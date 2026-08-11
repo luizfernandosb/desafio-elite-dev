@@ -1,4 +1,4 @@
-import { OrderStatus, TicketStatus } from '../../generated/prisma/enums'
+import { EventStatus, OrderStatus, TicketStatus } from '../../generated/prisma/enums'
 import { InvalidTransitionError } from './errors'
 
 export const ORDER_TRANSITIONS: Record<OrderStatus, OrderStatus[]> = {
@@ -13,6 +13,12 @@ export const ORDER_TRANSITIONS: Record<OrderStatus, OrderStatus[]> = {
 export const TICKET_TRANSITIONS: Record<TicketStatus, TicketStatus[]> = {
   ACTIVE: [TicketStatus.USED, TicketStatus.CANCELLED],
   USED: [],
+  CANCELLED: [],
+}
+
+export const EVENT_TRANSITIONS: Record<EventStatus, EventStatus[]> = {
+  DRAFT: [EventStatus.PUBLISHED, EventStatus.CANCELLED],
+  PUBLISHED: [EventStatus.CANCELLED],
   CANCELLED: [],
 }
 

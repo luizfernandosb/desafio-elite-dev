@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { Role } from '../../generated/prisma/enums'
 import { signAccessToken } from '../modules/auth/token.service'
 import { ForbiddenError, UnauthorizedError } from '../shared/errors'
-import { requireAuth, requireRole } from './auth.middleware'
+import { optionalAuth, requireAuth, requireRole } from './auth.middleware'
 
 function makeReq(headers: Record<string, string> = {}): Request {
   return { headers } as unknown as Request
@@ -31,6 +31,39 @@ describe('requireAuth', () => {
     const next = vi.fn()
     requireAuth(makeReq({ authorization: 'Bearer token-forjado' }), {} as Response, next)
     expect(next).toHaveBeenCalledWith(expect.any(UnauthorizedError))
+  })
+})
+
+describe('optionalAuth', () => {
+  it('popula req.user quando o token é válido', () => {
+    const token = signAccessToken({ sub: 'user-1', role: Role.ORGANIZER })
+    const req = makeReq({ authorization: `Bearer ${token}` })
+    const next = vi.fn()
+
+    optionalAuth(req, {} as Response, next)
+
+    expect(req.user).toEqual({ id: 'user-1', role: Role.ORGANIZER })
+    expect(next).toHaveBeenCalledWith()
+  })
+
+  it('segue anônimo (sem erro) quando não há header', () => {
+    const req = makeReq()
+    const next = vi.fn()
+
+    optionalAuth(req, {} as Response, next)
+
+    expect(req.user).toBeUndefined()
+    expect(next).toHaveBeenCalledWith()
+  })
+
+  it('segue anônimo (sem erro) quando o token é inválido', () => {
+    const req = makeReq({ authorization: 'Bearer token-forjado' })
+    const next = vi.fn()
+
+    optionalAuth(req, {} as Response, next)
+
+    expect(req.user).toBeUndefined()
+    expect(next).toHaveBeenCalledWith()
   })
 })
 

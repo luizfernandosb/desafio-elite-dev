@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import { OrderStatus, TicketStatus } from '../../generated/prisma/enums'
+import { EventStatus, OrderStatus, TicketStatus } from '../../generated/prisma/enums'
 import { InvalidTransitionError } from './errors'
-import { ORDER_TRANSITIONS, TICKET_TRANSITIONS, assertTransition } from './state-machines'
+import { EVENT_TRANSITIONS, ORDER_TRANSITIONS, TICKET_TRANSITIONS, assertTransition } from './state-machines'
 
 function testTransitionTable<S extends string>(transitions: Record<S, S[]>, allStates: S[]) {
   it('aceita toda transição declarada na tabela', () => {
@@ -38,4 +38,8 @@ describe('Order transitions', () => {
 
 describe('Ticket transitions', () => {
   testTransitionTable(TICKET_TRANSITIONS, Object.values(TicketStatus))
+})
+
+describe('Event transitions', () => {
+  testTransitionTable(EVENT_TRANSITIONS, Object.values(EventStatus))
 })

@@ -8,9 +8,9 @@ import { getByIdSchema, searchSchema } from './catalog.schema'
 import { CatalogService } from './catalog.service'
 import { TmdbProvider } from './providers/tmdb.provider'
 
-const catalogRepository = new CatalogRepository()
-const tmdbProvider = new TmdbProvider()
-const catalogService = new CatalogService(catalogRepository, tmdbProvider)
+// exportado -- outros módulos (events) reaproveitam esta mesma instância em vez de criar
+// um segundo TmdbProvider com seu próprio cache de gêneros em memória
+export const catalogService = new CatalogService(new CatalogRepository(), new TmdbProvider())
 const catalogController = new CatalogController(catalogService)
 
 export const catalogRoutes = Router()
