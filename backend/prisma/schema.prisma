@@ -1,5 +1,10 @@
-// Modelos entram na etapa 02 (.claude/plan/backend/02-modelagem-prisma.md).
-// Esta etapa só fixa datasource e generator.
+// Modelos definidos na etapa 02 (.claude/plan/backend/02-modelagem-prisma.md).
+// datasource/generator seguem o padrão do Prisma 7 -- ver backend/prisma.config.ts
+// e backend/src/lib/prisma.ts (driver adapter). Nenhuma URL vive aqui.
+//
+// Todo campo DateTime leva @db.Timestamptz(3): o mapeamento padrão do Prisma para
+// PostgreSQL é `timestamp(3)` SEM timezone -- timestamptz exige a anotação explícita
+// em cada campo (§4.6.3, TZ=UTC sozinho não resolve isso no nível de coluna).
 
 generator client {
   provider = "prisma-client"
@@ -8,4 +13,267 @@ generator client {
 
 datasource db {
   provider = "postgresql"
+}
+
+enum Role {
+  ORGANIZER
+  CUSTOMER
+  GATE
+}
+
+enum CatalogSource {
+  TMDB // TICKETMASTER reservado (§4.3), não implementado nesta versão
+}
+
+enum EventType {
+  SEATED // GENERAL_ADMISSION reservado (§4.4.4), não implementado nesta versão
+}
+
+enum EventStatus {
+  DRAFT
+  PUBLISHED
+  CANCELLED
+}
+
+enum SeatKind {
+  REGULAR
+  ACCESSIBLE
+  COMPANION
+}
+
+enum SeatStatus {
+  FREE
+  HELD
+  SOLD
+}
+
+enum OrderStatus {
+  PENDING
+  PAID
+  FULFILLED // ausente do spec original (§4.6.2), incluído por I-1 -- ver plano da etapa 02
+  FAILED
+  EXPIRED
+  REFUNDED
+}
+
+enum TicketStatus {
+  ACTIVE
+  USED
+  CANCELLED
+}
+
+enum ValidationResult {
+  VALID
+  INVALID_SIGNATURE
+  NOT_FOUND
+  ALREADY_USED
+  WRONG_EVENT
+  CANCELLED_TICKET
+  GATE_TOO_EARLY
+  GATE_CLOSED
+}
+
+model User {
+  id            String   @id @default(cuid())
+  email         String   @unique // trim + toLowerCase antes de salvar (§7.4)
+  passwordHash  String? // null em conta só-Google
+  googleSub     String?  @unique // 'sub' do ID token verificado (§7.3)
+  name          String
+  role          Role     @default(CUSTOMER)
+  emailVerified Boolean  @default(false) // true só para conta Google (§7.4)
+  createdAt     DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt     DateTime @updatedAt @db.Timestamptz(3)
+
+  events        Event[]         @relation("EventOrganizer")
+  orders        Order[]
+  seatHolds     SeatHold[]
+  refreshTokens RefreshToken[]
+  validations   ValidationLog[] @relation("GateOperator")
+}
+
+model RefreshToken {
+  id           String    @id @default(cuid())
+  userId       String
+  jti          String    @unique
+  tokenHash    String    @unique // hash, nunca o token (§7.2)
+  expiresAt    DateTime  @db.Timestamptz(3)
+  revokedAt    DateTime? @db.Timestamptz(3)
+  replacedById String? // rotação: detecta reuso de token antigo
+  createdAt    DateTime  @default(now()) @db.Timestamptz(3)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, revokedAt])
+}
+
+model Event {
+  id             String        @id @default(cuid())
+  organizerId    String
+  // snapshot do catálogo -- nunca buscado on-demand no TMDb (§4.3)
+  source         CatalogSource @default(TMDB)
+  externalId     String
+  title          String
+  subtitle       String?
+  synopsis       String?
+  imageUrl       String?
+  runtimeMinutes Int?
+  genres         String[]
+  // definido pelo organizador
+  venueName      String
+  venueCity      String
+  type           EventType     @default(SEATED)
+  status         EventStatus   @default(DRAFT)
+  startsAt       DateTime      @db.Timestamptz(3) // UTC
+  endsAt         DateTime?     @db.Timestamptz(3)
+  timezone       String // IANA: "America/Sao_Paulo" (§4.6.3) -- nunca offset numérico
+  priceInCents   Int
+  currency       String        @default("BRL")
+  createdAt      DateTime      @default(now()) @db.Timestamptz(3)
+  updatedAt      DateTime      @updatedAt @db.Timestamptz(3)
+
+  organizer User        @relation("EventOrganizer", fields: [organizerId], references: [id])
+  seats     Seat[]
+  orders    Order[]
+  tickets   Ticket[]
+  seatState SeatState[]
+
+  @@index([status, startsAt]) // listagem pública ordenada por data
+  @@index([organizerId]) // painel do organizador
+  @@index([source, externalId])
+}
+
+model Seat {
+  id      String   @id @default(cuid())
+  eventId String
+  row     String
+  number  Int
+  kind    SeatKind @default(REGULAR)
+
+  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  holds   SeatHold[]
+  tickets Ticket[]
+  state   SeatState?
+
+  @@unique([eventId, row, number]) // "A12" existe uma vez por evento
+  @@index([eventId])
+}
+
+/// Projeção pública do estado do assento -- única tabela publicada no Realtime (§4.4.2, §7.9).
+/// Sem userId: quem reservou é dado de outra pessoa.
+model SeatState {
+  seatId    String     @id
+  eventId   String
+  status    SeatStatus @default(FREE)
+  expiresAt DateTime?  @db.Timestamptz(3)
+  updatedAt DateTime   @updatedAt @db.Timestamptz(3)
+
+  seat  Seat  @relation(fields: [seatId], references: [id], onDelete: Cascade)
+  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@index([eventId])
+  @@map("seat_state")
+}
+
+model SeatHold {
+  id         String    @id @default(cuid())
+  eventId    String
+  seatId     String
+  userId     String
+  expiresAt  DateTime  @db.Timestamptz(3)
+  releasedAt DateTime? @db.Timestamptz(3)
+  orderId    String? // rastreabilidade quando o hold vira Order (§4.6.2)
+  createdAt  DateTime  @default(now()) @db.Timestamptz(3)
+
+  seat  Seat   @relation(fields: [seatId], references: [id], onDelete: Cascade)
+  user  User   @relation(fields: [userId], references: [id])
+  order Order? @relation(fields: [orderId], references: [id])
+
+  @@index([eventId, releasedAt])
+  @@index([expiresAt, releasedAt]) // varredura do pg_cron
+  // índice parcial único em seatId WHERE "releasedAt" IS NULL -- migration manual (etapa 02)
+}
+
+model Order {
+  id                    String      @id @default(cuid())
+  userId                String
+  eventId               String
+  status                OrderStatus @default(PENDING)
+  amountInCents         Int
+  currency              String      @default("BRL")
+  stripePaymentIntentId String?     @unique
+  idempotencyKey        String?     @unique
+  expiresAt             DateTime    @db.Timestamptz(3) // now + 30 min (§4.6.2)
+  createdAt             DateTime    @default(now()) @db.Timestamptz(3)
+  updatedAt             DateTime    @updatedAt @db.Timestamptz(3)
+
+  user    User       @relation(fields: [userId], references: [id])
+  event   Event      @relation(fields: [eventId], references: [id])
+  tickets Ticket[]
+  holds   SeatHold[]
+
+  @@index([userId, createdAt])
+  @@index([status, expiresAt]) // varredura de expiração
+}
+
+/// Invariante garantida pelo banco, não pelo código: um Ticket ACTIVE com `seatId`
+/// preenchido implica exatamente um SeatHold com `releasedAt` preenchido -- o hold foi
+/// consumido pela compra. O índice parcial único em (eventId, seatId) WHERE seatId IS
+/// NOT NULL garante que não existem dois tickets ativos para o mesmo assento (§4.6.2).
+model Ticket {
+  id             String       @id @default(cuid())
+  orderId        String
+  eventId        String
+  seatId         String? // sempre preenchido nesta versão (SEATED-only)
+  status         TicketStatus @default(ACTIVE)
+  codeHash       String       @unique // SHA-256 do código; o código em si não é armazenado (§7.6)
+  shareToken     String?      @unique // token de leitura, separado do QR (§7.7)
+  shareExpiresAt DateTime?    @db.Timestamptz(3)
+  shareRevokedAt DateTime?    @db.Timestamptz(3)
+  usedAt         DateTime?    @db.Timestamptz(3)
+  validatedById  String?
+  createdAt      DateTime     @default(now()) @db.Timestamptz(3)
+
+  order Order @relation(fields: [orderId], references: [id])
+  event Event @relation(fields: [eventId], references: [id])
+  seat  Seat? @relation(fields: [seatId], references: [id])
+
+  @@index([eventId, status])
+  @@index([orderId])
+  // índice parcial único em (eventId, seatId) WHERE "seatId" IS NOT NULL -- migration manual (etapa 02)
+}
+
+/// Auditoria de toda tentativa de validação, sucesso ou falha (§7.6).
+model ValidationLog {
+  id         String           @id @default(cuid())
+  eventId    String
+  ticketId   String? // null quando o código nem existe
+  gateUserId String
+  result     ValidationResult
+  codePrefix String? // 8 primeiros chars -- rastreia sem guardar credencial
+  createdAt  DateTime         @default(now()) @db.Timestamptz(3)
+
+  gateUser User @relation("GateOperator", fields: [gateUserId], references: [id])
+
+  @@index([eventId, createdAt])
+  @@index([ticketId])
+}
+
+/// Idempotência do webhook do Stripe (I-8). PK é o event.id do Stripe.
+model ProcessedWebhookEvent {
+  id          String   @id
+  type        String
+  processedAt DateTime @default(now()) @db.Timestamptz(3)
+}
+
+/// Cache de respostas do TMDb (§4.3).
+model CatalogCache {
+  id        String        @id @default(cuid())
+  source    CatalogSource
+  cacheKey  String
+  payload   Json
+  expiresAt DateTime      @db.Timestamptz(3)
+
+  @@unique([source, cacheKey])
+  @@index([expiresAt])
 }
