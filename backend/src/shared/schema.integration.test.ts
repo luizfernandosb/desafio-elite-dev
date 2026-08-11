@@ -96,6 +96,7 @@ describe('índices parciais -- anti-double-booking', () => {
         eventId: event.id,
         seatId: seat.id,
         codeHash: `hash-${crypto.randomUUID()}`,
+        qrJti: crypto.randomUUID(),
       },
     })
 
@@ -106,6 +107,7 @@ describe('índices parciais -- anti-double-booking', () => {
           eventId: event.id,
           seatId: seat.id,
           codeHash: `hash-${crypto.randomUUID()}`,
+          qrJti: crypto.randomUUID(),
         },
       }),
     ).rejects.toMatchObject({ code: 'P2002' })

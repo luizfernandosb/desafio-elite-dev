@@ -55,4 +55,26 @@ export class SeatHoldRepository {
       orderBy: { createdAt: 'asc' },
     })
   }
+
+  // usado na criação do pedido (etapa 07) -- ativos, do próprio usuário, do mesmo
+  // evento. Qualquer hold fora desse conjunto faz o pedido inteiro falhar.
+  findManyOwnedActive(db: Db, holdIds: string[], eventId: string, userId: string) {
+    return db.seatHold.findMany({
+      where: { id: { in: holdIds }, eventId, userId, releasedAt: null, expiresAt: { gt: new Date() } },
+    })
+  }
+
+  linkToOrder(db: Db, holdIds: string[], orderId: string) {
+    return db.seatHold.updateMany({ where: { id: { in: holdIds } }, data: { orderId } })
+  }
+
+  findByOrderId(db: Db, orderId: string) {
+    return db.seatHold.findMany({ where: { orderId } })
+  }
+
+  // o hold foi *consumido* pela compra -- releasedAt preenchido, mas por um motivo
+  // diferente de "expirou" ou "o cliente desistiu" (§4.6.2, invariante do Ticket)
+  consume(db: Db, holdIds: string[]) {
+    return db.seatHold.updateMany({ where: { id: { in: holdIds } }, data: { releasedAt: new Date() } })
+  }
 }

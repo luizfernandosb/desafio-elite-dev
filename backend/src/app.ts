@@ -7,6 +7,7 @@ import { env } from './config/env'
 import { prisma } from './lib/prisma'
 import { errorHandler } from './middlewares/error.middleware'
 import { requestLogger } from './middlewares/request-logger.middleware'
+import { stripeWebhookHandler } from './modules/orders/orders.routes'
 import { v1Router } from './routes/v1'
 
 const globalLimiter = rateLimit({
@@ -25,8 +26,11 @@ app.use(requestLogger) // 1º: todo request tem ID antes de tudo
 app.use(helmet())
 app.use(cors({ origin: env.CORS_ORIGINS, credentials: true })) // allowlist, nunca '*'
 
-// body cru para a verificação de assinatura do Stripe -- precisa vir antes do express.json (etapa 07)
-app.use('/api/v1/stripe/webhook', express.raw({ type: 'application/json' }))
+// body cru para a verificação de assinatura do Stripe -- precisa vir antes do
+// express.json(), e a rota fica montada aqui mesmo (não em v1Router) porque, por essa
+// ordem de middlewares, a resposta já foi enviada antes de qualquer coisa depois deste
+// bloco rodar. Se fosse por v1Router, o request passaria pelo express.json() antes.
+app.use('/api/v1/stripe/webhook', express.raw({ type: 'application/json' }), stripeWebhookHandler)
 
 app.use(express.json({ limit: '100kb' }))
 app.use(cookieParser())

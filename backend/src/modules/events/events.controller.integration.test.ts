@@ -311,6 +311,12 @@ async function simulateSale(eventId: string) {
     },
   })
   await prisma.ticket.create({
-    data: { orderId: order.id, eventId, seatId: seat.id, codeHash: `hash-${crypto.randomUUID()}` },
+    data: {
+      orderId: order.id,
+      eventId,
+      seatId: seat.id,
+      codeHash: `hash-${crypto.randomUUID()}`,
+      qrJti: crypto.randomUUID(),
+    },
   })
 }

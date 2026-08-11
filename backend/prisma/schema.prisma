@@ -227,6 +227,7 @@ model Ticket {
   seatId         String? // sempre preenchido nesta versão (SEATED-only)
   status         TicketStatus @default(ACTIVE)
   codeHash       String       @unique // SHA-256 do código; o código em si não é armazenado (§7.6)
+  qrJti          String // recupera o código sob demanda (ticketId+eventId+jti+segredo) -- nunca guarda o código (etapa 08)
   shareToken     String?      @unique // token de leitura, separado do QR (§7.7)
   shareExpiresAt DateTime?    @db.Timestamptz(3)
   shareRevokedAt DateTime?    @db.Timestamptz(3)
