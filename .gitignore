@@ -19,6 +19,7 @@ build/
 # Prisma
 backend/prisma/*.db
 backend/prisma/migrations/dev.db
+backend/generated/
 
 # Logs
 *.log

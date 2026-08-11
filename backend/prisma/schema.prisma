@@ -1,0 +1,11 @@
+// Modelos entram na etapa 02 (.claude/plan/backend/02-modelagem-prisma.md).
+// Esta etapa só fixa datasource e generator.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
