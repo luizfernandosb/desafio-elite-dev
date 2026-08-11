@@ -1,7 +1,9 @@
 import pino from 'pino'
 import { env } from '../config/env'
 
-export const logger = pino({
+// exportado separado do singleton para que o teste de redact possa reconstruir a
+// mesma configuração contra um destino em memória, sem depender de I/O real
+export const loggerOptions: pino.LoggerOptions = {
   level: env.LOG_LEVEL,
   transport:
     env.NODE_ENV === 'development'
@@ -21,4 +23,6 @@ export const logger = pino({
     ],
     censor: '[REDACTED]',
   },
-})
+}
+
+export const logger = pino(loggerOptions)

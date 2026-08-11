@@ -14,6 +14,9 @@ const globalLimiter = rateLimit({
   limit: 300,
   standardHeaders: true,
   legacyHeaders: false,
+  // desligado sob NODE_ENV=test -- a suíte de integração roda em série, no mesmo
+  // processo, e compartilharia o mesmo contador entre todos os arquivos de teste
+  skip: () => env.NODE_ENV === 'test',
 })
 
 export const app = express()
