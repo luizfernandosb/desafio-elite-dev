@@ -1,0 +1,55 @@
+/* Reset moderno mínimo -- tokens de tema e componentes vêm na etapa 02. Isto aqui é
+   só a base neutra que qualquer projeto precisa antes de ter identidade visual. */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+* {
+  margin: 0;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+img,
+picture,
+svg {
+  display: block;
+  max-width: 100%;
+}
+
+input,
+button,
+textarea,
+select {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+/* Skip link (§12 acessibilidade) -- fora da tela até receber foco por teclado, sem
+   depender de JS nem de um token de cor que ainda não existe. */
+.skip-link {
+  position: absolute;
+  top: -100%;
+  left: 0;
+  z-index: 100;
+  padding: 0.5em 1em;
+  background: #000;
+  color: #fff;
+}
+
+.skip-link:focus {
+  top: 0;
+}

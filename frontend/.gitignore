@@ -12,6 +12,12 @@ dist
 dist-ssr
 *.local
 
+# variáveis de ambiente -- nunca comitar valores reais, só os .example (etapa 01)
+.env
+.env.*
+!.env.example
+!.env.test.example
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

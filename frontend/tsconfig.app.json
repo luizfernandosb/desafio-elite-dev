@@ -16,11 +16,23 @@
     "noEmit": true,
     "jsx": "react-jsx",
 
+    /* Strictness -- o mapa de assentos (etapa 06) é cheio de acesso por índice;
+       noUncheckedIndexedAccess pega os `undefined` antes de virarem tela branca */
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+
     /* Linting */
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "erasableSyntaxOnly": true,
-    "noFallthroughCasesInSwitch": true
+    "noFallthroughCasesInSwitch": true,
+
+    /* Alias @/ -> src/, espelhado em vite.config.ts. Sem baseUrl -- TS 6+ resolve
+       "paths" relativo ao próprio tsconfig sem precisar dele (baseUrl está deprecado,
+       vai sumir no TS 7). */
+    "paths": {
+      "@/*": ["./src/*"]
+    }
   },
-  "include": ["src"]
+  "include": ["src", "env.schema.ts"]
 }
