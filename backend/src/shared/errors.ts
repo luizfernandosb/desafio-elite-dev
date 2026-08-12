@@ -46,3 +46,9 @@ export class InvalidTransitionError extends AppError {
     super('INVALID_TRANSITION', `Transição inválida: ${transition}`, 422)
   }
 }
+
+export class RateLimitedError extends AppError {
+  constructor(message = 'Muitas tentativas. Aguarde um instante.') {
+    super('RATE_LIMITED', message, 429)
+  }
+}

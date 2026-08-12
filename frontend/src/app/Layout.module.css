@@ -10,6 +10,7 @@
 .nav {
   display: flex;
   align-items: center;
+  gap: var(--space-4);
 }
 
 .logo {
@@ -20,6 +21,12 @@
   text-decoration: none;
 }
 
-.themeToggle {
+.actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.actions > :first-child {
   width: 140px;
 }

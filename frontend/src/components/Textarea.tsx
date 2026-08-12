@@ -1,13 +1,15 @@
-import { useId, type TextareaHTMLAttributes } from 'react'
+import { useId, type ComponentProps } from 'react'
 import styles from './Textarea.module.css'
 
-interface TextareaProps extends TextareaHTMLAttributes<HTMLTextAreaElement> {
+interface TextareaProps extends ComponentProps<'textarea'> {
   label: string
   error?: string
   hint?: string
 }
 
-export function Textarea({ label, error, hint, id, className, ...rest }: TextareaProps) {
+// `ref` explícito -- mesmo motivo do Input.tsx (React Hook Form precisa do elemento
+// real por trás do componente).
+export function Textarea({ label, error, hint, id, className, ref, ...rest }: TextareaProps) {
   const generatedId = useId()
   const textareaId = id ?? generatedId
   const hintId = hint ? `${textareaId}-hint` : undefined
@@ -19,6 +21,7 @@ export function Textarea({ label, error, hint, id, className, ...rest }: Textare
         {label}
       </label>
       <textarea
+        ref={ref}
         id={textareaId}
         className={[styles.textarea, error && styles.textareaError, className].filter(Boolean).join(' ')}
         aria-invalid={Boolean(error) || undefined}

@@ -1,13 +1,16 @@
-import { useId, type InputHTMLAttributes } from 'react'
+import { useId, type ComponentProps } from 'react'
 import styles from './Input.module.css'
 
-interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
+interface InputProps extends ComponentProps<'input'> {
   label: string
   error?: string
   hint?: string
 }
 
-export function Input({ label, error, hint, id, className, ...rest }: InputProps) {
+// `ref` explícito no destructure (React 19 aceita `ref` como prop comum em componente
+// função, sem `forwardRef`) -- sem isso, React Hook Form não alcança o `<input>` real
+// (nem `setFocus` no primeiro campo inválido, nem o registro por ref funcionam).
+export function Input({ label, error, hint, id, className, ref, ...rest }: InputProps) {
   const generatedId = useId()
   const inputId = id ?? generatedId
   const hintId = hint ? `${inputId}-hint` : undefined
@@ -19,6 +22,7 @@ export function Input({ label, error, hint, id, className, ...rest }: InputProps
         {label}
       </label>
       <input
+        ref={ref}
         id={inputId}
         className={[styles.input, error && styles.inputError, className].filter(Boolean).join(' ')}
         aria-invalid={Boolean(error) || undefined}

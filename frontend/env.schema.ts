@@ -16,7 +16,9 @@ export const envSchema = z.object({
   VITE_SUPABASE_URL: z.string().url(),
   VITE_SUPABASE_ANON_KEY: z.string().min(20),
   VITE_STRIPE_PUBLISHABLE_KEY: z.string().startsWith('pk_'),
-  VITE_GOOGLE_CLIENT_ID: z.string().min(10),
+  // opcional -- login com Google é o corte nº 1 do plano (§12.1): ausência esconde
+  // o botão em vez de quebrar o build/tela (etapa 03 de autenticação)
+  VITE_GOOGLE_CLIENT_ID: z.string().min(10).optional(),
   VITE_USE_MSW: z
     .enum(['true', 'false'])
     .default('false')

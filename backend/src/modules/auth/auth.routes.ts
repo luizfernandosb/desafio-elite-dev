@@ -3,6 +3,7 @@ import rateLimit from 'express-rate-limit'
 import { env } from '../../config/env'
 import { requireAuth } from '../../middlewares/auth.middleware'
 import { validate } from '../../middlewares/validate.middleware'
+import { RateLimitedError } from '../../shared/errors'
 import { AuthController } from './auth.controller'
 import { googleSchema, loginSchema, registerSchema } from './auth.schema'
 import { AuthRepository } from './auth.repository'
@@ -18,6 +19,11 @@ const authController = new AuthController(authService)
 // processo (§7.10.2) e compartilharia o mesmo contador entre arquivos de teste
 const skipInTest = () => env.NODE_ENV === 'test'
 
+// resposta padrão do express-rate-limit não é { code, message } -- next(err) cai no
+// errorHandler global, igual a qualquer outro erro da API (§5.5.4)
+const rateLimitHandler = (_req: unknown, _res: unknown, next: (err: unknown) => void) =>
+  next(new RateLimitedError())
+
 // por IP -- contém um atacante batendo em várias contas a partir do mesmo lugar
 const perIpLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -25,6 +31,7 @@ const perIpLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   skip: skipInTest,
+  handler: rateLimitHandler,
 })
 
 // por e-mail -- contém varredura de senha distribuída por IP contra UMA conta (§7.8)
@@ -35,6 +42,7 @@ const perEmailLoginLimiter = rateLimit({
   legacyHeaders: false,
   keyGenerator: (req) => String(req.body?.email ?? '').trim().toLowerCase() || 'unknown',
   skip: skipInTest,
+  handler: rateLimitHandler,
 })
 
 export const authRoutes = Router()

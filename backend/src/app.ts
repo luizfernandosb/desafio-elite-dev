@@ -9,6 +9,7 @@ import { errorHandler } from './middlewares/error.middleware'
 import { requestLogger } from './middlewares/request-logger.middleware'
 import { stripeWebhookHandler } from './modules/orders/orders.routes'
 import { v1Router } from './routes/v1'
+import { RateLimitedError } from './shared/errors'
 
 const globalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -18,6 +19,10 @@ const globalLimiter = rateLimit({
   // desligado sob NODE_ENV=test -- a suíte de integração roda em série, no mesmo
   // processo, e compartilharia o mesmo contador entre todos os arquivos de teste
   skip: () => env.NODE_ENV === 'test',
+  // resposta padrão do express-rate-limit não é { code, message } (§5.5.4) -- via
+  // `next(err)` cai no mesmo errorHandler global de todo o resto da API, em vez de
+  // duplicar a serialização aqui
+  handler: (_req, _res, next) => next(new RateLimitedError()),
 })
 
 export const app = express()
