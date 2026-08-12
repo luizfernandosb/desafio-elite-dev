@@ -5,6 +5,7 @@ import { cleanDatabase } from '../../test/setup'
 import { seedEventWithSeats, seedUser } from '../../test/factories'
 import { isUniqueViolation } from '../../shared/prisma-errors'
 import { SeatHoldRepository } from './seat-hold.repository'
+import { SeatStateRepository } from './seat-state.repository'
 
 // SeatHold.userId tem FK real para User -- diferente do exemplo do spec (§7.10.4), que
 // usa `user-${i}` sem criar a linha. Sem isso todo INSERT falha com FK, não com P2002
@@ -137,5 +138,63 @@ describe('anti-double-booking -- assento marcado (§7.10.4, teste nº 1)', () =>
         ]),
       ),
     ).resolves.toBeDefined()
+  })
+})
+
+describe('seat_state -- escrita dupla é transacional (etapa 11, §4.4.2)', () => {
+  beforeEach(cleanDatabase)
+
+  it('hold criado -- seat_state vira HELD com expiresAt na mesma transação', async () => {
+    const { event, seats } = await seedEventWithSeats({ seatCount: 1 })
+    const seat = seats[0]!
+    const repo = new SeatHoldRepository()
+    const seatStateRepo = new SeatStateRepository()
+    const [userId] = await seedUsers(1)
+    const expiresAt = new Date(Date.now() + 600_000)
+
+    await prisma.$transaction(async (tx) => {
+      await repo.createMany(tx, [
+        { id: randomUUID(), eventId: event.id, seatId: seat.id, userId: userId!, expiresAt },
+      ])
+      await seatStateRepo.markHeld(tx, [seat.id], expiresAt)
+    })
+
+    const state = await prisma.seatState.findUniqueOrThrow({ where: { seatId: seat.id } })
+    expect(state.status).toBe('HELD')
+    expect(state.expiresAt).toEqual(expiresAt)
+  })
+
+  it('rollback do hold não deixa seat_state como HELD -- prova a escrita dupla transacional', async () => {
+    const { event, seats } = await seedEventWithSeats({ seatCount: 1 })
+    const seat = seats[0]!
+    const repo = new SeatHoldRepository()
+    const seatStateRepo = new SeatStateRepository()
+    const [ownerId, attemptId] = await seedUsers(2)
+
+    // assento já tem hold ativo de outro usuário -- a 2ª tentativa colide no índice
+    // parcial único e reverte a transação inteira, inclusive o markHeld que rodou
+    // ANTES da falha (ordem invertida de propósito, para provar a atomicidade e não
+    // só o caminho feliz do Service)
+    await prisma.seatHold.create({
+      data: { eventId: event.id, seatId: seat.id, userId: ownerId!, expiresAt: new Date(Date.now() + 600_000) },
+    })
+
+    await expect(
+      prisma.$transaction(async (tx) => {
+        await seatStateRepo.markHeld(tx, [seat.id], new Date(Date.now() + 600_000))
+        await repo.createMany(tx, [
+          {
+            id: randomUUID(),
+            eventId: event.id,
+            seatId: seat.id,
+            userId: attemptId!,
+            expiresAt: new Date(Date.now() + 600_000),
+          },
+        ])
+      }),
+    ).rejects.toSatisfy(isUniqueViolation)
+
+    const state = await prisma.seatState.findUniqueOrThrow({ where: { seatId: seat.id } })
+    expect(state.status).toBe('FREE') // markHeld rodou, mas a transação nunca comitou
   })
 })
