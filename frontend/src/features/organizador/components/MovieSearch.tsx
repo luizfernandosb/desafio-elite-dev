@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import { Card, EmptyState, Input, Skeleton } from '../../../components'
 import { catalogErrorMessage } from '../error-messages'
 import { organizadorKeys, searchCatalog, type CatalogItem } from '../api'
-import { useDebouncedValue } from '../useDebouncedValue'
+import { useDebouncedValue } from '../../../shared/useDebouncedValue'
 import styles from './MovieSearch.module.css'
 
 interface MovieSearchProps {

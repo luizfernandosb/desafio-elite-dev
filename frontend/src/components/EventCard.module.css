@@ -6,19 +6,31 @@
   border-radius: var(--radius-md);
   overflow: hidden;
   background-color: var(--surface-2); /* fallback antes/sem a imagem carregar */
-  background-size: cover;
-  background-position: center;
   border: 1px solid var(--border);
+}
+
+.poster {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  z-index: 0;
 }
 
 /* Única exceção documentada ao "zero gradiente" do resto do projeto (§5.1.1) --
    gradual e só na parte de baixo, nunca cobrindo o pôster inteiro. */
 .overlay {
   position: relative;
+  z-index: 1;
   width: 100%;
   padding: var(--space-6) var(--space-4) var(--space-4);
   background: linear-gradient(to top, rgba(10, 10, 12, 0.88) 0%, rgba(10, 10, 12, 0.55) 55%, transparent 100%);
   color: #fff;
+}
+
+.badge {
+  margin-bottom: var(--space-2);
 }
 
 .price {
@@ -35,5 +47,11 @@
 .subtitle {
   color: rgba(255, 255, 255, 0.75);
   font-size: 0.875rem;
+  margin-top: var(--space-1);
+}
+
+.meta {
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 0.75rem;
   margin-top: var(--space-1);
 }

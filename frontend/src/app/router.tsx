@@ -1,4 +1,6 @@
 import { createBrowserRouter, type RouteObject } from 'react-router-dom'
+import CatalogPage from '../features/catalog/pages/CatalogPage'
+import EventDetailPage from '../features/catalog/pages/EventDetailPage'
 import { RequireAuth, RequireRole } from '../features/auth/guards'
 import { LoginPage } from '../features/auth/pages/LoginPage'
 import { RegisterPage } from '../features/auth/pages/RegisterPage'
@@ -38,8 +40,11 @@ export const router = createBrowserRouter([
     element: <Layout />,
     errorElement: <RouteErrorBoundary />,
     children: [
-      { index: true, element: <PlaceholderPage title="Catálogo" etapa="etapa 05" /> },
-      { path: 'eventos/:id', element: <PlaceholderPage title="Detalhe do evento" etapa="etapa 05" /> },
+      // catálogo público -- carregamento direto, não `lazy()` (etapa 05): é a
+      // primeira tela de ~todo visitante, diferente dos três grupos pesados abaixo
+      // que só uma fração de quem acessa o site chega a baixar
+      { index: true, element: <CatalogPage /> },
+      { path: 'eventos/:id', element: <EventDetailPage /> },
       { path: 'eventos/:id/assentos', element: <PlaceholderPage title="Mapa de assentos" etapa="etapa 06" /> },
 
       {

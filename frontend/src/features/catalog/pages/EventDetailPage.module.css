@@ -1,0 +1,94 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  max-width: 720px;
+  margin: 0 auto;
+  padding: var(--space-8) var(--space-4);
+}
+
+.poster {
+  width: 100%;
+  max-width: 320px;
+  aspect-ratio: 2 / 3;
+  object-fit: cover;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+}
+
+.page h1 {
+  margin: 0;
+}
+
+.meta {
+  margin: 0;
+  color: var(--text-secondary);
+}
+
+.badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.synopsis {
+  margin: 0;
+  max-width: 60ch;
+}
+
+.price {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--primary);
+  margin: 0;
+}
+
+.occupancy {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+}
+
+.statusBanner {
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  background: var(--surface-1);
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+/* mesma aparência do Button primary (§5.1.1) -- não é o componente `Button` porque
+   este precisa ser um `<a>` de verdade quando habilitado (navegação), e um
+   `<button disabled>` de verdade quando não (Button não tem variante polimórfica). */
+.cta,
+.ctaDisabled {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  align-self: flex-start;
+  min-height: var(--tap-target);
+  padding: 0 var(--space-6);
+  border: none;
+  border-radius: var(--radius-md);
+  font-size: 1rem;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background var(--transition);
+}
+
+.cta {
+  background: var(--primary);
+  color: #fff;
+}
+
+.cta:hover {
+  background: var(--primary-hover);
+}
+
+.ctaDisabled {
+  background: var(--surface-2);
+  color: var(--text-secondary);
+  cursor: not-allowed;
+}
