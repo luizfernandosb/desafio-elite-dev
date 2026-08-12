@@ -63,19 +63,30 @@ export const router = createBrowserRouter([
           { path: 'ingressos/:id', element: <PlaceholderPage title="Ingresso" etapa="etapa 09" /> },
 
           {
+            // painel completo do organizador (busca no TMDb, wizard de criação,
+            // gestão de sessão, upload de imagem) -- etapa 04
             element: <RequireRole role="ORGANIZER" />,
             children: [
               {
                 path: 'organizador',
-                lazy: () => import('./routes/OrganizadorPage').then((m) => ({ Component: m.default })),
+                lazy: () =>
+                  import('../features/organizador/pages/OrganizadorListPage').then((m) => ({
+                    Component: m.default,
+                  })),
               },
               {
                 path: 'organizador/eventos/nova',
-                lazy: () => import('./routes/OrganizadorPage').then((m) => ({ Component: m.default })),
+                lazy: () =>
+                  import('../features/organizador/pages/CreateEventWizard').then((m) => ({
+                    Component: m.default,
+                  })),
               },
               {
                 path: 'organizador/eventos/:id',
-                lazy: () => import('./routes/OrganizadorPage').then((m) => ({ Component: m.default })),
+                lazy: () =>
+                  import('../features/organizador/pages/EventDetailPage').then((m) => ({
+                    Component: m.default,
+                  })),
               },
             ],
           },

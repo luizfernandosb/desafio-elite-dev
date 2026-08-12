@@ -37,6 +37,16 @@
   border-color: var(--danger);
 }
 
+/* bloqueado (ex.: campo travado após venda, etapa 04) precisa ser visível sem
+   depender só do atributo `disabled` -- `cursor` sozinho não é um sinal visual
+   (§5.1.1); `--surface-1` é o mesmo tom já usado para "assento vendido"/superfície
+   inativa em outros componentes, não uma cor nova */
+.input:disabled {
+  background: var(--surface-1);
+  color: var(--text-secondary);
+  cursor: not-allowed;
+}
+
 .hint {
   font-size: 0.75rem;
   color: var(--text-secondary);

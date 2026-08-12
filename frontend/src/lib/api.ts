@@ -119,7 +119,11 @@ async function parseErrorBody(res: Response): Promise<ErrorBody> {
 
 async function rawFetch(path: string, options: RequestOptions): Promise<Response> {
   const headers = new Headers(options.headers)
-  if (options.body !== undefined) headers.set('Content-Type', 'application/json')
+  // FormData (upload de imagem, etapa 04) não passa por JSON.stringify nem ganha
+  // Content-Type manual -- o browser define `multipart/form-data; boundary=...`
+  // sozinho; sobrescrever aqui quebraria o parsing do multer no back-end.
+  const isFormData = options.body instanceof FormData
+  if (options.body !== undefined && !isFormData) headers.set('Content-Type', 'application/json')
   if (!options.skipAuth && accessToken) headers.set('Authorization', `Bearer ${accessToken}`)
 
   return fetch(`${env.VITE_API_URL}${path}`, {
@@ -127,7 +131,7 @@ async function rawFetch(path: string, options: RequestOptions): Promise<Response
     headers,
     credentials: 'include',
     signal: options.signal ?? AbortSignal.timeout(TIMEOUT_MS),
-    body: options.body !== undefined ? JSON.stringify(options.body) : undefined,
+    body: isFormData ? (options.body as FormData) : options.body !== undefined ? JSON.stringify(options.body) : undefined,
   })
 }
 

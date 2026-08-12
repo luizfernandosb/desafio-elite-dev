@@ -41,6 +41,12 @@
   border-color: var(--danger);
 }
 
+.trigger:disabled {
+  background: var(--surface-1);
+  color: var(--text-secondary);
+  cursor: not-allowed;
+}
+
 .icon {
   color: var(--text-secondary);
 }

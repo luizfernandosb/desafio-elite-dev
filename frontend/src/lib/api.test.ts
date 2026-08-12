@@ -117,6 +117,27 @@ describe('api -- fila de refresh (§ etapa 01, "bug mais provável desta etapa")
     expect(getAccessToken()).toBeNull()
   })
 
+  it('corpo FormData não é serializado nem ganha Content-Type manual (upload de imagem, etapa 04)', async () => {
+    let receivedContentType: string | null = null
+    let receivedField: string | null = null
+    server.use(
+      http.post(`${API}/probe-upload`, async ({ request }) => {
+        receivedContentType = request.headers.get('content-type')
+        const body = await request.formData()
+        receivedField = body.get('image') as string | null
+        return HttpResponse.json({ ok: true })
+      }),
+    )
+
+    const formData = new FormData()
+    formData.append('image', 'fake-bytes')
+
+    await api.post('/probe-upload', formData)
+
+    expect(receivedContentType).toContain('multipart/form-data')
+    expect(receivedField).toBe('fake-bytes')
+  })
+
   it('rota de auth (skipAuth) não tenta refresh num 401 -- é credencial errada, não sessão expirada', async () => {
     let refreshCount = 0
     server.use(

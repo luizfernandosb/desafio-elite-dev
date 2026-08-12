@@ -38,6 +38,12 @@
   border-color: var(--danger);
 }
 
+.textarea:disabled {
+  background: var(--surface-1);
+  color: var(--text-secondary);
+  cursor: not-allowed;
+}
+
 .hint {
   font-size: 0.75rem;
   color: var(--text-secondary);

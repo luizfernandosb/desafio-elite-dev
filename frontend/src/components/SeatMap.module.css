@@ -1,0 +1,127 @@
+.wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  overflow-x: auto;
+}
+
+.grid {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  width: fit-content;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.rowLabel {
+  width: var(--space-4);
+  flex-shrink: 0;
+  text-align: center;
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+}
+
+/* célula menor que --tap-target (§5.1.1) de propósito -- exceção documentada na
+   própria etapa 06 do plano: uma sala de 26x40 não cabe na tela com alvo de 44px,
+   e o gesto aqui é apontar/clicar, não tocar um alvo isolado em movimento. */
+.seat {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-1);
+  color: var(--text-secondary);
+  font-size: 0.6875rem;
+  padding: 0;
+  cursor: default;
+}
+
+.clickable {
+  cursor: pointer;
+  transition: transform var(--transition), border-color var(--transition);
+}
+
+.clickable:hover {
+  border-color: var(--primary);
+  transform: scale(1.08);
+}
+
+.free {
+  background: var(--surface-1);
+  color: var(--text-secondary);
+}
+
+.held {
+  background: var(--warning);
+  border-color: var(--warning);
+  color: #fff;
+}
+
+.sold {
+  background: var(--text-secondary);
+  border-color: var(--text-secondary);
+  color: var(--surface-0);
+}
+
+/* acessível nunca depende só da cor -- a diferença some no daltonismo (§5.1.1);
+   o aria-label do próprio botão já diz "acessível" para quem usa leitor de tela,
+   e a borda tracejada é o reforço visual para quem enxerga cor normalmente. */
+.accessible {
+  border-style: dashed;
+  border-color: var(--primary);
+  border-width: 2px;
+}
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  font-size: 0.8125rem;
+  color: var(--text-secondary);
+}
+
+.legend li {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.swatch {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+}
+
+.swatch.free {
+  background: var(--surface-1);
+}
+
+.swatch.held {
+  background: var(--warning);
+  border-color: var(--warning);
+}
+
+.swatch.sold {
+  background: var(--text-secondary);
+  border-color: var(--text-secondary);
+}
+
+.swatch.accessible {
+  background: var(--surface-1);
+  border-style: dashed;
+  border-color: var(--primary);
+}
