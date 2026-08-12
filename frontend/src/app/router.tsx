@@ -1,8 +1,21 @@
-import { createBrowserRouter } from 'react-router-dom'
+import { createBrowserRouter, type RouteObject } from 'react-router-dom'
 import { Layout } from './Layout'
 import { RouteErrorBoundary } from './ErrorBoundary'
 import { NotFoundPage } from './routes/NotFoundPage'
 import { PlaceholderPage } from './routes/PlaceholderPage'
+
+// /estilo é ferramenta de desenvolvimento (conferência visual dos tokens/componentes,
+// substitui Storybook -- etapa 02), não tela de produto: `import.meta.env.DEV` é
+// substituído em build time, então o Rollup elimina esta rota e o import de
+// StyleGuidePage inteiro do bundle de produção (ninguém navega pra cá em prod).
+const devOnlyRoutes: RouteObject[] = import.meta.env.DEV
+  ? [
+      {
+        path: 'estilo',
+        lazy: () => import('./routes/StyleGuidePage').then((m) => ({ Component: m.default })),
+      },
+    ]
+  : []
 
 // Guards por papel entram na etapa 03 (autenticação) -- por ora toda rota é
 // alcançável, só para provar que o roteamento em si funciona.
@@ -56,6 +69,8 @@ export const router = createBrowserRouter([
         path: 'portaria',
         lazy: () => import('./routes/PortariaPage').then((m) => ({ Component: m.default })),
       },
+
+      ...devOnlyRoutes,
 
       { path: '*', element: <NotFoundPage /> },
     ],

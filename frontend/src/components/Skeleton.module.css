@@ -1,0 +1,30 @@
+/* Pulso de opacidade, não shimmer em gradiente -- `linear-gradient` neste projeto só
+   existe no overlay do card de evento (§5.1.1, critério de aceite via grep). */
+.skeleton {
+  display: block;
+  background: var(--surface-2);
+  animation: pulse 1.4s ease-in-out infinite;
+}
+
+.sm {
+  border-radius: var(--radius-sm);
+}
+
+.md {
+  border-radius: var(--radius-md);
+}
+
+.full {
+  border-radius: var(--radius-full);
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.5;
+  }
+}

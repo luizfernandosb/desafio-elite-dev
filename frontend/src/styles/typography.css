@@ -1,0 +1,98 @@
+/* Inter Variable self-hosted (@fontsource-variable/inter) -- Google Fonts adicionaria
+   um terceiro domínio e um risco de latência para resolver nada (§5.1.1). Peso
+   variável (100-900) num arquivo woff2 só, carregado com font-display: swap. */
+@import '@fontsource-variable/inter/index.css';
+
+:root {
+  --font-sans: 'Inter Variable', system-ui, sans-serif;
+}
+
+body {
+  font-family: var(--font-sans);
+  font-size: 16px;
+}
+
+/* Escala tipográfica (§5.1.1) -- uma fonte só, variada por peso/tamanho/tracking.
+   O tracking negativo nos títulos grandes não é decoração: compensa o hinting do
+   Inter nesses tamanhos e mantém as letras como bloco visual, não decoração solta. */
+.text-display,
+.text-h1 {
+  font-weight: 900;
+  /* clamp() -- não estoura em 360px (§5.1.1) */
+  font-size: clamp(2rem, 1.4rem + 3vw, 3rem);
+  letter-spacing: -0.04em;
+  line-height: 1.1;
+}
+
+.text-h1 {
+  font-weight: 700;
+  font-size: clamp(1.5rem, 1.1rem + 2vw, 2rem);
+  letter-spacing: -0.03em;
+  line-height: 1.2;
+}
+
+.text-h2 {
+  font-weight: 600;
+  font-size: 1.375rem; /* 22px */
+  letter-spacing: -0.02em;
+  line-height: 1.3;
+}
+
+.text-h3 {
+  font-weight: 600;
+  font-size: 1.125rem; /* 18px */
+  letter-spacing: -0.015em;
+  line-height: 1.4;
+}
+
+.text-body {
+  font-weight: 400;
+  font-size: 1rem; /* 16px */
+  letter-spacing: 0;
+  line-height: 1.5;
+}
+
+.text-small {
+  font-weight: 400;
+  font-size: 0.875rem; /* 14px */
+  letter-spacing: 0;
+  line-height: 1.5;
+}
+
+.text-caption {
+  font-weight: 500;
+  font-size: 0.75rem; /* 12px */
+  letter-spacing: 0.02em;
+  line-height: 1.4;
+  text-transform: uppercase;
+}
+
+/* Elementos semânticos recebem o tamanho correspondente por padrão -- escolher a
+   tag pela estrutura do documento, não pelo tamanho visual desejado (esse é o papel
+   das classes `.text-*` acima, para quando os dois não coincidem). */
+h1 {
+  font-weight: 700;
+  font-size: clamp(1.5rem, 1.1rem + 2vw, 2rem);
+  letter-spacing: -0.03em;
+  line-height: 1.2;
+}
+
+h2 {
+  font-weight: 600;
+  font-size: 1.375rem;
+  letter-spacing: -0.02em;
+  line-height: 1.3;
+}
+
+h3 {
+  font-weight: 600;
+  font-size: 1.125rem;
+  letter-spacing: -0.015em;
+  line-height: 1.4;
+}
+
+/* Dígito de largura fixa em preço, número de assento e cronômetro -- dígito de
+   largura variável faz o contador do hold "tremer" a cada segundo (§5.1.1). */
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}

@@ -5,6 +5,8 @@ import { AppProviders } from './app/providers'
 import { router } from './app/router'
 import { env } from './lib/env'
 import './styles/reset.css'
+import './styles/tokens.css'
+import './styles/typography.css'
 
 // VITE_USE_MSW liga o mock de rede em desenvolvimento, sem precisar do back-end
 // rodando (§ etapa 01, "MSW desde o dia 0"). Import dinâmico: o código do MSW só

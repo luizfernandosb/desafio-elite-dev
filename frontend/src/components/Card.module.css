@@ -1,0 +1,20 @@
+.card {
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+  padding: var(--space-4);
+}
+
+/* opacity + translate no hover do card individual -- nunca fadeInUp por item numa
+   lista, cansa em scroll longo (§5.1.1, "o que não fazer") */
+.interactive {
+  transition:
+    transform var(--transition),
+    box-shadow var(--transition);
+}
+
+.interactive:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}

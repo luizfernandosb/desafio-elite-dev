@@ -1,0 +1,68 @@
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  min-height: var(--tap-target);
+  padding: 0 var(--space-4);
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  font-family: var(--font-sans);
+  font-weight: 600;
+  font-size: 1rem;
+  white-space: nowrap;
+  transition:
+    background var(--transition),
+    border-color var(--transition),
+    transform var(--transition),
+    filter var(--transition);
+}
+
+.button:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+.button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Sem sombra, sem gradiente -- é isso (§5.1.1). */
+.primary {
+  background: var(--primary);
+  color: #fff;
+}
+
+.primary:hover:not(:disabled) {
+  background: var(--primary-hover);
+}
+
+.secondary {
+  background: var(--surface-1);
+  border-color: var(--border);
+  color: var(--text-primary);
+}
+
+.secondary:hover:not(:disabled) {
+  background: var(--surface-2);
+}
+
+.ghost {
+  background: transparent;
+  color: var(--primary);
+}
+
+.ghost:hover:not(:disabled) {
+  background: var(--primary-tint);
+}
+
+.danger {
+  background: var(--danger);
+  color: #fff;
+}
+
+/* sem um token de hover próprio para --danger (só existe um tom na paleta) --
+   `filter` deriva o hover sem inventar um segundo hex fora de tokens.css */
+.danger:hover:not(:disabled) {
+  filter: brightness(0.88);
+}
