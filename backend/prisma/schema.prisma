@@ -108,29 +108,31 @@ model RefreshToken {
 }
 
 model Event {
-  id             String        @id @default(cuid())
-  organizerId    String
+  id              String        @id @default(cuid())
+  organizerId     String
   // snapshot do catálogo -- nunca buscado on-demand no TMDb (§4.3)
-  source         CatalogSource @default(TMDB)
-  externalId     String
-  title          String
-  subtitle       String?
-  synopsis       String?
-  imageUrl       String?
-  runtimeMinutes Int?
-  genres         String[]
+  source          CatalogSource @default(TMDB)
+  externalId      String
+  title           String
+  subtitle        String?
+  synopsis        String?
+  imageUrl        String? // exibido -- pôster do catálogo até o organizador enviar um banner próprio (etapa 12)
+  catalogImageUrl String? // snapshot imutável do pôster do catálogo -- fallback do DELETE /events/:id/image
+  customImageKey  String? // key no bucket Supabase quando imageUrl é um upload do organizador; null = usando o pôster
+  runtimeMinutes  Int?
+  genres          String[]
   // definido pelo organizador
-  venueName      String
-  venueCity      String
-  type           EventType     @default(SEATED)
-  status         EventStatus   @default(DRAFT)
-  startsAt       DateTime      @db.Timestamptz(3) // UTC
-  endsAt         DateTime?     @db.Timestamptz(3)
-  timezone       String // IANA: "America/Sao_Paulo" (§4.6.3) -- nunca offset numérico
-  priceInCents   Int
-  currency       String        @default("BRL")
-  createdAt      DateTime      @default(now()) @db.Timestamptz(3)
-  updatedAt      DateTime      @updatedAt @db.Timestamptz(3)
+  venueName       String
+  venueCity       String
+  type            EventType     @default(SEATED)
+  status          EventStatus   @default(DRAFT)
+  startsAt        DateTime      @db.Timestamptz(3) // UTC
+  endsAt          DateTime?     @db.Timestamptz(3)
+  timezone        String // IANA: "America/Sao_Paulo" (§4.6.3) -- nunca offset numérico
+  priceInCents    Int
+  currency        String        @default("BRL")
+  createdAt       DateTime      @default(now()) @db.Timestamptz(3)
+  updatedAt       DateTime      @updatedAt @db.Timestamptz(3)
 
   organizer User        @relation("EventOrganizer", fields: [organizerId], references: [id])
   seats     Seat[]
@@ -189,10 +191,10 @@ model SeatHold {
   seat  Seat   @relation(fields: [seatId], references: [id], onDelete: Cascade)
   user  User   @relation(fields: [userId], references: [id])
   order Order? @relation(fields: [orderId], references: [id])
+  // índice parcial único em seatId WHERE "releasedAt" IS NULL -- migration manual (etapa 02)
 
   @@index([eventId, releasedAt])
   @@index([expiresAt, releasedAt]) // varredura do pg_cron
-  // índice parcial único em seatId WHERE "releasedAt" IS NULL -- migration manual (etapa 02)
 }
 
 model Order {
@@ -240,10 +242,10 @@ model Ticket {
   event       Event @relation(fields: [eventId], references: [id])
   seat        Seat? @relation(fields: [seatId], references: [id])
   validatedBy User? @relation("TicketValidator", fields: [validatedById], references: [id])
+  // índice parcial único em (eventId, seatId) WHERE "seatId" IS NOT NULL -- migration manual (etapa 02)
 
   @@index([eventId, status])
   @@index([orderId])
-  // índice parcial único em (eventId, seatId) WHERE "seatId" IS NOT NULL -- migration manual (etapa 02)
 }
 
 /// Auditoria de toda tentativa de validação, sucesso ou falha (§7.6).

@@ -53,14 +53,16 @@ export const createEventSchema = {
 
 // campos que não alteram o contrato de compra ficam sempre editáveis; os que alteram
 // (data, fuso, preço, cidade) só quando o evento ainda não vendeu ingresso -- checado
-// no Service, que conhece o estado atual do evento (§ etapa 05, "PATCH com vendas")
+// no Service, que conhece o estado atual do evento (§ etapa 05, "PATCH com vendas").
+// `imageUrl` propositalmente fora daqui (etapa 12): só muda via POST/DELETE
+// /events/:id/image, que passa pela validação de magic bytes -- um PATCH aceitando
+// qualquer URL seria um segundo caminho para o mesmo campo, sem a validação do primeiro.
 export const updateEventSchema = {
   params: z.object({ id: z.string().min(1) }),
   body: z
     .object({
       venueName: z.string().trim().min(1).max(200).optional(),
       synopsis: z.string().max(2000).optional(),
-      imageUrl: z.string().url().optional(),
       venueCity: z.string().trim().min(1).max(100).optional(),
       startsAt: z.coerce.date().optional(),
       endsAt: z.coerce.date().optional(),
