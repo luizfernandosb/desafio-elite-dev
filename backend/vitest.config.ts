@@ -21,7 +21,10 @@ export default defineConfig({
       {
         test: {
           name: 'integration',
-          include: ['src/**/*.integration.test.ts'],
+          // prisma/** -- só o teste do seed (etapa 13), colocado junto do próprio
+          // seed em prisma/seed/ (fora de src/, mesma pasta que prisma.config.ts
+          // aponta em migrations.seed)
+          include: ['src/**/*.integration.test.ts', 'prisma/**/*.integration.test.ts'],
           environment: 'node',
           // integração roda em série -- evita conflito de dados entre testes
           fileParallelism: false,

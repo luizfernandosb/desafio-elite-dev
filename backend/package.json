@@ -17,6 +17,8 @@
     "prisma:migrate": "prisma migrate dev",
     "prisma:deploy": "prisma migrate deploy",
     "db:test:create": "docker compose exec -T db createdb -U postgres ticketdev_test || true",
+    "seed": "prisma db seed",
+    "seed:reset": "tsx prisma/seed/guard-local-db.ts && prisma migrate reset --force",
     "test": "vitest run",
     "test:unit": "vitest run --project unit",
     "test:integration": "vitest run --project integration",
