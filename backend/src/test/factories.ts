@@ -9,7 +9,7 @@ export async function seedUser(role: Role = Role.CUSTOMER) {
 }
 
 export async function seedEventWithSeats(
-  opts: { seatCount?: number; status?: EventStatus } = {},
+  opts: { seatCount?: number; status?: EventStatus; startsAt?: Date; endsAt?: Date | null } = {},
 ) {
   const seatCount = opts.seatCount ?? 10
   const organizer = await seedUser(Role.ORGANIZER)
@@ -21,7 +21,11 @@ export async function seedEventWithSeats(
       title: 'Evento de teste',
       venueName: 'Casa de Shows',
       venueCity: 'São Paulo',
-      startsAt: new Date(Date.now() + 86_400_000),
+      // 24h no futuro por padrão -- fora da janela de portaria de propósito (2h antes
+      // até 6h depois, §4.6.3). Testes de portaria (etapa 10) passam um `startsAt`
+      // dentro da janela explicitamente.
+      startsAt: opts.startsAt ?? new Date(Date.now() + 86_400_000),
+      endsAt: opts.endsAt,
       timezone: 'America/Sao_Paulo',
       priceInCents: 5000,
       status: opts.status ?? EventStatus.PUBLISHED,

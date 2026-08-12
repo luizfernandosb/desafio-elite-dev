@@ -33,6 +33,33 @@ describe('assertValidationWindow', () => {
     const startsAt = new Date(Date.now() - 8 * HOUR)
     expect(() => assertValidationWindow({ startsAt, endsAt: null })).toThrow(/já encerrado/)
   })
+
+  it('2h01 antes de startsAt -- ainda GATE_TOO_EARLY (§ etapa 10)', () => {
+    const startsAt = new Date(Date.now() + 2 * HOUR + 60_000)
+    expect(() => assertValidationWindow({ startsAt, endsAt: null })).toThrow(/ainda não abriu/)
+  })
+
+  it('1h59 antes de startsAt -- já passa (dentro da janela)', () => {
+    const startsAt = new Date(Date.now() + 1 * HOUR + 59 * 60_000)
+    expect(() => assertValidationWindow({ startsAt, endsAt: null })).not.toThrow()
+  })
+
+  it('6h01 depois de startsAt (sem endsAt) -- GATE_CLOSED', () => {
+    const startsAt = new Date(Date.now() - 6 * HOUR - 60_000)
+    expect(() => assertValidationWindow({ startsAt, endsAt: null })).toThrow(/já encerrado/)
+  })
+
+  it('endsAt explícito tem precedência sobre o teto de 6h', () => {
+    // endsAt manda mesmo quando cai ANTES do teto de 6h (evento curto)
+    const startsAt = new Date(Date.now() - 3 * HOUR)
+    const endsAt = new Date(Date.now() - HOUR) // evento já encerrou antes das 6h
+    expect(() => assertValidationWindow({ startsAt, endsAt })).toThrow(/já encerrado/)
+
+    // e mesmo quando cai DEPOIS do teto de 6h (evento longo) -- endsAt ainda abre a janela
+    const startsAt2 = new Date(Date.now() - 7 * HOUR)
+    const endsAt2 = new Date(Date.now() + HOUR) // evento longo, ainda não acabou
+    expect(() => assertValidationWindow({ startsAt: startsAt2, endsAt: endsAt2 })).not.toThrow()
+  })
 })
 
 describe('computeShareExpiresAt', () => {

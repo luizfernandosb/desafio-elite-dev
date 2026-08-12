@@ -84,11 +84,12 @@ model User {
   createdAt     DateTime @default(now()) @db.Timestamptz(3)
   updatedAt     DateTime @updatedAt @db.Timestamptz(3)
 
-  events        Event[]         @relation("EventOrganizer")
-  orders        Order[]
-  seatHolds     SeatHold[]
-  refreshTokens RefreshToken[]
-  validations   ValidationLog[] @relation("GateOperator")
+  events           Event[]         @relation("EventOrganizer")
+  orders           Order[]
+  seatHolds        SeatHold[]
+  refreshTokens    RefreshToken[]
+  validations      ValidationLog[] @relation("GateOperator")
+  ticketsValidated Ticket[]        @relation("TicketValidator")
 }
 
 model RefreshToken {
@@ -235,9 +236,10 @@ model Ticket {
   validatedById  String?
   createdAt      DateTime     @default(now()) @db.Timestamptz(3)
 
-  order Order @relation(fields: [orderId], references: [id])
-  event Event @relation(fields: [eventId], references: [id])
-  seat  Seat? @relation(fields: [seatId], references: [id])
+  order       Order @relation(fields: [orderId], references: [id])
+  event       Event @relation(fields: [eventId], references: [id])
+  seat        Seat? @relation(fields: [seatId], references: [id])
+  validatedBy User? @relation("TicketValidator", fields: [validatedById], references: [id])
 
   @@index([eventId, status])
   @@index([orderId])
