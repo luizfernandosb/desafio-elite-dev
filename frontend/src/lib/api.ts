@@ -20,15 +20,28 @@ export class ApiError extends Error {
   readonly code: string
   readonly status: number
   readonly requestId?: string
+  // campos extra que alguns erros carregam, espalhados no corpo (não aninhados sob
+  // `details`) -- espelha `AppError.details` do back (`shared/errors.ts`), que o
+  // `errorHandler` serializa como `{ code, message, ...err.details }`. Ex.:
+  // `takenSeatIds` em `SEAT_TAKEN` (etapa 06). `code`/`message`/`requestId` nunca
+  // aparecem aqui, já viraram campos próprios da classe.
+  readonly details?: Record<string, unknown>
 
   // sem parameter properties (`public readonly code: string` no construtor) --
   // `erasableSyntaxOnly` do tsconfig proíbe qualquer sintaxe de classe que precise
   // gerar código além de apagar tipos, e parameter properties geram `this.code = code`
-  constructor(code: string, message: string, status: number, requestId?: string) {
+  constructor(
+    code: string,
+    message: string,
+    status: number,
+    requestId?: string,
+    details?: Record<string, unknown>,
+  ) {
     super(message)
     this.code = code
     this.status = status
     this.requestId = requestId
+    this.details = details
   }
 }
 
@@ -106,12 +119,26 @@ interface ErrorBody {
   code: string
   message: string
   requestId?: string
+  [key: string]: unknown
 }
 
-async function parseErrorBody(res: Response): Promise<ErrorBody> {
+interface ParsedError {
+  code: string
+  message: string
+  requestId?: string
+  details?: Record<string, unknown>
+}
+
+async function parseErrorBody(res: Response): Promise<ParsedError> {
   try {
     const body = (await res.json()) as Partial<ErrorBody>
-    return { code: body.code ?? 'UNKNOWN_ERROR', message: body.message ?? res.statusText, requestId: body.requestId }
+    const { code, message, requestId, ...details } = body
+    return {
+      code: code ?? 'UNKNOWN_ERROR',
+      message: message ?? res.statusText,
+      requestId: requestId as string | undefined,
+      details: Object.keys(details).length > 0 ? details : undefined,
+    }
   } catch {
     return { code: 'UNKNOWN_ERROR', message: res.statusText || 'Erro desconhecido' }
   }
@@ -147,12 +174,12 @@ async function apiFetch<T>(path: string, options: RequestOptions, isRetry = fals
     // acabou, não é mais um problema de token momentaneamente velho
     notifySessionExpired()
     const error = await parseErrorBody(res)
-    throw new ApiError(error.code, error.message, res.status, error.requestId)
+    throw new ApiError(error.code, error.message, res.status, error.requestId, error.details)
   }
 
   if (!res.ok) {
     const error = await parseErrorBody(res)
-    throw new ApiError(error.code, error.message, res.status, error.requestId)
+    throw new ApiError(error.code, error.message, res.status, error.requestId, error.details)
   }
 
   if (res.status === 204) return undefined as T

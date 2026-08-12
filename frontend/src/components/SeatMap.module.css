@@ -26,22 +26,27 @@
   color: var(--text-secondary);
 }
 
-/* célula menor que --tap-target (§5.1.1) de propósito -- exceção documentada na
-   própria etapa 06 do plano: uma sala de 26x40 não cabe na tela com alvo de 44px,
-   e o gesto aqui é apontar/clicar, não tocar um alvo isolado em movimento. */
+/* Alvo visual de 28px, menor que --tap-target (§5.1.1) de propósito -- exceção
+   documentada na própria etapa 06: uma sala de 26x40 não cabe na tela com alvo de
+   44px reais, e o gesto aqui é apontar/clicar, não tocar um alvo isolado em
+   movimento. A área de TOQUE ainda chega perto de 44px via `padding` (abaixo) sem
+   distorcer o desenho da sala -- só o miolo visual (bordas, cor) fica em 28px. */
 .seat {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
   width: 28px;
   height: 28px;
+  padding: 8px; /* infla a área de toque em telas por ponteiro grosso sem crescer o desenho */
+  background-clip: content-box;
+  box-sizing: content-box;
   flex-shrink: 0;
-  border: 1px solid var(--border);
+  border: 1.5px solid var(--primary);
   border-radius: var(--radius-sm);
-  background: var(--surface-1);
-  color: var(--text-secondary);
+  background-color: var(--surface-0);
+  color: var(--text-primary);
   font-size: 0.6875rem;
-  padding: 0;
   cursor: default;
 }
 
@@ -51,34 +56,75 @@
 }
 
 .clickable:hover {
-  border-color: var(--primary);
   transform: scale(1.08);
 }
 
-.free {
-  background: var(--surface-1);
-  color: var(--text-secondary);
+.seat[aria-disabled='true'] {
+  cursor: not-allowed;
 }
 
+/* Held/selecionado/vendido nunca dependem só da cor (§5.1.2, daltonismo) -- cada um
+   soma um estilo de borda E um glifo (`::after`) que sobrevive a uma simulação de
+   protanopia/deuteranopia; o número do assento continua visível (identificação
+   precisa por quem enxerga bem), o glifo é o reforço redundante no canto. */
 .held {
-  background: var(--warning);
-  border-color: var(--warning);
+  background-color: var(--primary-tint);
+  border-style: dashed;
+}
+
+.held::after {
+  content: '·';
+  position: absolute;
+  bottom: 6px;
+  right: 7px;
+  font-size: 14px;
+  line-height: 1;
+  color: var(--primary);
+}
+
+.selected {
+  background-color: var(--primary);
+  border-color: var(--primary);
+  color: #fff;
+}
+
+.selected::after {
+  content: '✓';
+  position: absolute;
+  bottom: 7px;
+  right: 6px;
+  font-size: 9px;
+  line-height: 1;
   color: #fff;
 }
 
 .sold {
-  background: var(--text-secondary);
-  border-color: var(--text-secondary);
-  color: var(--surface-0);
+  background-color: var(--surface-1);
+  border-color: var(--border);
+  color: var(--text-secondary);
 }
 
-/* acessível nunca depende só da cor -- a diferença some no daltonismo (§5.1.1);
-   o aria-label do próprio botão já diz "acessível" para quem usa leitor de tela,
-   e a borda tracejada é o reforço visual para quem enxerga cor normalmente. */
-.accessible {
-  border-style: dashed;
-  border-color: var(--primary);
-  border-width: 2px;
+.sold::after {
+  content: '✕';
+  position: absolute;
+  bottom: 7px;
+  right: 6px;
+  font-size: 9px;
+  line-height: 1;
+  color: var(--text-secondary);
+}
+
+/* acessível é um FATO do layout da sala, ortogonal a status/seleção -- marcador
+   próprio (canto oposto ao glifo de estado) pra nunca se sobrepor visualmente */
+.accessible::before {
+  content: '';
+  position: absolute;
+  top: 5px;
+  left: 5px;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--primary-dark);
 }
 
 .legend {
@@ -103,25 +149,25 @@
   width: 12px;
   height: 12px;
   border-radius: var(--radius-sm);
-  border: 1px solid var(--border);
-}
-
-.swatch.free {
-  background: var(--surface-1);
+  border: 1.5px solid var(--primary);
 }
 
 .swatch.held {
-  background: var(--warning);
-  border-color: var(--warning);
+  background: var(--primary-tint);
+  border-style: dashed;
+}
+
+.swatch.selected {
+  background: var(--primary);
 }
 
 .swatch.sold {
-  background: var(--text-secondary);
-  border-color: var(--text-secondary);
+  background: var(--surface-1);
+  border-color: var(--border);
 }
 
 .swatch.accessible {
-  background: var(--surface-1);
-  border-style: dashed;
-  border-color: var(--primary);
+  background: var(--surface-0);
+  border-style: dotted;
+  border-color: var(--primary-dark);
 }

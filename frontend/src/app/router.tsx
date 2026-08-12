@@ -45,7 +45,6 @@ export const router = createBrowserRouter([
       // que só uma fração de quem acessa o site chega a baixar
       { index: true, element: <CatalogPage /> },
       { path: 'eventos/:id', element: <EventDetailPage /> },
-      { path: 'eventos/:id/assentos', element: <PlaceholderPage title="Mapa de assentos" etapa="etapa 06" /> },
 
       {
         path: 'checkout/:orderId',
@@ -66,6 +65,17 @@ export const router = createBrowserRouter([
         children: [
           { path: 'ingressos', element: <PlaceholderPage title="Meus ingressos" etapa="etapa 09" /> },
           { path: 'ingressos/:id', element: <PlaceholderPage title="Ingresso" etapa="etapa 09" /> },
+
+          {
+            // escolher assentos exige conta (§ etapa 05, decidido no CTA de
+            // EventDetailPage: só o clique de "Escolher assentos" força login, ver
+            // evento continua público) -- só clientes de fato criam hold no back
+            // (`requireRole(Role.CUSTOMER)`, seat-hold.routes.ts), papel errado vira
+            // FORBIDDEN tratado como qualquer outro erro de hold (etapa 06)
+            path: 'eventos/:id/assentos',
+            lazy: () =>
+              import('../features/reserva/pages/SeatSelectionPage').then((m) => ({ Component: m.default })),
+          },
 
           {
             // painel completo do organizador (busca no TMDb, wizard de criação,

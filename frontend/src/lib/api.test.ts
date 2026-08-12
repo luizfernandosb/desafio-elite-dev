@@ -25,6 +25,32 @@ describe('api -- erro tipado (§5.5.4)', () => {
     })
   })
 
+  it('campos extra do corpo do erro (ex.: takenSeatIds de SEAT_TAKEN, etapa 06) viram `details`', async () => {
+    server.use(
+      http.post(`${API}/probe`, () =>
+        HttpResponse.json(
+          { code: 'SEAT_TAKEN', message: 'Assento já reservado', takenSeatIds: ['seat-1', 'seat-2'] },
+          { status: 409 },
+        ),
+      ),
+    )
+
+    await expect(api.post('/probe')).rejects.toMatchObject({
+      code: 'SEAT_TAKEN',
+      details: { takenSeatIds: ['seat-1', 'seat-2'] },
+    })
+  })
+
+  it('erro sem campos extra além de code/message/requestId -- `details` fica undefined, não um objeto vazio', async () => {
+    server.use(
+      http.get(`${API}/probe`, () =>
+        HttpResponse.json({ code: 'VALIDATION_ERROR', message: 'Dados inválidos' }, { status: 400 }),
+      ),
+    )
+
+    await expect(api.get('/probe')).rejects.toMatchObject({ details: undefined })
+  })
+
   it('guarda o requestId de um 500 para a tela de falha mostrar (§5.5.7)', async () => {
     server.use(
       http.get(`${API}/probe`, () =>
