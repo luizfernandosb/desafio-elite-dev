@@ -1,54 +1,16 @@
-import { randomUUID } from 'node:crypto'
 import supertest from 'supertest'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { app } from '../../app'
 import { env } from '../../config/env'
-import { stripe } from '../../lib/stripe'
-import { prisma } from '../../lib/prisma'
 import { Role } from '../../../generated/prisma/enums'
 import { signAccessToken } from '../auth/token.service'
 import { cleanDatabase } from '../../test/setup'
-import { seedEventWithSeats, seedUser } from '../../test/factories'
+import { seedPaidTicket, seedUser } from '../../test/factories'
 
-function signWebhook(type: string, paymentIntentId: string) {
-  const payload = JSON.stringify({
-    id: `evt_${randomUUID()}`,
-    object: 'event',
-    type,
-    data: { object: { id: paymentIntentId, object: 'payment_intent' } },
-  })
-  const signature = stripe.webhooks.generateTestHeaderString({ payload, secret: env.STRIPE_WEBHOOK_SECRET })
-  return { payload, signature }
-}
-
-async function issueTicket() {
-  const { event, seats } = await seedEventWithSeats({ seatCount: 1 })
-  const customer = await seedUser(Role.CUSTOMER)
-  const token = signAccessToken({ sub: customer.id, role: Role.CUSTOMER })
-
-  const holdExpiresAt = new Date(Date.now() + 600_000)
-  const hold = await prisma.seatHold.create({
-    data: { eventId: event.id, seatId: seats[0]!.id, userId: customer.id, expiresAt: holdExpiresAt },
-  })
-  await prisma.seatState.update({ where: { seatId: seats[0]!.id }, data: { status: 'HELD', expiresAt: holdExpiresAt } })
-
-  const created = await supertest(app)
-    .post('/api/v1/orders')
-    .set('Authorization', `Bearer ${token}`)
-    .set('Idempotency-Key', randomUUID())
-    .send({ eventId: event.id, holdIds: [hold.id] })
-
-  const order = created.body.order as { stripePaymentIntentId: string }
-  const { payload, signature } = signWebhook('payment_intent.succeeded', order.stripePaymentIntentId)
-  await supertest(app)
-    .post('/api/v1/stripe/webhook')
-    .set('Content-Type', 'application/json')
-    .set('Stripe-Signature', signature)
-    .send(payload)
-
-  const ticket = await prisma.ticket.findFirstOrThrow({ where: { eventId: event.id } })
-  return { event, seat: seats[0]!, customer, token, ticket }
-}
+// alias local -- as chamadas abaixo já dependiam do nome `issueTicket`, e o formato
+// que `seedPaidTicket` devolve ({ event, seat, ticket, token, ... }) já é o que este
+// arquivo sempre esperou
+const issueTicket = seedPaidTicket
 
 describe('POST /api/v1/tickets/:id/share', () => {
   beforeEach(cleanDatabase)
@@ -90,6 +52,18 @@ describe('POST /api/v1/tickets/:id/share', () => {
     const { ticket } = await issueTicket()
     const res = await supertest(app).post(`/api/v1/tickets/${ticket.id}/share`)
     expect(res.status).toBe(401)
+  })
+
+  it('403 -- organizador não gera link de compartilhamento (rota é só CUSTOMER)', async () => {
+    const { ticket } = await issueTicket()
+    const organizer = await seedUser(Role.ORGANIZER)
+    const organizerToken = signAccessToken({ sub: organizer.id, role: Role.ORGANIZER })
+
+    const res = await supertest(app)
+      .post(`/api/v1/tickets/${ticket.id}/share`)
+      .set('Authorization', `Bearer ${organizerToken}`)
+
+    expect(res.status).toBe(403)
   })
 })
 

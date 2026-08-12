@@ -1,6 +1,11 @@
 import { randomUUID } from 'node:crypto'
+import supertest from 'supertest'
+import { app } from '../app'
+import { env } from '../config/env'
 import { EventStatus, Role } from '../../generated/prisma/enums'
+import { stripe } from '../lib/stripe'
 import { prisma } from '../lib/prisma'
+import { signAccessToken } from '../modules/auth/token.service'
 
 export async function seedUser(role: Role = Role.CUSTOMER) {
   return prisma.user.create({
@@ -43,4 +48,82 @@ export async function seedEventWithSeats(
   })
 
   return { organizer, event, seats }
+}
+
+// Assina um webhook do Stripe do mesmo jeito que o Stripe de verdade assinaria --
+// reaproveitado por qualquer teste que precise simular `payment_intent.succeeded`
+// (ou outro evento) chegando em `POST /stripe/webhook` (etapa 07).
+export function signWebhook(type: string, paymentIntentId: string) {
+  const payload = JSON.stringify({
+    id: `evt_${randomUUID()}`,
+    object: 'event',
+    type,
+    data: { object: { id: paymentIntentId, object: 'payment_intent' } },
+  })
+  const signature = stripe.webhooks.generateTestHeaderString({ payload, secret: env.STRIPE_WEBHOOK_SECRET })
+  return { payload, signature }
+}
+
+// Compõe seedEventWithSeats -> seedUser -> o fluxo real de compra (hold -> POST
+// /orders -> webhook do Stripe assinado) até existir um Ticket ACTIVE de verdade --
+// nunca um insert direto de Ticket no banco, que pularia a emissão real do QR (etapa
+// 08) e a transição PENDING -> PAID do pedido (etapa 07). Qualquer teste de
+// integração que precise de "um ingresso já pago" reaproveita esta factory em vez de
+// duplicar o fluxo (era o caso de gate/ticket/share antes desta etapa).
+export async function seedPaidTicket(opts: { seatCount?: number; startsAt?: Date; endsAt?: Date | null } = {}) {
+  const seatCount = opts.seatCount ?? 1
+  const { organizer, event, seats } = await seedEventWithSeats({
+    seatCount,
+    startsAt: opts.startsAt,
+    endsAt: opts.endsAt,
+  })
+  const customer = await seedUser(Role.CUSTOMER)
+  const token = signAccessToken({ sub: customer.id, role: Role.CUSTOMER })
+
+  const holds = await Promise.all(
+    seats.map(async (seat) => {
+      const hold = await prisma.seatHold.create({
+        data: { eventId: event.id, seatId: seat.id, userId: customer.id, expiresAt: new Date(Date.now() + 600_000) },
+      })
+      await prisma.seatState.update({
+        where: { seatId: seat.id },
+        data: { status: 'HELD', expiresAt: hold.expiresAt },
+      })
+      return hold
+    }),
+  )
+
+  const created = await supertest(app)
+    .post('/api/v1/orders')
+    .set('Authorization', `Bearer ${token}`)
+    .set('Idempotency-Key', randomUUID())
+    .send({ eventId: event.id, holdIds: holds.map((h) => h.id) })
+  if (created.status !== 201) {
+    throw new Error(`seedPaidTicket: POST /orders falhou -- ${created.status} ${JSON.stringify(created.body)}`)
+  }
+
+  const order = created.body.order as { id: string; stripePaymentIntentId: string }
+  const { payload, signature } = signWebhook('payment_intent.succeeded', order.stripePaymentIntentId)
+  const webhookRes = await supertest(app)
+    .post('/api/v1/stripe/webhook')
+    .set('Content-Type', 'application/json')
+    .set('Stripe-Signature', signature)
+    .send(payload)
+  if (webhookRes.status !== 200) {
+    throw new Error(`seedPaidTicket: webhook falhou -- ${webhookRes.status} ${JSON.stringify(webhookRes.body)}`)
+  }
+
+  const tickets = await prisma.ticket.findMany({ where: { orderId: order.id }, orderBy: { createdAt: 'asc' } })
+
+  return {
+    organizer,
+    event,
+    seats,
+    tickets,
+    ticket: tickets[0]!,
+    seat: seats[0]!,
+    customer,
+    token,
+    orderId: order.id,
+  }
 }

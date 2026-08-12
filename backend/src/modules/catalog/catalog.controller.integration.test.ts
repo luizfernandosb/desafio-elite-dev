@@ -4,12 +4,13 @@ import { app } from '../../app'
 import { Role } from '../../../generated/prisma/enums'
 import { signAccessToken } from '../auth/token.service'
 import { cleanDatabase } from '../../test/setup'
+import { bypassLoopbackOnly } from '../../test/msw/on-unhandled-request'
 import { server } from '../../test/msw/server'
 
-// 'bypass', não 'error': este arquivo mistura supertest (loopback local, precisa
-// passar sem ser interceptado) com o mock do TMDb (precisa ser interceptado) --
-// ver comentário em test/msw/server.ts
-beforeAll(() => server.listen({ onUnhandledRequest: 'bypass' }))
+// bypassLoopbackOnly, não 'bypass' puro nem 'error' puro: este arquivo mistura supertest
+// (loopback local, precisa passar sem ser interceptado) com o mock do TMDb (precisa ser
+// interceptado) -- ver comentário em test/msw/on-unhandled-request.ts
+beforeAll(() => server.listen({ onUnhandledRequest: bypassLoopbackOnly }))
 afterEach(() => server.resetHandlers())
 afterAll(() => server.close())
 

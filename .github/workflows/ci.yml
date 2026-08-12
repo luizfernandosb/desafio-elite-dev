@@ -33,8 +33,12 @@ jobs:
       JWT_ACCESS_SECRET: ci-access-secret-32-characters-xx
       JWT_REFRESH_SECRET: ci-refresh-secret-32-characters-xx
       JWT_QR_SECRET: ci-qr-secret-32-characters-minimum-x
-      STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY_TEST }}
-      STRIPE_WEBHOOK_SECRET: ${{ secrets.STRIPE_WEBHOOK_SECRET_TEST }}
+      # placeholder, não secret do repositório: FakePaymentProvider é o único provider
+      # de pagamento em uso (orders.routes.ts) e o webhook é assinado localmente pelo
+      # próprio teste (stripe.webhooks.generateTestHeaderString) -- nenhuma chamada sai
+      # para api.stripe.com, então nenhuma chave real precisa existir aqui (§7.10.6).
+      STRIPE_SECRET_KEY: sk_test_placeholder
+      STRIPE_WEBHOOK_SECRET: whsec_test_placeholder
       SUPABASE_URL: https://ci-placeholder.supabase.co
       SUPABASE_SERVICE_ROLE: ci-placeholder-service-role-key
       TMDB_API_KEY: msw-placeholder
@@ -49,6 +53,11 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          # histórico completo -- check:conventions varre `git log --all` procurando
+          # chave da Stripe já commitada (Anexo A); um clone raso (depth 1, o padrão)
+          # deixaria essa checagem sempre "limpa" mesmo que algo tivesse sido commitado
+          fetch-depth: 0
 
       - uses: actions/setup-node@v4
         with:
@@ -64,6 +73,12 @@ jobs:
 
       - name: Lint
         run: npm run lint
+
+      - name: Convenções (Anexo A)
+        run: npm run check:conventions
+
+      - name: Auditoria de dependências
+        run: npm audit --audit-level=high
 
       - name: Migrations
         run: npm run prisma:deploy

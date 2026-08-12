@@ -7,12 +7,13 @@ import { signAccessToken } from '../auth/token.service'
 import { cleanDatabase } from '../../test/setup'
 import { seedEventWithSeats, seedUser } from '../../test/factories'
 import { JPEG_FIXTURE, PNG_FIXTURE, SVG_FIXTURE, TEXT_FIXTURE } from '../../test/fixtures/images'
+import { bypassLoopbackOnly } from '../../test/msw/on-unhandled-request'
 import { server } from '../../test/msw/server'
 import { removedStorageKeys } from '../../test/msw/storage-handlers'
 
-// 'bypass', não 'error': mistura supertest (loopback local) com o mock do Supabase
-// Storage (precisa ser interceptado) -- mesmo raciocínio do catalog.controller (etapa 04)
-beforeAll(() => server.listen({ onUnhandledRequest: 'bypass' }))
+// bypassLoopbackOnly, não 'bypass' puro: mistura supertest (loopback local) com o mock
+// do Supabase Storage (precisa ser interceptado) -- ver test/msw/on-unhandled-request.ts
+beforeAll(() => server.listen({ onUnhandledRequest: bypassLoopbackOnly }))
 afterEach(() => {
   server.resetHandlers()
   removedStorageKeys.length = 0

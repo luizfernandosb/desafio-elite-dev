@@ -1,63 +1,20 @@
-import { randomUUID } from 'node:crypto'
 import supertest from 'supertest'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { app } from '../../app'
-import { env } from '../../config/env'
-import { stripe } from '../../lib/stripe'
 import { prisma } from '../../lib/prisma'
 import { Role } from '../../../generated/prisma/enums'
 import { signAccessToken } from '../auth/token.service'
 import { cleanDatabase } from '../../test/setup'
-import { seedEventWithSeats, seedUser } from '../../test/factories'
+import { seedPaidTicket, seedUser } from '../../test/factories'
 import { generateTicketCode } from '../tickets/qr.service'
-
-function signWebhook(type: string, paymentIntentId: string) {
-  const payload = JSON.stringify({
-    id: `evt_${randomUUID()}`,
-    object: 'event',
-    type,
-    data: { object: { id: paymentIntentId, object: 'payment_intent' } },
-  })
-  const signature = stripe.webhooks.generateTestHeaderString({ payload, secret: env.STRIPE_WEBHOOK_SECRET })
-  return { payload, signature }
-}
 
 async function issueTicket() {
   // dentro da janela de portaria (2h antes até 6h depois, §4.6.3) -- o padrão da
   // factory é 24h no futuro, de propósito fora da janela para outros módulos
-  const { event, seats } = await seedEventWithSeats({
-    seatCount: 1,
-    startsAt: new Date(Date.now() - 30 * 60_000),
-  })
-  const customer = await seedUser(Role.CUSTOMER)
-  const customerToken = signAccessToken({ sub: customer.id, role: Role.CUSTOMER })
-
-  const holdExpiresAt = new Date(Date.now() + 600_000)
-  const hold = await prisma.seatHold.create({
-    data: { eventId: event.id, seatId: seats[0]!.id, userId: customer.id, expiresAt: holdExpiresAt },
-  })
-  await prisma.seatState.update({ where: { seatId: seats[0]!.id }, data: { status: 'HELD', expiresAt: holdExpiresAt } })
-
-  const created = await supertest(app)
-    .post('/api/v1/orders')
-    .set('Authorization', `Bearer ${customerToken}`)
-    .set('Idempotency-Key', randomUUID())
-    .send({ eventId: event.id, holdIds: [hold.id] })
-
-  const order = created.body.order as { stripePaymentIntentId: string }
-  const { payload, signature } = signWebhook('payment_intent.succeeded', order.stripePaymentIntentId)
-  await supertest(app)
-    .post('/api/v1/stripe/webhook')
-    .set('Content-Type', 'application/json')
-    .set('Stripe-Signature', signature)
-    .send(payload)
-
-  const ticket = await prisma.ticket.findFirstOrThrow({ where: { eventId: event.id } })
-
+  const paid = await seedPaidTicket({ startsAt: new Date(Date.now() - 30 * 60_000) })
   const gate = await seedUser(Role.GATE)
   const gateToken = signAccessToken({ sub: gate.id, role: Role.GATE })
-
-  return { event, seat: seats[0]!, ticket, gateToken }
+  return { ...paid, gateToken }
 }
 
 async function getCode(ticketId: string, ownerToken: string) {

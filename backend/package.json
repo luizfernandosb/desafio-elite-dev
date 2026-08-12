@@ -23,6 +23,7 @@
     "test:unit": "vitest run --project unit",
     "test:integration": "vitest run --project integration",
     "test:watch": "vitest",
+    "check:conventions": "bash scripts/check-conventions.sh",
     "postinstall": "prisma generate"
   },
   "keywords": [],

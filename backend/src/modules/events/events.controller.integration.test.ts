@@ -5,9 +5,13 @@ import { Role } from '../../../generated/prisma/enums'
 import { prisma } from '../../lib/prisma'
 import { signAccessToken } from '../auth/token.service'
 import { cleanDatabase } from '../../test/setup'
+import { bypassLoopbackOnly } from '../../test/msw/on-unhandled-request'
 import { server } from '../../test/msw/server'
 
-beforeAll(() => server.listen({ onUnhandledRequest: 'bypass' }))
+// bypassLoopbackOnly, não 'bypass' puro: mistura supertest (loopback) com o mock do
+// TMDb (catalogService, reaproveitado por EventsService na criação de evento) --
+// ver test/msw/on-unhandled-request.ts
+beforeAll(() => server.listen({ onUnhandledRequest: bypassLoopbackOnly }))
 afterEach(() => server.resetHandlers())
 afterAll(() => server.close())
 
@@ -203,6 +207,40 @@ describe('PATCH /api/v1/events/:id', () => {
       .send({ synopsis: 'Tentativa' })
 
     expect(res.status).toBe(403)
+  })
+
+  it('403 -- cliente não pode editar evento (papel errado, não ownership)', async () => {
+    const organizer = await createUserAndToken(Role.ORGANIZER, 'org')
+    const customer = await createUserAndToken(Role.CUSTOMER, 'cli')
+    const created = await createEvent(organizer.token)
+
+    const res = await supertest(app)
+      .patch(`/api/v1/events/${created.body.id}`)
+      .set('Authorization', `Bearer ${customer.token}`)
+      .send({ synopsis: 'Tentativa' })
+
+    expect(res.status).toBe(403)
+  })
+
+  it('401 -- sem token', async () => {
+    const { token } = await createUserAndToken(Role.ORGANIZER, 'org')
+    const created = await createEvent(token)
+
+    const res = await supertest(app).patch(`/api/v1/events/${created.body.id}`).send({ synopsis: 'Tentativa' })
+
+    expect(res.status).toBe(401)
+  })
+
+  it('400 -- corpo vazio, nada para atualizar', async () => {
+    const { token } = await createUserAndToken(Role.ORGANIZER, 'org')
+    const created = await createEvent(token)
+
+    const res = await supertest(app)
+      .patch(`/api/v1/events/${created.body.id}`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({})
+
+    expect(res.status).toBe(400)
   })
 
   it('409 EVENT_HAS_SALES -- priceInCents bloqueado depois da primeira venda', async () => {
