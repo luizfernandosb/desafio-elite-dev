@@ -20,6 +20,9 @@ export const loggerOptions: pino.LoggerOptions = {
       'body.cardNumber',
       '*.passwordHash',
       '*.stripePaymentIntentId',
+      '*.code', // código do QR em claro -- nunca deveria ser logado (§7.6, etapa 08)
+      '*.shareToken',
+      'req.params.shareToken', // o path da rota pública inclui o token (etapa 09)
     ],
     censor: '[REDACTED]',
   },

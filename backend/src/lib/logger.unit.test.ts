@@ -35,4 +35,22 @@ describe('logger redact', () => {
     expect(output).not.toContain('$argon2id$hash')
     expect(output).toContain('[REDACTED]')
   })
+
+  it('nunca deixa passar o código do QR em claro (§7.6, etapa 08)', () => {
+    const output = captureLogLine((testLogger) => {
+      testLogger.warn({ msg: 'ticket issued', ticket: { code: 'TKT1.payload.assinatura' } })
+    })
+
+    expect(output).not.toContain('TKT1.payload.assinatura')
+    expect(output).toContain('[REDACTED]')
+  })
+
+  it('nunca deixa passar o shareToken em claro (§7.7, etapa 09)', () => {
+    const output = captureLogLine((testLogger) => {
+      testLogger.warn({ msg: 'share link created', ticket: { shareToken: 'token-secreto-de-32-bytes' } })
+    })
+
+    expect(output).not.toContain('token-secreto-de-32-bytes')
+    expect(output).toContain('[REDACTED]')
+  })
 })
