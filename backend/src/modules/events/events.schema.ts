@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { CatalogSource, EventStatus } from '../../../generated/prisma/enums'
+import { CatalogSource, EventAudio, EventFormat, EventStatus, RoomType } from '../../../generated/prisma/enums'
 import { BRAZIL_UF_CODES } from '../../shared/brazil-states'
 import { paginationSchema } from '../../shared/pagination'
 import { isValidSeatLabel, MAX_ROWS, MAX_SEATS_PER_ROW } from './seatmap.service'
@@ -41,6 +41,11 @@ export const createEventSchema = {
       timezone: timezoneSchema,
       priceInCents: z.number().int().nonnegative(),
       layout: layoutSchema,
+      format: z.enum(EventFormat).default(EventFormat.TWO_D),
+      audio: z.enum(EventAudio).default(EventAudio.DUBBED),
+      roomType: z.enum(RoomType).default(RoomType.STANDARD),
+      // percentual sobre priceInCents, só quando roomType = VIP (ver refine abaixo)
+      vipSurchargePercent: z.coerce.number().int().min(1).max(300).optional(),
       // nenhum campo `organizerId`, `type` ou `status` aqui -- vêm do servidor (§7.5)
     })
     .refine((data) => data.startsAt.getTime() > Date.now(), {
@@ -50,6 +55,10 @@ export const createEventSchema = {
     .refine((data) => !data.endsAt || data.endsAt > data.startsAt, {
       message: 'endsAt deve ser depois de startsAt',
       path: ['endsAt'],
+    })
+    .refine((data) => data.roomType !== RoomType.VIP || data.vipSurchargePercent !== undefined, {
+      message: 'Informe a porcentagem adicional da Sala VIP',
+      path: ['vipSurchargePercent'],
     }),
 }
 
@@ -71,6 +80,10 @@ export const updateEventSchema = {
       endsAt: z.coerce.date().optional(),
       timezone: timezoneSchema.optional(),
       priceInCents: z.number().int().nonnegative().optional(),
+      format: z.enum(EventFormat).optional(),
+      audio: z.enum(EventAudio).optional(),
+      roomType: z.enum(RoomType).optional(),
+      vipSurchargePercent: z.coerce.number().int().min(1).max(300).nullable().optional(),
     })
     .refine((data) => Object.keys(data).length > 0, 'Nada para atualizar'),
 }

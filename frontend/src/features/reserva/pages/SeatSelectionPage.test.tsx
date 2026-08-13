@@ -39,6 +39,9 @@ function makeEvent(overrides: Record<string, unknown> = {}) {
     startsAt: new Date(Date.now() + 1000 * 60 * 60 * 24).toISOString(),
     timezone: 'America/Sao_Paulo',
     priceInCents: 3200,
+    format: 'TWO_D',
+    audio: 'DUBBED',
+    roomType: 'STANDARD',
     currency: 'BRL',
     ...overrides,
   }
@@ -57,7 +60,7 @@ function makeSeatmap() {
         ],
       },
     ],
-    meta: { generatedAt: new Date().toISOString(), priceInCents: 3200, currency: 'BRL' },
+    meta: { generatedAt: new Date().toISOString(), priceInCents: 3200, effectivePriceInCents: 3200, currency: 'BRL' },
   }
 }
 
@@ -168,7 +171,7 @@ describe('SeatSelectionPage', () => {
           })),
         },
       ],
-      meta: { generatedAt: new Date().toISOString(), priceInCents: 3200, currency: 'BRL' },
+      meta: { generatedAt: new Date().toISOString(), priceInCents: 3200, effectivePriceInCents: 3200, currency: 'BRL' },
     }
     let holdCalls = 0
     server.use(

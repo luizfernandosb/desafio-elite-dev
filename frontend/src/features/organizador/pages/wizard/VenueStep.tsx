@@ -1,10 +1,10 @@
 import { zodResolver } from '@hookform/resolvers/zod'
-import { useForm } from 'react-hook-form'
+import { useFieldArray, useForm } from 'react-hook-form'
 import { Button, Input } from '../../../../components'
 import { CityPicker } from '../../components/CityPicker'
 import { StatePicker } from '../../components/StatePicker'
 import { TimezonePicker } from '../../components/TimezonePicker'
-import { venueStepSchema, type VenueStepValues } from '../../schemas'
+import { MAX_SLOTS, venueStepSchema, type VenueStepValues } from '../../schemas'
 import styles from './steps.module.css'
 
 interface VenueStepProps {
@@ -17,6 +17,7 @@ export function VenueStep({ defaultValues, onBack, onNext }: VenueStepProps) {
   const {
     register,
     handleSubmit,
+    control,
     watch,
     setValue,
     formState: { errors },
@@ -26,11 +27,17 @@ export function VenueStep({ defaultValues, onBack, onNext }: VenueStepProps) {
     mode: 'onBlur',
   })
 
-  const date = watch('date')
-  const time = watch('time')
+  // Primeiro uso de `useFieldArray` no projeto -- não há um padrão prévio de "lista
+  // de campos repetível" pra espelhar aqui, mas o resto (zodResolver, setValue pros
+  // pickers controlados) segue exatamente a mesma convenção do resto do formulário.
+  const { fields, append, remove } = useFieldArray({ control, name: 'slots' })
+
   const timezone = watch('timezone')
   const venueState = watch('venueState')
   const venueCity = watch('venueCity')
+  // fuso é um só pro lote inteiro -- a confirmação mostra o primeiro horário como
+  // representante (§ "Sessão às... no horário de..."), não um resumo por linha
+  const firstSlot = watch('slots.0')
 
   return (
     <form className={styles.step} onSubmit={handleSubmit(onNext)} noValidate>
@@ -51,11 +58,50 @@ export function VenueStep({ defaultValues, onBack, onNext }: VenueStepProps) {
         onChange={(value) => setValue('venueCity', value, { shouldValidate: true })}
         error={errors.venueCity?.message}
       />
-      <div className={styles.row}>
-        {/* data e hora separadas -- um datetime-local só é ruim no celular (§ etapa 04) */}
-        <Input label="Data" type="date" error={errors.date?.message} {...register('date')} />
-        <Input label="Horário" type="time" error={errors.time?.message} {...register('time')} />
+
+      <div className={styles.slots}>
+        <p className={styles.slotsLabel}>Horários (uma sessão por horário)</p>
+        {fields.map((field, index) => (
+          <div key={field.id} className={styles.slotRow}>
+            {/* data e hora separadas -- um datetime-local só é ruim no celular (§ etapa 04) */}
+            <Input
+              label="Data"
+              type="date"
+              error={errors.slots?.[index]?.date?.message}
+              {...register(`slots.${index}.date`)}
+            />
+            <Input
+              label="Horário"
+              type="time"
+              error={errors.slots?.[index]?.time?.message}
+              {...register(`slots.${index}.time`)}
+            />
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => remove(index)}
+              disabled={fields.length <= 1}
+              aria-label={`Remover horário ${index + 1}`}
+            >
+              Remover
+            </Button>
+          </div>
+        ))}
+        {errors.slots?.root?.message && (
+          <p role="alert" className={styles.formError}>
+            {errors.slots.root.message}
+          </p>
+        )}
+        <Button
+          type="button"
+          variant="secondary"
+          onClick={() => append({ date: '', time: '' })}
+          disabled={fields.length >= MAX_SLOTS}
+        >
+          Adicionar outro horário
+        </Button>
       </div>
+
       {/* Select do Radix não tem `register()` (sem <input> nativo por trás) -- valor
           escrito no form via `setValue`, mesmo padrão de qualquer campo controlado
           fora do DOM nativo (§ exploração da etapa 04, "Select ... via Controller ou
@@ -63,8 +109,8 @@ export function VenueStep({ defaultValues, onBack, onNext }: VenueStepProps) {
       <TimezonePicker
         value={timezone}
         onChange={(value) => setValue('timezone', value, { shouldValidate: true })}
-        date={date}
-        time={time}
+        date={firstSlot?.date ?? ''}
+        time={firstSlot?.time ?? ''}
         error={errors.timezone?.message}
       />
       <div className={styles.actions}>

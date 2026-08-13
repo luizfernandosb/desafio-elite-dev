@@ -32,6 +32,9 @@ const CREATE_DTO = {
   timezone: 'America/Sao_Paulo',
   priceInCents: 3200,
   layout: { rows: 8, seatsPerRow: 12 },
+  format: 'TWO_D' as never,
+  audio: 'DUBBED' as never,
+  roomType: 'STANDARD' as never,
 }
 
 function makeEvent(overrides: Partial<Record<string, unknown>> = {}) {

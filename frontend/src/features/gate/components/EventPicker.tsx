@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { Select, Skeleton } from '../../../components'
 import { catalogKeys, listPublicEvents } from '../../catalog/api'
 import { formatEventDate } from '../../../shared/date'
+import { sessionAttributeBadges } from '../../../shared/session-attributes'
 import styles from './EventPicker.module.css'
 
 interface EventPickerProps {
@@ -27,7 +28,9 @@ export function EventPicker({ value, onChange }: EventPickerProps) {
 
   const options = (data?.data ?? []).map((event) => ({
     value: event.id,
-    label: `${event.title} - ${formatEventDate(event.startsAt, event.timezone)}`,
+    // formato/áudio/sala no rótulo -- ajuda o operador a distinguir duas sessões do
+    // mesmo filme em horários diferentes (ex.: 19h 2D Dublado x 19h 3D Legendado VIP)
+    label: `${event.title} - ${formatEventDate(event.startsAt, event.timezone)} (${sessionAttributeBadges(event).join(', ')})`,
   }))
 
   return (

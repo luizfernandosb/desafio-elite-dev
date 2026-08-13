@@ -4,6 +4,7 @@ import { Link, useSearchParams } from 'react-router-dom'
 import { Badge, Button, Card, EmptyState, ErrorState, Pagination, Skeleton, Tabs } from '../../../components'
 import { formatEventDate } from '../../../shared/date'
 import { formatMoney } from '../../../shared/money'
+import { sessionAttributeBadges } from '../../../shared/session-attributes'
 import { useQueryState } from '../../../shared/useQueryState'
 import { listOrganizerEvents, organizadorKeys, type EventStatus, type OrganizerEvent } from '../api'
 import { eventStatusLabel } from '../status'
@@ -31,7 +32,7 @@ function EventRow({ event }: { event: OrganizerEvent }) {
   // capacidade total exigiria o seatmap de cada evento (uma chamada a mais por linha),
   // então "vendidos/total" do plano vira só "vendidos" aqui; ver mapa de assentos na
   // própria página de gestão para a ocupação completa.
-  const revenue = event.priceInCents * sold
+  const revenue = event.effectivePriceInCents * sold
 
   return (
     <Link to={`/organizador/eventos/${event.id}`} className={styles.rowLink}>
@@ -40,7 +41,12 @@ function EventRow({ event }: { event: OrganizerEvent }) {
           <p className={styles.rowTitle}>{event.title}</p>
           <p className={styles.rowMeta}>{formatEventDate(event.startsAt, event.timezone)}</p>
         </div>
-        <Badge>{eventStatusLabel(event.status)}</Badge>
+        <div className={styles.rowBadges}>
+          <Badge>{eventStatusLabel(event.status)}</Badge>
+          {sessionAttributeBadges(event).map((label) => (
+            <Badge key={label}>{label}</Badge>
+          ))}
+        </div>
         <p className={styles.rowStat}>{sold} vendido{sold === 1 ? '' : 's'}</p>
         <p className={styles.rowStat}>{formatMoney(revenue)}</p>
       </Card>

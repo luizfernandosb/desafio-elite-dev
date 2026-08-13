@@ -40,6 +40,13 @@
   color: var(--text-secondary);
 }
 
+.badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  margin-top: var(--space-2);
+}
+
 .seat {
   margin: 0;
   font-weight: 500;

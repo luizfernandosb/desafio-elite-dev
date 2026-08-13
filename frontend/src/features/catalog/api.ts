@@ -1,4 +1,5 @@
 import { api, type Paginated } from '../../lib/api'
+import type { SessionAudio, SessionFormat, SessionRoomType } from '../../shared/session-attributes'
 
 export type PublicEventStatus = 'PUBLISHED' | 'CANCELLED'
 
@@ -17,11 +18,15 @@ export interface PublicEvent {
   genres: string[]
   venueName: string
   venueCity: string
+  format: SessionFormat
+  audio: SessionAudio
+  roomType: SessionRoomType
   status: PublicEventStatus
   startsAt: string
   endsAt?: string
   timezone: string
   priceInCents: number
+  effectivePriceInCents: number
   currency: string
   organizer: { id: string; name: string }
   _count: { tickets: number }
@@ -37,7 +42,7 @@ export interface PublicSeatmapRow {
 export interface PublicSeatmap {
   eventId: string
   rows: PublicSeatmapRow[]
-  meta: { generatedAt: string; priceInCents: number; currency: string }
+  meta: { generatedAt: string; priceInCents: number; effectivePriceInCents: number; currency: string }
 }
 
 export interface ListPublicEventsParams {

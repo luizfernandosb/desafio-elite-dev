@@ -52,6 +52,9 @@ export function issueTicket(input: {
       timezone: input.timezone,
       venueName: input.venueName,
       venueCity: input.venueCity,
+      format: 'TWO_D',
+      audio: 'DUBBED',
+      roomType: 'STANDARD',
     },
     seat: seatFromId(input.seatId),
     // "código de validação" só precisa ser único e opaco aqui -- o back real

@@ -1,19 +1,19 @@
 import { useEffect, useState } from 'react'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useQueryClient } from '@tanstack/react-query'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useToast } from '../../../components'
-import { createEvent, organizadorKeys, type CatalogItem, type CreateEventInput } from '../api'
+import { createEvent, organizadorKeys, type CatalogItem, type CreateEventInput, type OrganizerEvent } from '../api'
 import { eventErrorMessage } from '../error-messages'
-import type { RoomStepValues, VenueStepValues } from '../schemas'
+import type { RoomStepValues, SlotValues, VenueStepValues } from '../schemas'
 import { zonedWallTimeToUtcDate } from '../timezones'
 import { MovieStep } from './wizard/MovieStep'
 import { RoomStep } from './wizard/RoomStep'
 import { VenueStep } from './wizard/VenueStep'
 import styles from './CreateEventWizard.module.css'
 
-// Chave única de rascunho -- um organizador só cria uma sessão de cada vez (não há
-// suporte a múltiplos rascunhos concorrentes, e o plano só pede sobreviver a um F5
-// acidental, não abas paralelas).
+// Chave única de rascunho -- um organizador só cria sessões de um lote de cada vez
+// (não há suporte a múltiplos rascunhos concorrentes, e o plano só pede sobreviver a
+// um F5 acidental, não abas paralelas).
 const DRAFT_KEY = 'organizador:novo-evento:rascunho'
 
 interface WizardDraft {
@@ -21,8 +21,8 @@ interface WizardDraft {
   venueName: string
   venueCity: string
   venueState: string
-  date: string
-  time: string
+  // um item por sessão a criar -- mesmo filme/local/sala/preço, horários diferentes
+  slots: SlotValues[]
   timezone: string
   // '' até o passo 3 ser preenchido pela primeira vez -- os inputs usam
   // `valueAsNumber` (RoomStep.tsx), então um valor de verdade já chega como number.
@@ -30,6 +30,10 @@ interface WizardDraft {
   seatsPerRow: number | ''
   priceInReais: number | ''
   accessibleSeats: string[]
+  format: RoomStepValues['format']
+  audio: RoomStepValues['audio']
+  roomType: RoomStepValues['roomType']
+  vipSurchargePercent: number | undefined
 }
 
 const EMPTY_DRAFT: WizardDraft = {
@@ -37,13 +41,16 @@ const EMPTY_DRAFT: WizardDraft = {
   venueName: '',
   venueCity: '',
   venueState: '',
-  date: '',
-  time: '',
+  slots: [{ date: '', time: '' }],
   timezone: 'America/Sao_Paulo',
   rows: '',
   seatsPerRow: '',
   priceInReais: '',
   accessibleSeats: [],
+  format: 'TWO_D',
+  audio: 'DUBBED',
+  roomType: 'STANDARD',
+  vipSurchargePercent: undefined,
 }
 
 function loadDraft(): WizardDraft {
@@ -64,15 +71,42 @@ function clampStep(value: string | null): WizardStep {
   return 1
 }
 
+function buildCreateInput(draft: WizardDraft, roomValues: RoomStepValues, slot: SlotValues): CreateEventInput {
+  const startsAt = zonedWallTimeToUtcDate(slot.date, slot.time, draft.timezone)
+  return {
+    source: draft.movie!.source,
+    externalId: draft.movie!.externalId,
+    venueName: draft.venueName,
+    venueCity: draft.venueCity,
+    venueState: draft.venueState,
+    startsAt: startsAt.toISOString(),
+    timezone: draft.timezone,
+    priceInCents: Math.round(roomValues.priceInReais * 100),
+    format: roomValues.format,
+    audio: roomValues.audio,
+    roomType: roomValues.roomType,
+    vipSurchargePercent: roomValues.roomType === 'VIP' ? roomValues.vipSurchargePercent : undefined,
+    layout: {
+      rows: roomValues.rows,
+      seatsPerRow: roomValues.seatsPerRow,
+      accessibleSeats: draft.accessibleSeats,
+    },
+  }
+}
+
 // Assistente de criação em três passos (§ etapa 04): um formulário único com todos
 // os campos é onde o organizador desiste. Estado na URL (`?passo=`) -- voltar no
 // navegador funciona, recarregar não perde o passo; rascunho em sessionStorage (não é
 // dado sensível) sobrevive a um F5 acidental. Só o passo 3 dispara `POST /events` --
-// criar no passo 1 encheria o painel de rascunhos abandonados.
+// um por horário do passo 2 (mesmo filme/local/sala/preço), nunca um endpoint de lote:
+// o cache de catálogo (back, `catalog.service.ts`) já evita N buscas repetidas do
+// mesmo filme no TMDb, então N chamadas sequenciais ao endpoint de sempre bastam.
 export default function CreateEventWizard() {
   const [searchParams, setSearchParams] = useSearchParams()
   const step = clampStep(searchParams.get('passo'))
   const [draft, setDraft] = useState<WizardDraft>(loadDraft)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [submitError, setSubmitError] = useState<string | null>(null)
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const { showToast } = useToast()
@@ -93,20 +127,6 @@ export default function CreateEventWizard() {
     }
   }, [step, draft.movie, setSearchParams])
 
-  const {
-    mutateAsync: submitEvent,
-    isPending,
-    error: submitErrorRaw,
-  } = useMutation({
-    mutationFn: (input: CreateEventInput) => createEvent(input),
-    onSuccess: (event) => {
-      sessionStorage.removeItem(DRAFT_KEY)
-      void queryClient.invalidateQueries({ queryKey: organizadorKeys.events() })
-      showToast('Sessão criada como rascunho.', 'success')
-      navigate(`/organizador/eventos/${event.id}`, { replace: true })
-    },
-  })
-
   function goToStep(next: WizardStep) {
     setSearchParams((prev) => {
       const params = new URLSearchParams(prev)
@@ -125,31 +145,65 @@ export default function CreateEventWizard() {
   }
 
   async function handleRoomSubmit(values: RoomStepValues) {
-    setDraft((prev) => ({ ...prev, rows: values.rows, seatsPerRow: values.seatsPerRow, priceInReais: values.priceInReais }))
+    const nextDraft = {
+      ...draft,
+      rows: values.rows,
+      seatsPerRow: values.seatsPerRow,
+      priceInReais: values.priceInReais,
+      format: values.format,
+      audio: values.audio,
+      roomType: values.roomType,
+      vipSurchargePercent: values.vipSurchargePercent,
+    }
+    setDraft(nextDraft)
 
-    if (!draft.movie) {
+    if (!nextDraft.movie) {
       goToStep(1)
       return
     }
 
-    const startsAt = zonedWallTimeToUtcDate(draft.date, draft.time, draft.timezone)
-    const input: CreateEventInput = {
-      source: draft.movie.source,
-      externalId: draft.movie.externalId,
-      venueName: draft.venueName,
-      venueCity: draft.venueCity,
-      venueState: draft.venueState,
-      startsAt: startsAt.toISOString(),
-      timezone: draft.timezone,
-      priceInCents: Math.round(values.priceInReais * 100),
-      layout: {
-        rows: values.rows,
-        seatsPerRow: values.seatsPerRow,
-        accessibleSeats: draft.accessibleSeats,
-      },
+    setIsSubmitting(true)
+    setSubmitError(null)
+
+    const attemptedSlots = nextDraft.slots
+    const results = await Promise.allSettled(
+      attemptedSlots.map((slot) => createEvent(buildCreateInput(nextDraft, values, slot))),
+    )
+
+    setIsSubmitting(false)
+    void queryClient.invalidateQueries({ queryKey: organizadorKeys.events() })
+
+    const succeeded = results.filter(
+      (result): result is PromiseFulfilledResult<OrganizerEvent> => result.status === 'fulfilled',
+    )
+    const failedSlots = attemptedSlots.filter((_, index) => results[index]?.status === 'rejected')
+
+    if (failedSlots.length === 0) {
+      sessionStorage.removeItem(DRAFT_KEY)
+      showToast(
+        succeeded.length === 1 ? 'Sessão criada como rascunho.' : `${succeeded.length} sessões criadas como rascunho.`,
+        'success',
+      )
+      navigate(
+        succeeded.length === 1 ? `/organizador/eventos/${succeeded[0]!.value.id}` : '/organizador?status=DRAFT',
+        { replace: true },
+      )
+      return
     }
 
-    await submitEvent(input)
+    // Falha parcial ou total: mantém no rascunho só os horários que NÃO foram criados
+    // -- um novo clique tenta de novo só esses, nunca recria os que já deram certo.
+    setDraft((prev) => ({ ...prev, slots: failedSlots }))
+
+    const firstRejection = results.find(
+      (result): result is PromiseRejectedResult => result.status === 'rejected',
+    )
+    const reason = firstRejection ? eventErrorMessage(firstRejection.reason) : 'Não foi possível criar as sessões.'
+    setSubmitError(
+      succeeded.length > 0
+        ? `${succeeded.length} de ${attemptedSlots.length} sessões criadas. ${failedSlots.length} falharam: ${reason} Corrija e tente de novo -- só os horários que falharam continuam no formulário.`
+        : `Não foi possível criar a sessão: ${reason}`,
+    )
   }
 
   function toggleAccessibleSeat(label: string) {
@@ -180,8 +234,7 @@ export default function CreateEventWizard() {
             venueName: draft.venueName,
             venueCity: draft.venueCity,
             venueState: draft.venueState,
-            date: draft.date,
-            time: draft.time,
+            slots: draft.slots,
             timezone: draft.timezone,
           }}
           onBack={() => goToStep(1)}
@@ -195,19 +248,23 @@ export default function CreateEventWizard() {
             rows: draft.rows === '' ? undefined : draft.rows,
             seatsPerRow: draft.seatsPerRow === '' ? undefined : draft.seatsPerRow,
             priceInReais: draft.priceInReais === '' ? undefined : draft.priceInReais,
+            format: draft.format,
+            audio: draft.audio,
+            roomType: draft.roomType,
+            vipSurchargePercent: draft.vipSurchargePercent,
           }}
           movie={draft.movie}
           venueName={draft.venueName}
           venueCity={draft.venueCity}
           venueState={draft.venueState}
-          startsAtUtc={zonedWallTimeToUtcDate(draft.date, draft.time, draft.timezone)}
+          startsAtUtcList={draft.slots.map((slot) => zonedWallTimeToUtcDate(slot.date, slot.time, draft.timezone))}
           timezone={draft.timezone}
           accessibleSeats={draft.accessibleSeats}
           onToggleAccessibleSeat={toggleAccessibleSeat}
           onBack={() => goToStep(2)}
           onSubmit={handleRoomSubmit}
-          submitting={isPending}
-          submitError={submitErrorRaw ? eventErrorMessage(submitErrorRaw) : null}
+          submitting={isSubmitting}
+          submitError={submitError}
         />
       )}
     </div>

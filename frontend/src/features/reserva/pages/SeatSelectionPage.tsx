@@ -2,8 +2,9 @@ import { useMemo, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { ErrorBoundary } from '../../../app/ErrorBoundary'
-import { EmptyState, ErrorState, SeatMap, Skeleton, type SeatMapRow } from '../../../components'
+import { Badge, EmptyState, ErrorState, SeatMap, Skeleton, type SeatMapRow } from '../../../components'
 import { formatEventDate } from '../../../shared/date'
+import { sessionAttributeBadges } from '../../../shared/session-attributes'
 import { applySeatPatch } from '../applySeatPatch'
 import { getEvent, getSeatmap, reservaKeys, type Seatmap, type SeatHold } from '../api'
 import { ConnectionBadge } from '../components/ConnectionBadge'
@@ -185,6 +186,11 @@ export default function SeatSelectionPage() {
         <p className={styles.meta}>
           {formatEventDate(event.startsAt, event.timezone)} - {event.venueName}, {event.venueCity}
         </p>
+        <div className={styles.badges}>
+          {sessionAttributeBadges(event).map((label) => (
+            <Badge key={label}>{label}</Badge>
+          ))}
+        </div>
       </div>
 
       <div className={styles.mapHeader}>
@@ -212,7 +218,7 @@ export default function SeatSelectionPage() {
 
       <SelectionBar
         selectedLabels={selectedLabels}
-        priceInCents={seatmap.meta.priceInCents}
+        effectivePriceInCents={seatmap.meta.effectivePriceInCents}
         currency={seatmap.meta.currency}
         onReserve={handleReserve}
         isReserving={isReserving}

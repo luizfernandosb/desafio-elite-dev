@@ -1,6 +1,6 @@
 import { randomBytes } from 'node:crypto'
 import type { Logger } from 'pino'
-import { TicketStatus } from '../../../generated/prisma/enums'
+import { EventAudio, EventFormat, RoomType, TicketStatus } from '../../../generated/prisma/enums'
 import { env } from '../../config/env'
 import { prisma } from '../../lib/prisma'
 import { computeShareExpiresAt } from '../../shared/date'
@@ -20,6 +20,9 @@ interface EventSummary {
   timezone: string
   venueName: string
   venueCity: string
+  format: EventFormat
+  audio: EventAudio
+  roomType: RoomType
 }
 
 interface TicketRecord {
@@ -53,7 +56,10 @@ export interface ShareLink {
 // payload minimo viável (§7.7) -- de propósito, sem ticketId, userId, orderId, nome,
 // e-mail ou qualquer outro dado de quem comprou
 export interface SharedTicketView {
-  event: Pick<EventSummary, 'title' | 'imageUrl' | 'startsAt' | 'timezone' | 'venueName' | 'venueCity'>
+  event: Pick<
+    EventSummary,
+    'title' | 'imageUrl' | 'startsAt' | 'timezone' | 'venueName' | 'venueCity' | 'format' | 'audio' | 'roomType'
+  >
   seat: TicketRecord['seat']
   ticket: { code: string; status: TicketStatus }
 }
@@ -154,6 +160,9 @@ export class TicketService {
         timezone: ticket.event.timezone,
         venueName: ticket.event.venueName,
         venueCity: ticket.event.venueCity,
+        format: ticket.event.format,
+        audio: ticket.event.audio,
+        roomType: ticket.event.roomType,
       },
       seat: ticket.seat,
       ticket: { code, status: ticket.status },

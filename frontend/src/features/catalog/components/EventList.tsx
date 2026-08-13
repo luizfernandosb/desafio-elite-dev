@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { Button, EmptyState, ErrorState, EventCard, Pagination, Skeleton } from '../../../components'
 import { formatEventDate } from '../../../shared/date'
 import { formatMoney } from '../../../shared/money'
+import { sessionAttributeBadges } from '../../../shared/session-attributes'
 import { catalogKeys, listPublicEvents } from '../api'
 import styles from './EventList.module.css'
 
@@ -78,8 +79,8 @@ export function EventList({ q, from, to, page, onPageChange, onClearFilters }: E
               title={event.title}
               subtitle={formatEventDate(event.startsAt, event.timezone)}
               meta={`${event.venueName} - ${event.venueCity}`}
-              priceLabel={`A partir de ${formatMoney(event.priceInCents, event.currency)}`}
-              badge={event.genres[0]}
+              priceLabel={`A partir de ${formatMoney(event.effectivePriceInCents, event.currency)}`}
+              badge={[event.genres[0], ...sessionAttributeBadges(event)].filter(Boolean).join(' · ')}
               eager={index < EAGER_CARD_COUNT}
             />
           </Link>

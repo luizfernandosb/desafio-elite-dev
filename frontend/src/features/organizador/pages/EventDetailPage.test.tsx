@@ -24,6 +24,10 @@ function makeEvent(overrides: Partial<OrganizerEvent> = {}): OrganizerEvent {
     venueName: 'Cinemark Shopping',
     venueCity: 'São Paulo',
     venueState: 'SP',
+    format: 'TWO_D',
+    audio: 'DUBBED',
+    roomType: 'STANDARD',
+    vipSurchargePercent: null,
     customImageKey: 'events/evt-99/capa.png',
     imageUrl: 'https://storage.example/evt-99/capa.png',
     type: 'SEATED',
@@ -31,6 +35,7 @@ function makeEvent(overrides: Partial<OrganizerEvent> = {}): OrganizerEvent {
     startsAt: '2026-09-20T23:00:00.000Z',
     timezone: 'America/Sao_Paulo',
     priceInCents: 3200,
+    effectivePriceInCents: 3200,
     currency: 'BRL',
     createdAt: '2026-08-01T00:00:00.000Z',
     updatedAt: '2026-08-01T00:00:00.000Z',
@@ -43,7 +48,7 @@ function makeEvent(overrides: Partial<OrganizerEvent> = {}): OrganizerEvent {
 const SEATMAP: EventSeatmap = {
   eventId: 'evt-99',
   rows: [],
-  meta: { generatedAt: '2026-08-01T00:00:00.000Z', priceInCents: 3200, currency: 'BRL' },
+  meta: { generatedAt: '2026-08-01T00:00:00.000Z', priceInCents: 3200, effectivePriceInCents: 3200, currency: 'BRL' },
 }
 
 function renderPage(event: OrganizerEvent) {

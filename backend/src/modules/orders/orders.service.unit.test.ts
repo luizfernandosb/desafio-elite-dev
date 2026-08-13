@@ -1,6 +1,6 @@
 import type { Logger } from 'pino'
 import { describe, expect, it, vi } from 'vitest'
-import { EventStatus, OrderStatus } from '../../../generated/prisma/enums'
+import { EventStatus, OrderStatus, RoomType } from '../../../generated/prisma/enums'
 import { ForbiddenError, InvalidTransitionError, NotFoundError } from '../../shared/errors'
 import type { EventsRepository } from '../events/events.repository'
 import type { SeatHoldRepository } from '../seats/seat-hold.repository'
@@ -87,12 +87,13 @@ function makeMockFakePaymentProvider(): PaymentProvider {
 
 function makeService(overrides: {
   ordersRepo?: OrdersRepository
+  eventsRepo?: EventsRepository
   holdRepo?: SeatHoldRepository
   paymentProvider?: PaymentProvider
 } = {}) {
   return new OrdersService(
     overrides.ordersRepo ?? makeMockOrdersRepo(),
-    makeMockEventsRepo(),
+    overrides.eventsRepo ?? makeMockEventsRepo(),
     overrides.holdRepo ?? makeMockHoldRepo(),
     makeMockSeatStateRepo(),
     makeMockTicketRepo(),
@@ -119,6 +120,32 @@ describe('OrdersService.createOrder', () => {
       'fake-tx',
       expect.objectContaining({ amountInCents: 12000 }), // 6000 x 2
     )
+  })
+
+  it('sessão Sala VIP -- amountInCents usa o preço com o adicional percentual, não o preço base', async () => {
+    const holdRepo = makeMockHoldRepo()
+    vi.mocked(holdRepo.findManyOwnedActive).mockResolvedValue([
+      { id: 'hold-1', seatId: 'seat-1' },
+      { id: 'hold-2', seatId: 'seat-2' },
+    ] as never)
+    const ordersRepo = makeMockOrdersRepo()
+    vi.mocked(ordersRepo.create).mockResolvedValue(makeOrder({ amountInCents: 14400 }) as never)
+    const eventsRepo = {
+      findById: vi.fn().mockResolvedValue({
+        id: 'event-1',
+        status: EventStatus.PUBLISHED,
+        priceInCents: 6000,
+        currency: 'BRL',
+        roomType: RoomType.VIP,
+        vipSurchargePercent: 20,
+      }),
+    } as unknown as EventsRepository
+
+    const service = makeService({ ordersRepo, eventsRepo, holdRepo })
+    await service.createOrder('user-1', { eventId: 'event-1', holdIds: ['hold-1', 'hold-2'] }, 'idem-1', log)
+
+    // 6000 + 20% = 7200 por assento x 2 = 14400 (não 12000, que seria o preço base)
+    expect(ordersRepo.create).toHaveBeenCalledWith('fake-tx', expect.objectContaining({ amountInCents: 14400 }))
   })
 
   it('409 HOLD_EXPIRED -- algum hold não está ativo/não é do usuário/não é do evento', async () => {

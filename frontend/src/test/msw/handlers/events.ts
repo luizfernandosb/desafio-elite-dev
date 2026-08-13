@@ -21,11 +21,16 @@ function makeOrganizerEvent(overrides: Partial<OrganizerEvent> = {}): OrganizerE
     venueName: 'Cine Elite',
     venueCity: 'São Paulo',
     venueState: 'SP',
+    format: 'TWO_D',
+    audio: 'DUBBED',
+    roomType: 'STANDARD',
+    vipSurchargePercent: null,
     type: 'SEATED',
     status: 'DRAFT',
     startsAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
     timezone: 'America/Sao_Paulo',
     priceInCents: 3200,
+    effectivePriceInCents: 3200,
     currency: 'BRL',
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
@@ -52,11 +57,8 @@ export const eventsHandlers = [
   ),
 
   http.post(`${API}/events`, async ({ request }) => {
-    const body = (await request.json()) as { venueName: string; venueCity: string; venueState: string }
-    return HttpResponse.json(
-      makeOrganizerEvent({ venueName: body.venueName, venueCity: body.venueCity, venueState: body.venueState }),
-      { status: 201 },
-    )
+    const body = (await request.json()) as Partial<OrganizerEvent>
+    return HttpResponse.json(makeOrganizerEvent(body), { status: 201 })
   }),
 
   http.patch(`${API}/events/:id`, async ({ params, request }) => {

@@ -1,5 +1,5 @@
 import type { PrismaClient } from '../../generated/prisma/client'
-import { CatalogSource, EventStatus, EventType } from '../../generated/prisma/enums'
+import { CatalogSource, EventAudio, EventFormat, EventStatus, EventType, RoomType } from '../../generated/prisma/enums'
 import { generateSeats, type GeneratedSeat } from '../../src/modules/events/seatmap.service'
 
 const DAY_MS = 24 * 60 * 60 * 1000
@@ -61,6 +61,10 @@ interface EnsureEventInput {
   endsAt: Date | null
   priceInCents: number
   layout?: { rows: number; seatsPerRow: number }
+  format?: EventFormat
+  audio?: EventAudio
+  roomType?: RoomType
+  vipSurchargePercent?: number | null
 }
 
 interface EnsuredEvent {
@@ -105,6 +109,10 @@ async function ensureEvent(prisma: PrismaClient, input: EnsureEventInput): Promi
       endsAt: input.endsAt,
       timezone: 'America/Sao_Paulo',
       priceInCents: input.priceInCents,
+      format: input.format ?? EventFormat.TWO_D,
+      audio: input.audio ?? EventAudio.DUBBED,
+      roomType: input.roomType ?? RoomType.STANDARD,
+      vipSurchargePercent: input.roomType === RoomType.VIP ? input.vipSurchargePercent ?? null : null,
     },
   })
 
@@ -149,6 +157,10 @@ export async function seedEvents(prisma: PrismaClient, organizerId: string): Pro
     endsAt: null,
     priceInCents: 3200,
     layout: { rows: 8, seatsPerRow: 12 }, // 96 assentos
+    format: EventFormat.THREE_D,
+    audio: EventAudio.SUBTITLED,
+    roomType: RoomType.VIP,
+    vipSurchargePercent: 20,
   })
 
   const eventB = await ensureEvent(prisma, {

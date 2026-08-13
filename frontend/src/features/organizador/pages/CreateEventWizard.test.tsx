@@ -55,6 +55,11 @@ async function selectMovieAndAdvance(user: ReturnType<typeof userEvent.setup>) {
   await user.click(screen.getByRole('button', { name: 'Continuar' }))
 }
 
+function futureDateParts2() {
+  const future = new Date(Date.now() + 1000 * 60 * 60 * 24 * 31)
+  return { date: future.toISOString().slice(0, 10), time: '21:30' }
+}
+
 async function fillVenueStepAndAdvance(user: ReturnType<typeof userEvent.setup>) {
   const { date, time } = futureDateParts()
   await user.type(await screen.findByLabelText('Local'), 'Cinemark Shopping')
@@ -68,6 +73,32 @@ async function fillVenueStepAndAdvance(user: ReturnType<typeof userEvent.setup>)
 
   fireEvent.change(screen.getByLabelText('Data'), { target: { value: date } })
   fireEvent.change(screen.getByLabelText('Horário'), { target: { value: time } })
+  await user.click(screen.getByRole('button', { name: 'Continuar' }))
+}
+
+// mesmo que `fillVenueStepAndAdvance`, mas adiciona um segundo horário antes de
+// avançar -- usado pelos testes de criação em lote
+async function fillVenueStepWithTwoSlotsAndAdvance(user: ReturnType<typeof userEvent.setup>) {
+  const first = futureDateParts()
+  const second = futureDateParts2()
+  await user.type(await screen.findByLabelText('Local'), 'Cinemark Shopping')
+
+  await user.click(screen.getByLabelText('Estado'))
+  await user.click(await screen.findByRole('option', { name: 'São Paulo' }))
+
+  await waitFor(() => expect(screen.getByLabelText('Cidade')).toBeEnabled())
+  await user.click(screen.getByLabelText('Cidade'))
+  await user.click(await screen.findByRole('option', { name: 'São Paulo' }))
+
+  fireEvent.change(screen.getByLabelText('Data'), { target: { value: first.date } })
+  fireEvent.change(screen.getByLabelText('Horário'), { target: { value: first.time } })
+
+  await user.click(screen.getByRole('button', { name: 'Adicionar outro horário' }))
+  const dateInputs = screen.getAllByLabelText('Data')
+  const timeInputs = screen.getAllByLabelText('Horário')
+  fireEvent.change(dateInputs[1]!, { target: { value: second.date } })
+  fireEvent.change(timeInputs[1]!, { target: { value: second.time } })
+
   await user.click(screen.getByRole('button', { name: 'Continuar' }))
 }
 
@@ -150,6 +181,67 @@ describe('CreateEventWizard', () => {
       // rascunho (movie + venue/data/hora) foi restaurado do sessionStorage
       expect(await screen.findByLabelText('Fileiras')).toBeInTheDocument()
       expect(screen.getByText(/Duna/)).toBeInTheDocument()
+    },
+    WIZARD_TEST_TIMEOUT,
+  )
+
+  it(
+    'dois horários -- cria uma sessão por horário e navega para Minhas Sessões (Rascunhos)',
+    async () => {
+      const receivedBodies: Record<string, unknown>[] = []
+      server.use(
+        http.post(`${API}/events`, async ({ request }) => {
+          const body = (await request.json()) as Record<string, unknown>
+          receivedBodies.push(body)
+          return HttpResponse.json({ id: `evt-${receivedBodies.length}` }, { status: 201 })
+        }),
+      )
+      const user = userEvent.setup()
+      renderWizard()
+
+      await selectMovieAndAdvance(user)
+      await fillVenueStepWithTwoSlotsAndAdvance(user)
+
+      await user.type(await screen.findByLabelText('Fileiras'), '8')
+      await user.type(screen.getByLabelText('Assentos por fileira'), '12')
+      await user.type(screen.getByLabelText('Preço (R$)'), '32')
+      await user.click(screen.getByRole('button', { name: 'Criar 2 sessões' }))
+
+      await waitFor(() => expect(receivedBodies).toHaveLength(2))
+      expect(receivedBodies[0]).toMatchObject({ format: 'TWO_D', audio: 'DUBBED', roomType: 'STANDARD' })
+      expect(receivedBodies[0]?.startsAt).not.toBe(receivedBodies[1]?.startsAt)
+
+      expect(await screen.findByText('2 sessões criadas como rascunho.')).toBeInTheDocument()
+    },
+    WIZARD_TEST_TIMEOUT,
+  )
+
+  it(
+    'dois horários, um falha -- mantém só o horário que falhou, não recria o que já deu certo',
+    async () => {
+      let calls = 0
+      server.use(
+        http.post(`${API}/events`, async () => {
+          calls += 1
+          if (calls === 1) return HttpResponse.json({ id: 'evt-ok' }, { status: 201 })
+          return HttpResponse.json({ code: 'VALIDATION_ERROR', message: 'Dados inválidos' }, { status: 400 })
+        }),
+      )
+      const user = userEvent.setup()
+      renderWizard()
+
+      await selectMovieAndAdvance(user)
+      await fillVenueStepWithTwoSlotsAndAdvance(user)
+
+      await user.type(await screen.findByLabelText('Fileiras'), '8')
+      await user.type(screen.getByLabelText('Assentos por fileira'), '12')
+      await user.type(screen.getByLabelText('Preço (R$)'), '32')
+      await user.click(screen.getByRole('button', { name: 'Criar 2 sessões' }))
+
+      expect(await screen.findByRole('alert')).toHaveTextContent('1 de 2 sessões criadas')
+      // ainda no passo 3 (não navegou) -- e o botão agora reflete só 1 horário
+      // restante (o que falhou), prova que o rascunho foi cortado para não duplicar
+      expect(await screen.findByRole('button', { name: 'Criar sessão' })).toBeInTheDocument()
     },
     WIZARD_TEST_TIMEOUT,
   )

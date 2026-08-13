@@ -4,6 +4,7 @@ import { Badge, ErrorState, Skeleton } from '../../../components'
 import { useAuth } from '../../auth/useAuth'
 import { formatEventDate } from '../../../shared/date'
 import { formatMoney } from '../../../shared/money'
+import { sessionAttributeBadges } from '../../../shared/session-attributes'
 import { catalogKeys, getPublicEvent, getPublicEventSeatmap } from '../api'
 import styles from './EventDetailPage.module.css'
 
@@ -90,6 +91,9 @@ export default function EventDetailPage() {
       </p>
 
       <div className={styles.badges}>
+        {sessionAttributeBadges(event).map((label) => (
+          <Badge key={label}>{label}</Badge>
+        ))}
         {event.genres.map((genre) => (
           <Badge key={genre}>{genre}</Badge>
         ))}
@@ -98,7 +102,7 @@ export default function EventDetailPage() {
 
       {event.synopsis && <p className={styles.synopsis}>{event.synopsis}</p>}
 
-      <p className={styles.price}>A partir de {formatMoney(event.priceInCents, event.currency)}</p>
+      <p className={styles.price}>A partir de {formatMoney(event.effectivePriceInCents, event.currency)}</p>
 
       {/* prova social discreta (§ etapa 05) -- mesma informação do back, sem
           inventar urgência artificial ("restam só 3!!") quando não é bem assim */}

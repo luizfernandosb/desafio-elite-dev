@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { SeatKind, SeatStatus } from '../../../generated/prisma/enums'
+import { RoomType, SeatKind, SeatStatus } from '../../../generated/prisma/enums'
 import { AppError } from '../../shared/errors'
 import { buildSeatmap, generateSeats, isValidSeatLabel } from './seatmap.service'
 
@@ -49,7 +49,7 @@ describe('isValidSeatLabel', () => {
 })
 
 describe('buildSeatmap', () => {
-  const event = { id: 'event-1', priceInCents: 3200, currency: 'BRL' }
+  const event = { id: 'event-1', priceInCents: 3200, currency: 'BRL', roomType: RoomType.STANDARD, vipSurchargePercent: null }
 
   it('agrupa assentos por fileira, na ordem recebida', () => {
     const seatmap = buildSeatmap(event, [
@@ -64,7 +64,16 @@ describe('buildSeatmap', () => {
                            { id: 's2', number: 2, kind: SeatKind.REGULAR, status: SeatStatus.SOLD }] },
       { row: 'B', seats: [{ id: 's3', number: 1, kind: SeatKind.ACCESSIBLE, status: SeatStatus.FREE }] },
     ])
-    expect(seatmap.meta).toMatchObject({ priceInCents: 3200, currency: 'BRL' })
+    expect(seatmap.meta).toMatchObject({ priceInCents: 3200, effectivePriceInCents: 3200, currency: 'BRL' })
+  })
+
+  it('sala VIP soma o adicional percentual no effectivePriceInCents, sem alterar priceInCents', () => {
+    const vipEvent = { ...event, roomType: RoomType.VIP, vipSurchargePercent: 20 }
+    const seatmap = buildSeatmap(vipEvent, [
+      { id: 's1', row: 'A', number: 1, kind: SeatKind.REGULAR, state: { status: SeatStatus.FREE, expiresAt: null } },
+    ])
+
+    expect(seatmap.meta).toMatchObject({ priceInCents: 3200, effectivePriceInCents: 3840, currency: 'BRL' })
   })
 
   it('trata HELD com expiresAt vencido como FREE (§4.4.3)', () => {

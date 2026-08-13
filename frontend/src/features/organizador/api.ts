@@ -1,4 +1,5 @@
 import { api, type Paginated } from '../../lib/api'
+import type { SessionAudio, SessionFormat, SessionRoomType } from '../../shared/session-attributes'
 
 export type EventStatus = 'DRAFT' | 'PUBLISHED' | 'CANCELLED'
 export type SeatKind = 'REGULAR' | 'ACCESSIBLE' | 'COMPANION'
@@ -49,12 +50,17 @@ export interface OrganizerEvent {
   venueName: string
   venueCity: string
   venueState: string
+  format: SessionFormat
+  audio: SessionAudio
+  roomType: SessionRoomType
+  vipSurchargePercent: number | null
   type: 'SEATED'
   status: EventStatus
   startsAt: string
   endsAt?: string
   timezone: string
   priceInCents: number
+  effectivePriceInCents: number
   currency: string
   createdAt: string
   updatedAt: string
@@ -77,7 +83,7 @@ export interface EventSeatmapRow {
 export interface EventSeatmap {
   eventId: string
   rows: EventSeatmapRow[]
-  meta: { generatedAt: string; priceInCents: number; currency: string }
+  meta: { generatedAt: string; priceInCents: number; effectivePriceInCents: number; currency: string }
 }
 
 export interface CreateEventInput {
@@ -95,6 +101,11 @@ export interface CreateEventInput {
     seatsPerRow: number
     accessibleSeats?: string[]
   }
+  // sem default aqui -- o back já assume 2D/Dublado/Padrão se nada vier (events.schema.ts)
+  format?: SessionFormat
+  audio?: SessionAudio
+  roomType?: SessionRoomType
+  vipSurchargePercent?: number
 }
 
 // campos bloqueados após a primeira venda (SALE_LOCKED_FIELDS no back) já ficam de
@@ -108,6 +119,10 @@ export interface UpdateEventInput {
   endsAt?: string
   timezone?: string
   priceInCents?: number
+  format?: SessionFormat
+  audio?: SessionAudio
+  roomType?: SessionRoomType
+  vipSurchargePercent?: number | null
 }
 
 export interface ListOrganizerEventsParams {

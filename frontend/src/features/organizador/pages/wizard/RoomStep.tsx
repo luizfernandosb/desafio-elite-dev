@@ -1,8 +1,9 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useForm } from 'react-hook-form'
-import { Button, Input, SeatMap, type SeatMapRow } from '../../../../components'
+import { Button, Input, Select, SeatMap, type SeatMapRow } from '../../../../components'
 import { formatEventDate } from '../../../../shared/date'
 import { formatMoney } from '../../../../shared/money'
+import { AUDIO_OPTIONS, FORMAT_OPTIONS, ROOM_TYPE_OPTIONS } from '../../../../shared/session-attributes'
 import type { CatalogItem } from '../../api'
 import { MAX_ROWS, MAX_SEATS_PER_ROW } from '../../room-layout'
 import { roomStepSchema, type RoomStepValues } from '../../schemas'
@@ -14,7 +15,10 @@ interface RoomStepProps {
   venueName: string
   venueCity: string
   venueState: string
-  startsAtUtc: Date
+  // um item por horário do passo anterior -- "Criar sessão" cria uma sessão por
+  // data/hora desta lista, todas com o mesmo filme/local/sala/preço/formato (§ etapa
+  // "múltiplos horários", CreateEventWizard.tsx)
+  startsAtUtcList: Date[]
   timezone: string
   accessibleSeats: string[]
   onToggleAccessibleSeat: (label: string) => void
@@ -46,7 +50,7 @@ export function RoomStep({
   venueName,
   venueCity,
   venueState,
-  startsAtUtc,
+  startsAtUtcList,
   timezone,
   accessibleSeats,
   onToggleAccessibleSeat,
@@ -59,6 +63,7 @@ export function RoomStep({
     register,
     handleSubmit,
     watch,
+    setValue,
     formState: { errors },
   } = useForm<RoomStepValues>({
     resolver: zodResolver(roomStepSchema),
@@ -76,6 +81,12 @@ export function RoomStep({
   const priceInReaisValue = Number.isFinite(rawPriceInReais) ? rawPriceInReais : 0
   const totalSeats = rowsValue > 0 && seatsPerRowValue > 0 ? rowsValue * seatsPerRowValue : 0
   const priceInCents = Math.round(priceInReaisValue * 100)
+  const roomType = watch('roomType')
+  const vipSurchargePercent = watch('vipSurchargePercent')
+  const isVip = roomType === 'VIP'
+  const effectivePriceInCents =
+    isVip && vipSurchargePercent ? Math.round(priceInCents * (1 + vipSurchargePercent / 100)) : priceInCents
+  const sessionCount = startsAtUtcList.length
 
   const previewRows =
     rowsValue > 0 && seatsPerRowValue > 0
@@ -128,6 +139,47 @@ export function RoomStep({
         {...register('priceInReais', { valueAsNumber: true })}
       />
 
+      <div className={styles.row}>
+        <Select
+          label="Formato"
+          options={FORMAT_OPTIONS}
+          value={watch('format')}
+          onValueChange={(value) => setValue('format', value as RoomStepValues['format'], { shouldValidate: true })}
+          error={errors.format?.message}
+        />
+        <Select
+          label="Áudio"
+          options={AUDIO_OPTIONS}
+          value={watch('audio')}
+          onValueChange={(value) => setValue('audio', value as RoomStepValues['audio'], { shouldValidate: true })}
+          error={errors.audio?.message}
+        />
+      </div>
+
+      <Select
+        label="Sala"
+        options={ROOM_TYPE_OPTIONS}
+        value={roomType}
+        onValueChange={(value) => {
+          const nextRoomType = value as RoomStepValues['roomType']
+          setValue('roomType', nextRoomType, { shouldValidate: true, shouldDirty: true })
+          if (nextRoomType !== 'VIP') setValue('vipSurchargePercent', undefined, { shouldValidate: true })
+        }}
+        error={errors.roomType?.message}
+      />
+
+      {isVip && (
+        <Input
+          label="Porcentagem adicional da Sala VIP (%)"
+          type="number"
+          min={1}
+          max={300}
+          hint="Somada ao preço normal só para esta sessão -- ex.: 20 vira preço x 1,20"
+          error={errors.vipSurchargePercent?.message}
+          {...register('vipSurchargePercent', { valueAsNumber: true })}
+        />
+      )}
+
       <div className={styles.summary}>
         <h3>Resumo</h3>
         <dl>
@@ -142,8 +194,12 @@ export function RoomStep({
             </dd>
           </div>
           <div>
-            <dt>Data</dt>
-            <dd>{formatEventDate(startsAtUtc, timezone)}</dd>
+            <dt>{sessionCount === 1 ? 'Data' : `Horários (${sessionCount})`}</dt>
+            <dd>
+              {startsAtUtcList.map((startsAtUtc, index) => (
+                <div key={index}>{formatEventDate(startsAtUtc, timezone)}</div>
+              ))}
+            </dd>
           </div>
           <div>
             <dt>Capacidade</dt>
@@ -151,11 +207,16 @@ export function RoomStep({
           </div>
           <div>
             <dt>Preço</dt>
-            <dd>{formatMoney(priceInCents)}</dd>
+            <dd>
+              {formatMoney(effectivePriceInCents)}
+              {isVip && effectivePriceInCents !== priceInCents && (
+                <> (preço normal {formatMoney(priceInCents)})</>
+              )}
+            </dd>
           </div>
           <div>
-            <dt>Receita potencial</dt>
-            <dd>{formatMoney(priceInCents * totalSeats)}</dd>
+            <dt>Receita potencial{sessionCount > 1 ? ' (todas as sessões)' : ''}</dt>
+            <dd>{formatMoney(effectivePriceInCents * totalSeats * sessionCount)}</dd>
           </div>
         </dl>
       </div>
@@ -165,7 +226,7 @@ export function RoomStep({
           Voltar
         </Button>
         <Button type="submit" loading={submitting}>
-          Criar sessão
+          {sessionCount === 1 ? 'Criar sessão' : `Criar ${sessionCount} sessões`}
         </Button>
       </div>
     </form>

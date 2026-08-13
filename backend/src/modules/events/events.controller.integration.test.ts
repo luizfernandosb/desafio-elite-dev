@@ -114,6 +114,48 @@ describe('POST /api/v1/events', () => {
     const res = await createEvent(token, { layout: { rows: 27, seatsPerRow: 10 } })
     expect(res.status).toBe(400)
   })
+
+  it('201 -- Sala VIP com porcentagem: effectivePriceInCents já vem com o adicional aplicado', async () => {
+    const { token } = await createUserAndToken(Role.ORGANIZER, 'org')
+    const res = await createEvent(token, {
+      priceInCents: 3200,
+      format: 'THREE_D',
+      audio: 'SUBTITLED',
+      roomType: 'VIP',
+      vipSurchargePercent: 25,
+    })
+
+    expect(res.status).toBe(201)
+    expect(res.body).toMatchObject({
+      priceInCents: 3200,
+      effectivePriceInCents: 4000, // 3200 + 25%
+      format: 'THREE_D',
+      audio: 'SUBTITLED',
+      roomType: 'VIP',
+      vipSurchargePercent: 25,
+    })
+  })
+
+  it('400 -- Sala VIP sem informar a porcentagem adicional', async () => {
+    const { token } = await createUserAndToken(Role.ORGANIZER, 'org')
+    const res = await createEvent(token, { roomType: 'VIP' })
+    expect(res.status).toBe(400)
+    expect(res.body.code).toBe('VALIDATION_ERROR')
+  })
+
+  it('201 -- sem os campos novos, usa os defaults (2D, Dublado, Sala Padrão)', async () => {
+    const { token } = await createUserAndToken(Role.ORGANIZER, 'org')
+    const res = await createEvent(token)
+
+    expect(res.status).toBe(201)
+    expect(res.body).toMatchObject({
+      format: 'TWO_D',
+      audio: 'DUBBED',
+      roomType: 'STANDARD',
+      vipSurchargePercent: null,
+      effectivePriceInCents: 3200,
+    })
+  })
 })
 
 describe('GET /api/v1/events', () => {
@@ -242,6 +284,31 @@ describe('PATCH /api/v1/events/:id', () => {
       .send({})
 
     expect(res.status).toBe(400)
+  })
+
+  it('400 -- PATCH roomType para VIP sem informar vipSurchargePercent', async () => {
+    const { token } = await createUserAndToken(Role.ORGANIZER, 'org')
+    const created = await createEvent(token)
+
+    const res = await supertest(app)
+      .patch(`/api/v1/events/${created.body.id}`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ roomType: 'VIP' })
+
+    expect(res.status).toBe(400)
+  })
+
+  it('200 -- PATCH roomType para STANDARD zera vipSurchargePercent que sobrou de quando era VIP', async () => {
+    const { token } = await createUserAndToken(Role.ORGANIZER, 'org')
+    const created = await createEvent(token, { roomType: 'VIP', vipSurchargePercent: 30 })
+
+    const res = await supertest(app)
+      .patch(`/api/v1/events/${created.body.id}`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ roomType: 'STANDARD' })
+
+    expect(res.status).toBe(200)
+    expect(res.body).toMatchObject({ roomType: 'STANDARD', vipSurchargePercent: null, effectivePriceInCents: 3200 })
   })
 
   it('409 EVENT_HAS_SALES -- priceInCents bloqueado depois da primeira venda', async () => {

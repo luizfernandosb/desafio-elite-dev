@@ -1,7 +1,8 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useForm } from 'react-hook-form'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { Button, Input, Textarea, useToast } from '../../../components'
+import { Button, Input, Select, Textarea, useToast } from '../../../components'
+import { AUDIO_OPTIONS, FORMAT_OPTIONS, ROOM_TYPE_OPTIONS } from '../../../shared/session-attributes'
 import { organizadorKeys, updateEvent, type OrganizerEvent, type UpdateEventInput } from '../api'
 import { CityPicker } from '../components/CityPicker'
 import { StatePicker } from '../components/StatePicker'
@@ -66,6 +67,10 @@ export function EventEditForm({ event }: EventEditFormProps) {
       time: toTimeInputValue(event.startsAt, event.timezone),
       timezone: event.timezone,
       priceInReais: event.priceInCents / 100,
+      format: event.format,
+      audio: event.audio,
+      roomType: event.roomType,
+      vipSurchargePercent: event.vipSurchargePercent ?? undefined,
     },
   })
 
@@ -96,6 +101,10 @@ export function EventEditForm({ event }: EventEditFormProps) {
       input.startsAt = zonedWallTimeToUtcDate(values.date, values.time, values.timezone).toISOString()
       input.timezone = values.timezone
       input.priceInCents = Math.round(values.priceInReais * 100)
+      input.format = values.format
+      input.audio = values.audio
+      input.roomType = values.roomType
+      input.vipSurchargePercent = values.roomType === 'VIP' ? values.vipSurchargePercent : null
     }
     await mutateAsync(input)
   }
@@ -105,6 +114,8 @@ export function EventEditForm({ event }: EventEditFormProps) {
   const timezone = watch('timezone')
   const venueState = watch('venueState')
   const venueCity = watch('venueCity')
+  const roomType = watch('roomType')
+  const isVip = roomType === 'VIP'
   const lockedHint = 'Bloqueado: há ingressos vendidos para esta sessão'
 
   return (
@@ -171,6 +182,57 @@ export function EventEditForm({ event }: EventEditFormProps) {
         error={errors.priceInReais?.message}
         {...register('priceInReais', { valueAsNumber: true })}
       />
+
+      <div className={styles.row}>
+        <Select
+          label="Formato"
+          options={FORMAT_OPTIONS}
+          value={watch('format')}
+          onValueChange={(value) =>
+            setValue('format', value as EditEventValues['format'], { shouldValidate: true, shouldDirty: true })
+          }
+          error={errors.format?.message}
+          disabled={hasSales}
+        />
+        <Select
+          label="Áudio"
+          options={AUDIO_OPTIONS}
+          value={watch('audio')}
+          onValueChange={(value) =>
+            setValue('audio', value as EditEventValues['audio'], { shouldValidate: true, shouldDirty: true })
+          }
+          error={errors.audio?.message}
+          disabled={hasSales}
+        />
+      </div>
+
+      <Select
+        label="Sala"
+        options={ROOM_TYPE_OPTIONS}
+        value={roomType}
+        onValueChange={(value) => {
+          const nextRoomType = value as EditEventValues['roomType']
+          setValue('roomType', nextRoomType, { shouldValidate: true, shouldDirty: true })
+          if (nextRoomType !== 'VIP') {
+            setValue('vipSurchargePercent', undefined, { shouldValidate: true, shouldDirty: true })
+          }
+        }}
+        error={errors.roomType?.message}
+        disabled={hasSales}
+      />
+
+      {isVip && (
+        <Input
+          label="Porcentagem adicional da Sala VIP (%)"
+          type="number"
+          min={1}
+          max={300}
+          disabled={hasSales}
+          hint={hasSales ? lockedHint : 'Somada ao preço normal só para esta sessão'}
+          error={errors.vipSurchargePercent?.message}
+          {...register('vipSurchargePercent', { valueAsNumber: true })}
+        />
+      )}
 
       <div className={styles.actions}>
         <Button type="submit" loading={isPending} disabled={!isDirty}>

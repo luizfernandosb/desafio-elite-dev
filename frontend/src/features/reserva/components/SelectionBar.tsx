@@ -6,7 +6,9 @@ import styles from './SelectionBar.module.css'
 
 interface SelectionBarProps {
   selectedLabels: string[]
-  priceInCents: number
+  // preço de verdade (já com o adicional de Sala VIP, se houver) -- nunca o
+  // `priceInCents` base bruto, ver `Seatmap.meta.effectivePriceInCents`
+  effectivePriceInCents: number
   currency: string
   onReserve: () => void
   isReserving: boolean
@@ -22,7 +24,7 @@ interface SelectionBarProps {
 
 export function SelectionBar({
   selectedLabels,
-  priceInCents,
+  effectivePriceInCents,
   currency,
   onReserve,
   isReserving,
@@ -42,7 +44,7 @@ export function SelectionBar({
 
   if (selectedLabels.length === 0) return null
 
-  const total = priceInCents * selectedLabels.length
+  const total = effectivePriceInCents * selectedLabels.length
 
   return (
     <div className={styles.bar} role="region" aria-label="Assentos selecionados">

@@ -1,4 +1,5 @@
 import { api, type Paginated } from '../../lib/api'
+import type { SessionAudio, SessionFormat, SessionRoomType } from '../../shared/session-attributes'
 
 export type TicketStatus = 'ACTIVE' | 'USED' | 'CANCELLED'
 
@@ -11,6 +12,9 @@ export interface TicketEventSummary {
   timezone: string
   venueName: string
   venueCity: string
+  format: SessionFormat
+  audio: SessionAudio
+  roomType: SessionRoomType
 }
 
 export interface TicketSeat {
@@ -42,7 +46,10 @@ export interface ShareLink {
 // payload mínimo da página pública (§7.7) -- sem ticketId, orderId, nome ou e-mail de
 // quem comprou, igual ao que o back devolve (`SharedTicketView`)
 export interface SharedTicketView {
-  event: Pick<TicketEventSummary, 'title' | 'imageUrl' | 'startsAt' | 'timezone' | 'venueName' | 'venueCity'>
+  event: Pick<
+    TicketEventSummary,
+    'title' | 'imageUrl' | 'startsAt' | 'timezone' | 'venueName' | 'venueCity' | 'format' | 'audio' | 'roomType'
+  >
   seat: TicketSeat | null
   ticket: { code: string; status: TicketStatus }
 }

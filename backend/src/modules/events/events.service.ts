@@ -1,5 +1,5 @@
 import type { Logger } from 'pino'
-import { CatalogSource, EventStatus, EventType } from '../../../generated/prisma/enums'
+import { CatalogSource, EventStatus, EventType, RoomType } from '../../../generated/prisma/enums'
 import { prisma } from '../../lib/prisma'
 import { ConflictError, ForbiddenError, NotFoundError, ValidationError } from '../../shared/errors'
 import { paginate, type PaginatedResponse } from '../../shared/pagination'
@@ -7,10 +7,22 @@ import { assertTransition, EVENT_TRANSITIONS } from '../../shared/state-machines
 import type { CatalogService } from '../catalog/catalog.service'
 import type { CreateEventDto, ListEventsQuery, UpdateEventDto } from './events.schema'
 import type { EventsRepository } from './events.repository'
+import { computeEffectivePriceInCents } from './pricing'
 import { buildSeatmap, generateSeats, type Seatmap } from './seatmap.service'
 
 // campos que alteram o contrato de compra -- bloqueados por PATCH depois da primeira venda
-const SALE_LOCKED_FIELDS = ['startsAt', 'endsAt', 'timezone', 'priceInCents', 'venueCity', 'venueState'] as const
+const SALE_LOCKED_FIELDS = [
+  'startsAt',
+  'endsAt',
+  'timezone',
+  'priceInCents',
+  'venueCity',
+  'venueState',
+  'format',
+  'audio',
+  'roomType',
+  'vipSurchargePercent',
+] as const
 
 interface Requester {
   id: string
@@ -48,6 +60,10 @@ export class EventsService {
         endsAt: dto.endsAt,
         timezone: dto.timezone,
         priceInCents: dto.priceInCents,
+        format: dto.format,
+        audio: dto.audio,
+        roomType: dto.roomType,
+        vipSurchargePercent: dto.roomType === 'VIP' ? dto.vipSurchargePercent : null,
       })
 
       await this.repo.createSeats(
@@ -63,13 +79,13 @@ export class EventsService {
     })
 
     log.info({ msg: 'event created', eventId: event.id, seatCount: seats.length })
-    return event
+    return this.withEffectivePrice(event)
   }
 
   async getById(id: string, requester: Requester | undefined) {
     const event = await this.repo.findById(prisma, id)
     if (!event || !this.isVisibleTo(event, requester)) throw new NotFoundError('Evento')
-    return event
+    return this.withEffectivePrice(event)
   }
 
   async list(query: ListEventsQuery, requester: Requester | undefined) {
@@ -92,7 +108,8 @@ export class EventsService {
       query.limit,
     )
 
-    return paginate(data, total, query) as PaginatedResponse<(typeof data)[number]>
+    const withPrices = data.map((event) => this.withEffectivePrice(event))
+    return paginate(withPrices, total, query) as PaginatedResponse<(typeof withPrices)[number]>
   }
 
   async update(id: string, userId: string, dto: UpdateEventDto, log: Logger) {
@@ -120,9 +137,19 @@ export class EventsService {
       throw new ValidationError('endsAt deve ser depois de startsAt')
     }
 
+    const nextRoomType = dto.roomType ?? event.roomType
+    if (dto.roomType !== undefined && dto.roomType !== RoomType.VIP && dto.vipSurchargePercent === undefined) {
+      // só zera quando ESTE patch de fato tira a sala de VIP -- um PATCH que não
+      // toca roomType (ex.: só `synopsis`) não pode ganhar um campo de bônus
+      dto.vipSurchargePercent = null
+    }
+    if (nextRoomType === RoomType.VIP && (dto.vipSurchargePercent ?? event.vipSurchargePercent) == null) {
+      throw new ValidationError('Informe a porcentagem adicional da Sala VIP')
+    }
+
     const updated = await this.repo.update(prisma, id, dto)
     log.info({ msg: 'event updated', eventId: id, fields: Object.keys(dto) })
-    return updated
+    return this.withEffectivePrice(updated)
   }
 
   async remove(id: string, userId: string, log: Logger): Promise<void> {
@@ -153,7 +180,7 @@ export class EventsService {
 
     const updated = await this.repo.update(prisma, id, { status: EventStatus.PUBLISHED })
     log.info({ msg: 'event published', eventId: id })
-    return updated
+    return this.withEffectivePrice(updated)
   }
 
   async cancel(id: string, userId: string, log: Logger) {
@@ -164,7 +191,7 @@ export class EventsService {
 
     const updated = await this.repo.update(prisma, id, { status: EventStatus.CANCELLED })
     log.info({ msg: 'event cancelled', eventId: id })
-    return updated
+    return this.withEffectivePrice(updated)
   }
 
   async seatmap(id: string, requester: Requester | undefined): Promise<Seatmap> {
@@ -184,5 +211,13 @@ export class EventsService {
 
   private assertOwner(event: { organizerId: string }, userId: string): void {
     if (event.organizerId !== userId) throw new ForbiddenError()
+  }
+
+  // preço de verdade (base + adicional de VIP, se houver) anexado à resposta -- o
+  // cliente da API nunca reimplementa essa conta (pricing.ts)
+  private withEffectivePrice<
+    T extends { priceInCents: number; roomType: RoomType; vipSurchargePercent: number | null },
+  >(event: T): T & { effectivePriceInCents: number } {
+    return { ...event, effectivePriceInCents: computeEffectivePriceInCents(event) }
   }
 }

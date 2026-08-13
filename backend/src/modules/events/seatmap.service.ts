@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto'
-import { SeatKind, SeatStatus } from '../../../generated/prisma/enums'
+import { SeatKind, SeatStatus, type RoomType } from '../../../generated/prisma/enums'
 import { AppError } from '../../shared/errors'
+import { computeEffectivePriceInCents } from './pricing'
 
 export const MAX_ROWS = 26 // fileira é letra -- A..Z
 export const MAX_SEATS_PER_ROW = 40 // teto de 1.040 assentos por evento
@@ -75,7 +76,7 @@ export interface SeatmapRow {
 export interface Seatmap {
   eventId: string
   rows: SeatmapRow[]
-  meta: { generatedAt: string; priceInCents: number; currency: string }
+  meta: { generatedAt: string; priceInCents: number; effectivePriceInCents: number; currency: string }
 }
 
 interface SeatWithState {
@@ -91,7 +92,13 @@ interface SeatWithState {
 // diga HELD: a granularidade do pg_cron é de 1 min, a leitura não pode herdar esse
 // atraso (§4.4.3). Nunca inclui userId -- SeatState não tem essa coluna (§4.4.2).
 export function buildSeatmap(
-  event: { id: string; priceInCents: number; currency: string },
+  event: {
+    id: string
+    priceInCents: number
+    currency: string
+    roomType: RoomType
+    vipSurchargePercent: number | null
+  },
   seats: SeatWithState[],
 ): Seatmap {
   const now = Date.now()
@@ -114,6 +121,7 @@ export function buildSeatmap(
     meta: {
       generatedAt: new Date().toISOString(),
       priceInCents: event.priceInCents,
+      effectivePriceInCents: computeEffectivePriceInCents(event),
       currency: event.currency,
     },
   }

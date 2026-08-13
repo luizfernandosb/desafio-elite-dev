@@ -6,6 +6,7 @@ import { ConflictError, ForbiddenError, InvalidTransitionError, NotFoundError, V
 import { isUniqueViolation } from '../../shared/prisma-errors'
 import { assertTransition, ORDER_TRANSITIONS } from '../../shared/state-machines'
 import type { EventsRepository } from '../events/events.repository'
+import { computeEffectivePriceInCents } from '../events/pricing'
 import type { SeatHoldRepository } from '../seats/seat-hold.repository'
 import type { SeatStateRepository } from '../seats/seat-state.repository'
 import { generateTicketCode } from '../tickets/qr.service'
@@ -38,8 +39,10 @@ export class OrdersService {
       throw new ConflictError('HOLD_EXPIRED', 'Um ou mais holds não estão disponíveis para este pedido')
     }
 
-    // amountInCents é sempre calculado aqui a partir do preço do evento -- nunca do corpo
-    const amountInCents = event.priceInCents * holds.length
+    // amountInCents é sempre calculado aqui a partir do preço do evento -- nunca do corpo.
+    // Preço EFETIVO (já com o adicional de Sala VIP, se houver, ver pricing.ts) -- o
+    // cliente paga o mesmo valor que viu no catálogo/carrinho, nunca o preço base cru.
+    const amountInCents = computeEffectivePriceInCents(event) * holds.length
 
     // I/O externo FORA da transação (§5.5.3) -- chamada HTTP dentro de tx aumenta o
     // tempo de lock e o risco de deadlock. Idempotente pela idempotencyKey: em retry,

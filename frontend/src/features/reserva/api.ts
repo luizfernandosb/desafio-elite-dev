@@ -1,4 +1,5 @@
 import { api } from '../../lib/api'
+import type { SessionAudio, SessionFormat, SessionRoomType } from '../../shared/session-attributes'
 
 export type SeatKind = 'REGULAR' | 'ACCESSIBLE' | 'COMPANION'
 export type SeatStatus = 'FREE' | 'HELD' | 'SOLD'
@@ -8,6 +9,9 @@ export interface ReservaEvent {
   title: string
   venueName: string
   venueCity: string
+  format: SessionFormat
+  audio: SessionAudio
+  roomType: SessionRoomType
   status: 'PUBLISHED' | 'CANCELLED'
   startsAt: string
   timezone: string
@@ -30,7 +34,7 @@ export interface SeatmapRow {
 export interface Seatmap {
   eventId: string
   rows: SeatmapRow[]
-  meta: { generatedAt: string; priceInCents: number; currency: string }
+  meta: { generatedAt: string; priceInCents: number; effectivePriceInCents: number; currency: string }
 }
 
 // `SeatHold` do back (seat-hold.service.ts) -- um hold por assento, mesmo quando

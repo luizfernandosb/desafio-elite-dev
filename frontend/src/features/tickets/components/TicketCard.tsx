@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import { Badge, Card } from '../../../components'
 import { formatEventDate } from '../../../shared/date'
+import { sessionAttributeBadges } from '../../../shared/session-attributes'
 import type { Ticket } from '../api'
 import { ticketStatusLabel, ticketStatusVariant } from '../status'
 import styles from './TicketCard.module.css'
@@ -29,6 +30,11 @@ export function TicketCard({ ticket }: TicketCardProps) {
           <p className={styles.meta}>
             {event.venueName} - {event.venueCity}
           </p>
+          <div className={styles.badges}>
+            {sessionAttributeBadges(event).map((label) => (
+              <Badge key={label}>{label}</Badge>
+            ))}
+          </div>
           {/* `seat` é opcional no tipo (schema: `seatId String?`, "sempre preenchido
               nesta versão SEATED-only") -- fallback nunca deveria aparecer hoje, mas
               o componente não presume um campo que o próprio back marca como opcional */}

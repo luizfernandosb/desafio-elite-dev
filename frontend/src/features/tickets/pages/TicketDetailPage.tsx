@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router-dom'
 import { QRCodeSVG } from 'qrcode.react'
 import { Badge, ErrorState, Skeleton } from '../../../components'
 import { formatEventDate } from '../../../shared/date'
+import { sessionAttributeBadges } from '../../../shared/session-attributes'
 import { getTicket, ticketKeys } from '../api'
 import { ShareButton } from '../components/ShareButton'
 import { ticketStatusLabel, ticketStatusVariant } from '../status'
@@ -63,6 +64,11 @@ export default function TicketDetailPage() {
       <p className={styles.meta}>
         {event.venueName} - {event.venueCity}
       </p>
+      <div className={styles.badges}>
+        {sessionAttributeBadges(event).map((label) => (
+          <Badge key={label}>{label}</Badge>
+        ))}
+      </div>
       <p className={styles.seat}>
         {seat ? `Fileira ${seat.row}, assento ${seat.number}` : 'Assento não atribuído'}
       </p>

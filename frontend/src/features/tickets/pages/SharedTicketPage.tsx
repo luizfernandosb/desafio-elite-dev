@@ -2,8 +2,9 @@ import { useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Link, useParams } from 'react-router-dom'
 import { QRCodeSVG } from 'qrcode.react'
-import { Skeleton } from '../../../components'
+import { Badge, Skeleton } from '../../../components'
 import { formatEventDate } from '../../../shared/date'
+import { sessionAttributeBadges } from '../../../shared/session-attributes'
 import { getSharedTicket, ticketKeys } from '../api'
 import { publicShareErrorMessage } from '../error-messages'
 import styles from './SharedTicketPage.module.css'
@@ -80,6 +81,11 @@ export default function SharedTicketPage() {
         <p className={styles.meta}>
           {event.venueName} - {event.venueCity}
         </p>
+        <div className={styles.badges}>
+          {sessionAttributeBadges(event).map((label) => (
+            <Badge key={label}>{label}</Badge>
+          ))}
+        </div>
         <p className={styles.seat}>
           {seat ? `Fileira ${seat.row}, assento ${seat.number}` : 'Assento não atribuído'}
         </p>

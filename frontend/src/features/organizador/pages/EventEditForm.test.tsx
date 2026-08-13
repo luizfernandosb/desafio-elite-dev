@@ -22,11 +22,16 @@ function makeEvent(overrides: Partial<OrganizerEvent> = {}): OrganizerEvent {
     venueName: 'Cinemark Shopping',
     venueCity: 'São Paulo',
     venueState: 'SP',
+    format: 'TWO_D',
+    audio: 'DUBBED',
+    roomType: 'STANDARD',
+    vipSurchargePercent: null,
     type: 'SEATED',
     status: 'DRAFT',
     startsAt: '2026-09-20T23:00:00.000Z',
     timezone: 'America/Sao_Paulo',
     priceInCents: 3200,
+    effectivePriceInCents: 3200,
     currency: 'BRL',
     createdAt: '2026-08-01T00:00:00.000Z',
     updatedAt: '2026-08-01T00:00:00.000Z',
@@ -73,7 +78,7 @@ describe('EventEditForm', () => {
     expect(receivedBody).toMatchObject({ venueCity: 'Rio de Janeiro', venueState: 'RJ', priceInCents: 3200 })
   })
 
-  it('com vendas -- estado, cidade, data, horário, fuso e preço ficam desabilitados; local continua editável', () => {
+  it('com vendas -- estado, cidade, data, horário, fuso, preço, formato, áudio e sala ficam desabilitados; local continua editável', () => {
     renderForm(makeEvent({ _count: { tickets: 5 } }))
 
     expect(screen.getByLabelText('Estado')).toBeDisabled()
@@ -81,8 +86,33 @@ describe('EventEditForm', () => {
     expect(screen.getByLabelText('Data')).toBeDisabled()
     expect(screen.getByLabelText('Horário')).toBeDisabled()
     expect(screen.getByLabelText('Preço (R$)')).toBeDisabled()
+    expect(screen.getByLabelText('Formato')).toBeDisabled()
+    expect(screen.getByLabelText('Áudio')).toBeDisabled()
+    expect(screen.getByLabelText('Sala')).toBeDisabled()
     expect(screen.getByLabelText('Local')).toBeEnabled()
     expect(screen.getByText(/já vendeu ingressos/)).toBeInTheDocument()
+  })
+
+  it('sem vendas -- trocar Sala para VIP exige e envia a porcentagem adicional', async () => {
+    let receivedBody: Record<string, unknown> | null = null
+    server.use(
+      http.patch(`${API}/events/evt-1`, async ({ request }) => {
+        receivedBody = (await request.json()) as Record<string, unknown>
+        return HttpResponse.json(makeEvent({ roomType: 'VIP', vipSurchargePercent: 20, effectivePriceInCents: 3840 }))
+      }),
+    )
+    const user = userEvent.setup()
+    renderForm(makeEvent())
+
+    await user.click(screen.getByLabelText('Sala'))
+    await user.click(await screen.findByRole('option', { name: 'VIP' }))
+
+    const percentInput = await screen.findByLabelText(/Porcentagem adicional da Sala VIP/)
+    await user.type(percentInput, '20')
+    await user.click(screen.getByRole('button', { name: 'Salvar alterações' }))
+
+    await waitFor(() => expect(receivedBody).not.toBeNull())
+    expect(receivedBody).toMatchObject({ roomType: 'VIP', vipSurchargePercent: 20 })
   })
 
   it('com vendas -- salvar não envia os campos bloqueados, mesmo alterando só o local', async () => {

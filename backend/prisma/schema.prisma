@@ -35,6 +35,21 @@ enum EventStatus {
   CANCELLED
 }
 
+enum EventFormat {
+  TWO_D
+  THREE_D
+}
+
+enum EventAudio {
+  DUBBED
+  SUBTITLED
+}
+
+enum RoomType {
+  STANDARD
+  VIP
+}
+
 enum SeatKind {
   REGULAR
   ACCESSIBLE
@@ -132,6 +147,13 @@ model Event {
   timezone        String // IANA: "America/Sao_Paulo" (§4.6.3) -- nunca offset numérico
   priceInCents    Int
   currency        String        @default("BRL")
+  format          EventFormat   @default(TWO_D)
+  audio           EventAudio    @default(DUBBED)
+  roomType        RoomType      @default(STANDARD)
+  // só preenchido quando roomType = VIP -- percentual sobre priceInCents; o preço
+  // que o cliente de fato paga (priceInCents + este adicional) nunca é recalculado
+  // em cada tela, vem pronto da API como `effectivePriceInCents` (pricing.ts)
+  vipSurchargePercent Int?
   createdAt       DateTime      @default(now()) @db.Timestamptz(3)
   updatedAt       DateTime      @updatedAt @db.Timestamptz(3)
 

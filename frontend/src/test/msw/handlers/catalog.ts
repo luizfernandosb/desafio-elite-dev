@@ -16,10 +16,14 @@ export const DEFAULT_EVENT: PublicEvent = {
   genres: ['Ficção científica'],
   venueName: 'Cine Elite',
   venueCity: 'São Paulo',
+  format: 'TWO_D',
+  audio: 'DUBBED',
+  roomType: 'STANDARD',
   status: 'PUBLISHED',
   startsAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
   timezone: 'America/Sao_Paulo',
   priceInCents: 3200,
+  effectivePriceInCents: 3200,
   currency: 'BRL',
   organizer: { id: 'org-1', name: 'Ana' },
   _count: { tickets: 0 },
@@ -37,7 +41,12 @@ export const DEFAULT_SEATMAP: PublicSeatmap = {
       ],
     },
   ],
-  meta: { generatedAt: new Date().toISOString(), priceInCents: DEFAULT_EVENT.priceInCents, currency: 'BRL' },
+  meta: {
+    generatedAt: new Date().toISOString(),
+    priceInCents: DEFAULT_EVENT.priceInCents,
+    effectivePriceInCents: DEFAULT_EVENT.effectivePriceInCents,
+    currency: 'BRL',
+  },
 }
 
 export const catalogHandlers = [

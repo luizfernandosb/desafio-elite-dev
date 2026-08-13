@@ -18,6 +18,28 @@
   flex: 1;
 }
 
+.slots {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.slotsLabel {
+  margin: 0;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.slotRow {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-4);
+}
+
+.slotRow > *:not(:last-child) {
+  flex: 1;
+}
+
 .actions {
   display: flex;
   gap: var(--space-4);
