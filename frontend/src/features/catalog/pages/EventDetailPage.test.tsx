@@ -1,27 +1,15 @@
-import { QueryClientProvider } from '@tanstack/react-query'
-import { render, screen } from '@testing-library/react'
+import { screen } from '@testing-library/react'
 import { http, HttpResponse } from 'msw'
-import { MemoryRouter, Route, Routes } from 'react-router-dom'
+import { Route, Routes } from 'react-router-dom'
 import { afterEach, describe, expect, it } from 'vitest'
 import { env } from '../../../lib/env'
 import { queryClient } from '../../../lib/query-client'
 import { server } from '../../../test/msw/server'
-import { AuthContext, type AuthContextValue } from '../../auth/useAuth'
+import { makeAuth, renderWithProviders } from '../../../test/render'
+import type { AuthContextValue } from '../../auth/useAuth'
 import EventDetailPage from './EventDetailPage'
 
 const API = env.VITE_API_URL
-
-function makeAuth(overrides: Partial<AuthContextValue> = {}): AuthContextValue {
-  return {
-    user: null,
-    status: 'anonymous',
-    login: async () => {},
-    register: async () => {},
-    loginWithGoogle: async () => {},
-    logout: async () => {},
-    ...overrides,
-  }
-}
 
 function makeEvent(overrides: Record<string, unknown> = {}) {
   return {
@@ -52,16 +40,11 @@ function emptySeatmap() {
 }
 
 function renderDetail(auth: AuthContextValue, id = 'evt-1') {
-  return render(
-    <QueryClientProvider client={queryClient}>
-      <AuthContext.Provider value={auth}>
-        <MemoryRouter initialEntries={[`/eventos/${id}`]}>
-          <Routes>
-            <Route path="/eventos/:id" element={<EventDetailPage />} />
-          </Routes>
-        </MemoryRouter>
-      </AuthContext.Provider>
-    </QueryClientProvider>,
+  return renderWithProviders(
+    <Routes>
+      <Route path="/eventos/:id" element={<EventDetailPage />} />
+    </Routes>,
+    { initialEntries: [`/eventos/${id}`], auth },
   )
 }
 

@@ -1,5 +1,5 @@
 import { setupWorker } from 'msw/browser'
-import { handlers } from './handlers'
+import { handlers } from './handlers/index'
 
 // Só para desenvolvimento (VITE_USE_MSW=true, ver lib/env.ts) -- iniciado em main.tsx
 // antes do primeiro render. Nunca entra num build de produção: nenhum import deste

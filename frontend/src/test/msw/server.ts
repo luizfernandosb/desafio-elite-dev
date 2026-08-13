@@ -1,5 +1,5 @@
 import { setupServer } from 'msw/node'
-import { handlers } from './handlers'
+import { handlers } from './handlers/index'
 
 // Para o Vitest (Node) -- listen/close ficam no setup global de teste
 // (src/test/setup.ts), diferente do back-end, porque aqui toda a suíte de front bate

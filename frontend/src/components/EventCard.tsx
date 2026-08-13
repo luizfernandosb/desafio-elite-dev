@@ -32,7 +32,11 @@ export function EventCard({ imageUrl, title, subtitle, meta, priceLabel, badge, 
       <div className={styles.overlay}>
         {badge && <div className={styles.badge}>{badge}</div>}
         <p className={styles.price}>{priceLabel}</p>
-        <h3 className={styles.title}>{title}</h3>
+        {/* h2, não h3 (§ etapa 12, achado real via axe-core em navegador: a
+            página só tem um `<h1>`, então h3 aqui pulava um nível --
+            "heading-order") -- cada card é uma subseção direta da página, não um
+            terceiro nível */}
+        <h2 className={styles.title}>{title}</h2>
         {subtitle && <p className={styles.subtitle}>{subtitle}</p>}
         {meta && <p className={styles.meta}>{meta}</p>}
       </div>

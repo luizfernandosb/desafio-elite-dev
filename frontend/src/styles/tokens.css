@@ -16,6 +16,20 @@
   --warning: #ff9500; /* já utilizado, estoque baixo */
   --neutral-gate: #8e8e93; /* evento errado -- neutro, não é erro do usuário */
 
+  /* Par de TEXTO para --success/--warning/--danger sobre o próprio tint (badge de
+     status, etapa 09; pontos do feed da portaria, etapa 10) -- medido na auditoria
+     da etapa 12: o token vívido usado como texto sobre um tint claro de si mesmo
+     mede ~1.9-3:1 (falha WCAG AA de sobra). Mesmo raciocínio de `--primary-hover`
+     sobre `--primary-tint`: tom mais escuro para texto, o vívido continua livre
+     para ícone/fundo/acento. Só o tema claro precisa do tom escurecido -- no
+     escuro, o token vívido já mede >4.5:1 sobre o próprio tint (fundo escuro atrás
+     dele), então os overrides de tema abaixo apontam pro vívido de novo, não pra
+     uma terceira cor. `contrast.test.ts` mede os dois tons nos dois temas. */
+  --success-text: #096829;
+  --warning-text: #8a4e00;
+  --danger-text: #b71c1c;
+  --neutral-gate-text: #5f5f64; /* mesmo raciocínio -- --neutral-gate cru mede 2.75:1 sobre --surface-2 claro */
+
   /* ---- Superfícies e texto (claro) ---- */
   --surface-0: #ffffff; /* fundo da página */
   --surface-1: #f4f6f8; /* card, input, assento vendido */
@@ -72,6 +86,15 @@
     --text-secondary: #9aa1ac;
     --border: #666d7a; /* mesma régua do claro -- 3:1 medido contra --surface-0 escuro */
     --primary-tint: var(--primary-tint-dark);
+    /* no escuro o vívido já mede >4.5:1 sobre o próprio tint -- não precisa do tom
+       escurecido do claro (`contrast.test.ts`). Exceção: --danger vívido mede só
+       4.18:1 sobre o tint em cima de --surface-1 escuro (Card) -- abaixo do
+       mínimo, então o escuro ganha um vermelho mais claro só para texto, prática
+       comum de tema escuro (a marca --danger em si não muda). */
+    --success-text: var(--success);
+    --warning-text: var(--warning);
+    --danger-text: #ff6b60;
+    --neutral-gate-text: var(--neutral-gate);
   }
 }
 
@@ -86,6 +109,10 @@
   --text-secondary: #9aa1ac;
   --border: #666d7a;
   --primary-tint: var(--primary-tint-dark);
+  --success-text: var(--success);
+  --warning-text: var(--warning);
+  --danger-text: #ff6b60;
+  --neutral-gate-text: var(--neutral-gate);
 }
 
 :root[data-theme='light'] {
@@ -96,6 +123,10 @@
   --text-secondary: #5b6270;
   --border: #88909c;
   --primary-tint: #e6f4ff;
+  --success-text: #096829;
+  --warning-text: #8a4e00;
+  --danger-text: #b71c1c;
+  --neutral-gate-text: #5f5f64;
 }
 
 @media (prefers-reduced-motion: reduce) {

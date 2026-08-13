@@ -1,12 +1,11 @@
-import { QueryClientProvider } from '@tanstack/react-query'
-import { render, screen } from '@testing-library/react'
+import { screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { ToastProvider } from '../../../components'
 import { env } from '../../../lib/env'
 import { queryClient } from '../../../lib/query-client'
 import { server } from '../../../test/msw/server'
+import { renderWithProviders } from '../../../test/render'
 import PortariaPage from './PortariaPage'
 
 const API = env.VITE_API_URL
@@ -18,10 +17,6 @@ vi.mock('@zxing/browser', () => ({
   BrowserQRCodeReader: vi.fn().mockImplementation(function FakeBrowserQRCodeReader() {
     return { decodeFromConstraints: vi.fn().mockRejectedValue(new Error('sem câmera em jsdom')) }
   }),
-}))
-
-vi.mock('../../auth/useAuth', () => ({
-  useAuth: () => ({ logout: vi.fn() }),
 }))
 
 function makeEvent(overrides: Record<string, unknown> = {}) {
@@ -44,13 +39,7 @@ function makeEvent(overrides: Record<string, unknown> = {}) {
 }
 
 function renderPage() {
-  return render(
-    <QueryClientProvider client={queryClient}>
-      <ToastProvider>
-        <PortariaPage />
-      </ToastProvider>
-    </QueryClientProvider>,
-  )
+  return renderWithProviders(<PortariaPage />)
 }
 
 afterEach(() => {

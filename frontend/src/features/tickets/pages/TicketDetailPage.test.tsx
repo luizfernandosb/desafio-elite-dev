@@ -1,12 +1,11 @@
-import { QueryClientProvider } from '@tanstack/react-query'
-import { render, screen } from '@testing-library/react'
+import { screen } from '@testing-library/react'
 import { http, HttpResponse } from 'msw'
-import { MemoryRouter, Route, Routes } from 'react-router-dom'
+import { Route, Routes } from 'react-router-dom'
 import { afterEach, describe, expect, it } from 'vitest'
-import { ToastProvider } from '../../../components'
 import { env } from '../../../lib/env'
 import { queryClient } from '../../../lib/query-client'
 import { server } from '../../../test/msw/server'
+import { renderWithProviders } from '../../../test/render'
 import TicketDetailPage from './TicketDetailPage'
 
 const API = env.VITE_API_URL
@@ -34,17 +33,12 @@ function makeTicketDetail(overrides: Record<string, unknown> = {}) {
 }
 
 function renderPage() {
-  return render(
-    <QueryClientProvider client={queryClient}>
-      <ToastProvider>
-        <MemoryRouter initialEntries={['/ingressos/ticket-1']}>
-          <Routes>
-            <Route path="/ingressos/:id" element={<TicketDetailPage />} />
-            <Route path="/ingressos" element={<div data-testid="list-page" />} />
-          </Routes>
-        </MemoryRouter>
-      </ToastProvider>
-    </QueryClientProvider>,
+  return renderWithProviders(
+    <Routes>
+      <Route path="/ingressos/:id" element={<TicketDetailPage />} />
+      <Route path="/ingressos" element={<div data-testid="list-page" />} />
+    </Routes>,
+    { initialEntries: ['/ingressos/ticket-1'] },
   )
 }
 

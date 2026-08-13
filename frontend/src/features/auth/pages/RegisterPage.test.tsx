@@ -1,30 +1,12 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { MemoryRouter } from 'react-router-dom'
 import { describe, expect, it, vi } from 'vitest'
-import { AuthContext, type AuthContextValue } from '../useAuth'
+import { makeAuth, renderWithProviders } from '../../../test/render'
+import type { AuthContextValue } from '../useAuth'
 import { RegisterPage } from './RegisterPage'
 
-function makeAuth(overrides: Partial<AuthContextValue> = {}): AuthContextValue {
-  return {
-    user: null,
-    status: 'anonymous',
-    login: vi.fn(),
-    register: vi.fn(),
-    loginWithGoogle: vi.fn(),
-    logout: vi.fn(),
-    ...overrides,
-  }
-}
-
 function renderRegisterPage(authValue: AuthContextValue) {
-  return render(
-    <MemoryRouter initialEntries={['/cadastrar']}>
-      <AuthContext.Provider value={authValue}>
-        <RegisterPage />
-      </AuthContext.Provider>
-    </MemoryRouter>,
-  )
+  return renderWithProviders(<RegisterPage />, { initialEntries: ['/cadastrar'], auth: authValue })
 }
 
 describe('RegisterPage', () => {

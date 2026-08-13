@@ -1,12 +1,12 @@
-import { QueryClientProvider } from '@tanstack/react-query'
-import { render, screen } from '@testing-library/react'
+import { screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
-import { MemoryRouter, Route, Routes } from 'react-router-dom'
+import { Route, Routes } from 'react-router-dom'
 import { afterEach, describe, expect, it } from 'vitest'
 import { env } from '../../../lib/env'
 import { queryClient } from '../../../lib/query-client'
 import { server } from '../../../test/msw/server'
+import { renderWithProviders } from '../../../test/render'
 import TicketListPage from './TicketListPage'
 
 const API = env.VITE_API_URL
@@ -40,16 +40,13 @@ function paginated(data: unknown[], overrides: Record<string, unknown> = {}) {
 }
 
 function renderPage() {
-  return render(
-    <QueryClientProvider client={queryClient}>
-      <MemoryRouter initialEntries={['/ingressos']}>
-        <Routes>
-          <Route path="/ingressos" element={<TicketListPage />} />
-          <Route path="/ingressos/:id" element={<div data-testid="detail-page" />} />
-          <Route path="/" element={<div data-testid="home-page" />} />
-        </Routes>
-      </MemoryRouter>
-    </QueryClientProvider>,
+  return renderWithProviders(
+    <Routes>
+      <Route path="/ingressos" element={<TicketListPage />} />
+      <Route path="/ingressos/:id" element={<div data-testid="detail-page" />} />
+      <Route path="/" element={<div data-testid="home-page" />} />
+    </Routes>,
+    { initialEntries: ['/ingressos'] },
   )
 }
 

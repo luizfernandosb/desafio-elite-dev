@@ -1,12 +1,11 @@
-import { QueryClientProvider } from '@tanstack/react-query'
-import { render, screen } from '@testing-library/react'
+import { screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
 import { afterEach, describe, expect, it } from 'vitest'
-import { ToastProvider } from '../../../components'
 import { env } from '../../../lib/env'
 import { queryClient } from '../../../lib/query-client'
 import { server } from '../../../test/msw/server'
+import { renderWithProviders } from '../../../test/render'
 import { ShareButton } from './ShareButton'
 
 const API = env.VITE_API_URL
@@ -16,13 +15,7 @@ afterEach(() => {
 })
 
 function renderButton() {
-  return render(
-    <QueryClientProvider client={queryClient}>
-      <ToastProvider>
-        <ShareButton ticketId="ticket-1" />
-      </ToastProvider>
-    </QueryClientProvider>,
-  )
+  return renderWithProviders(<ShareButton ticketId="ticket-1" />)
 }
 
 // `navigator.share` não existe em jsdom (sem polyfill de Web Share API) -- todo

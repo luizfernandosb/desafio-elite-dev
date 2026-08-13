@@ -42,6 +42,13 @@
 .title {
   color: #fff;
   margin: 0;
+  /* tag semântica subiu de h3 para h2 (§ etapa 12, heading-order), mas o desenho
+     do card não muda -- tamanho explícito aqui em vez de herdar de `h2` em
+     typography.css (1.375rem), que deixaria o título visivelmente maior */
+  font-size: 1.125rem;
+  font-weight: 600;
+  letter-spacing: -0.015em;
+  line-height: 1.4;
 }
 
 .subtitle {

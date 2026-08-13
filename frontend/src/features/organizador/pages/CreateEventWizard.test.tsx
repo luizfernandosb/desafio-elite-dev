@@ -1,13 +1,12 @@
-import { QueryClientProvider } from '@tanstack/react-query'
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
-import { MemoryRouter, Route, Routes } from 'react-router-dom'
+import { Route, Routes } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { ToastProvider } from '../../../components'
 import { env } from '../../../lib/env'
 import { queryClient } from '../../../lib/query-client'
 import { server } from '../../../test/msw/server'
+import { renderWithProviders } from '../../../test/render'
 import CreateEventWizard from './CreateEventWizard'
 
 const API = env.VITE_API_URL
@@ -20,17 +19,12 @@ const DRAFT_KEY = 'organizador:novo-evento:rascunho'
 const WIZARD_TEST_TIMEOUT = 15000
 
 function renderWizard(initialEntries: string[] = ['/organizador/eventos/nova']) {
-  return render(
-    <QueryClientProvider client={queryClient}>
-      <ToastProvider>
-        <MemoryRouter initialEntries={initialEntries}>
-          <Routes>
-            <Route path="/organizador/eventos/nova" element={<CreateEventWizard />} />
-            <Route path="/organizador/eventos/:id" element={<div data-testid="detail-page" />} />
-          </Routes>
-        </MemoryRouter>
-      </ToastProvider>
-    </QueryClientProvider>,
+  return renderWithProviders(
+    <Routes>
+      <Route path="/organizador/eventos/nova" element={<CreateEventWizard />} />
+      <Route path="/organizador/eventos/:id" element={<div data-testid="detail-page" />} />
+    </Routes>,
+    { initialEntries },
   )
 }
 

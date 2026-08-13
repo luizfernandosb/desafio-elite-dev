@@ -35,7 +35,11 @@ const devOnlyRoutes: RouteObject[] = import.meta.env.DEV
 // `/entrar` e `/cadastrar` seguem públicas -- ver evento é público de propósito
 // (etapa 05), mas escolher assentos e pagar exigem conta (back:
 // `requireRole(Role.CUSTOMER)` em holds e orders).
-export const router = createBrowserRouter([
+// Extraído de `createBrowserRouter` (não só um argumento inline) para os testes
+// ponta a ponta (§ etapa 13) montarem a MESMA árvore de rotas com
+// `createMemoryRouter`, em vez de duplicar a lista à mão e arriscar divergir da
+// árvore real de produção.
+export const routes: RouteObject[] = [
   {
     path: '/',
     element: <Layout />,
@@ -157,4 +161,6 @@ export const router = createBrowserRouter([
       },
     ],
   },
-])
+]
+
+export const router = createBrowserRouter(routes)

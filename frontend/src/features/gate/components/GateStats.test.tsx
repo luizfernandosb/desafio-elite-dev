@@ -1,10 +1,10 @@
-import { QueryClientProvider } from '@tanstack/react-query'
-import { render, screen } from '@testing-library/react'
+import { screen } from '@testing-library/react'
 import { http, HttpResponse } from 'msw'
 import { afterEach, describe, expect, it } from 'vitest'
 import { env } from '../../../lib/env'
 import { queryClient } from '../../../lib/query-client'
 import { server } from '../../../test/msw/server'
+import { renderWithProviders } from '../../../test/render'
 import { GateStatsPanel } from './GateStats'
 
 const API = env.VITE_API_URL
@@ -29,11 +29,7 @@ describe('GateStatsPanel', () => {
       ),
     )
 
-    render(
-      <QueryClientProvider client={queryClient}>
-        <GateStatsPanel eventId="evt-1" />
-      </QueryClientProvider>,
-    )
+    renderWithProviders(<GateStatsPanel eventId="evt-1" />)
 
     expect(await screen.findByText('142 de 200')).toBeInTheDocument()
     expect(screen.getByText(/58 restantes/)).toBeInTheDocument()
@@ -47,11 +43,7 @@ describe('GateStatsPanel', () => {
       ),
     )
 
-    render(
-      <QueryClientProvider client={queryClient}>
-        <GateStatsPanel eventId="evt-1" />
-      </QueryClientProvider>,
-    )
+    renderWithProviders(<GateStatsPanel eventId="evt-1" />)
 
     expect(await screen.findByText('0 de 50')).toBeInTheDocument()
     expect(screen.queryByLabelText('Últimas validações')).not.toBeInTheDocument()
@@ -67,11 +59,7 @@ describe('GateStatsPanel', () => {
       ),
     )
 
-    render(
-      <QueryClientProvider client={queryClient}>
-        <GateStatsPanel eventId="evt-1" />
-      </QueryClientProvider>,
-    )
+    renderWithProviders(<GateStatsPanel eventId="evt-1" />)
 
     // 500 aciona 1 retry (query-client.ts) antes do erro aparecer
     expect(await screen.findByRole('alert', {}, { timeout: 3000 })).toHaveTextContent('Erro interno')

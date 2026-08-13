@@ -1,22 +1,17 @@
-import { QueryClientProvider } from '@tanstack/react-query'
 import { renderHook, waitFor } from '@testing-library/react'
 import { http, HttpResponse } from 'msw'
 import type { ReactNode } from 'react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { ToastProvider } from '../../components'
 import { env } from '../../lib/env'
 import { queryClient } from '../../lib/query-client'
 import { server } from '../../test/msw/server'
+import { TestProviders } from '../../test/render'
 import { useHold } from './useHold'
 
 const API = env.VITE_API_URL
 
 function wrapper({ children }: { children: ReactNode }) {
-  return (
-    <QueryClientProvider client={queryClient}>
-      <ToastProvider>{children}</ToastProvider>
-    </QueryClientProvider>
-  )
+  return <TestProviders>{children}</TestProviders>
 }
 
 afterEach(() => {

@@ -1,13 +1,12 @@
-import { QueryClientProvider } from '@tanstack/react-query'
-import { render, screen } from '@testing-library/react'
+import { screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
-import { MemoryRouter, Route, Routes } from 'react-router-dom'
+import { Route, Routes } from 'react-router-dom'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { ToastProvider } from '../../../components'
 import { env } from '../../../lib/env'
 import { queryClient } from '../../../lib/query-client'
 import { server } from '../../../test/msw/server'
+import { renderWithProviders } from '../../../test/render'
 import SeatSelectionPage from './SeatSelectionPage'
 
 // Mock do cliente Supabase -- os testes desta página não devem depender de rede de
@@ -63,17 +62,12 @@ function makeSeatmap() {
 }
 
 function renderPage() {
-  return render(
-    <QueryClientProvider client={queryClient}>
-      <ToastProvider>
-        <MemoryRouter initialEntries={['/eventos/evt-1/assentos']}>
-          <Routes>
-            <Route path="/eventos/:id/assentos" element={<SeatSelectionPage />} />
-            <Route path="/checkout/:orderId" element={<div data-testid="checkout-page" />} />
-          </Routes>
-        </MemoryRouter>
-      </ToastProvider>
-    </QueryClientProvider>,
+  return renderWithProviders(
+    <Routes>
+      <Route path="/eventos/:id/assentos" element={<SeatSelectionPage />} />
+      <Route path="/checkout/:orderId" element={<div data-testid="checkout-page" />} />
+    </Routes>,
+    { initialEntries: ['/eventos/evt-1/assentos'] },
   )
 }
 

@@ -1,11 +1,11 @@
-import { QueryClientProvider } from '@tanstack/react-query'
-import { render, screen, waitFor } from '@testing-library/react'
+import { screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { env } from '../../../lib/env'
 import { queryClient } from '../../../lib/query-client'
 import { server } from '../../../test/msw/server'
+import { renderWithProviders } from '../../../test/render'
 import type { CatalogItem } from '../api'
 import { MovieSearch } from './MovieSearch'
 
@@ -19,11 +19,7 @@ function emptySearchResponse() {
 }
 
 function renderMovieSearch(onSelect: (item: CatalogItem | null) => void = vi.fn()) {
-  return render(
-    <QueryClientProvider client={queryClient}>
-      <MovieSearch selected={null} onSelect={onSelect} />
-    </QueryClientProvider>,
-  )
+  return renderWithProviders(<MovieSearch selected={null} onSelect={onSelect} />)
 }
 
 afterEach(() => {

@@ -1,13 +1,13 @@
-import { QueryClientProvider } from '@tanstack/react-query'
 import { renderHook } from '@testing-library/react'
 import type { ReactNode } from 'react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { queryClient } from '../../lib/query-client'
+import { TestProviders } from '../../test/render'
 import { usePollingFallback } from './usePollingFallback'
 import type { RealtimeConnectionStatus } from './useSeatRealtime'
 
 function wrapper({ children }: { children: ReactNode }) {
-  return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+  return <TestProviders>{children}</TestProviders>
 }
 
 afterEach(() => {

@@ -1,13 +1,12 @@
-import { QueryClientProvider } from '@tanstack/react-query'
-import { render, screen } from '@testing-library/react'
+import { screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
-import { MemoryRouter, Route, Routes } from 'react-router-dom'
+import { Route, Routes } from 'react-router-dom'
 import { afterEach, describe, expect, it } from 'vitest'
-import { ToastProvider } from '../../../components'
 import { env } from '../../../lib/env'
 import { queryClient } from '../../../lib/query-client'
 import { server } from '../../../test/msw/server'
+import { renderWithProviders } from '../../../test/render'
 import CheckoutReturnPage from './CheckoutReturnPage'
 
 const API = env.VITE_API_URL
@@ -48,18 +47,13 @@ function makeFailedOrder() {
 }
 
 function renderPage() {
-  return render(
-    <QueryClientProvider client={queryClient}>
-      <ToastProvider>
-        <MemoryRouter initialEntries={['/checkout/order-1/retorno']}>
-          <Routes>
-            <Route path="/checkout/:orderId/retorno" element={<CheckoutReturnPage />} />
-            <Route path="/checkout/:orderId" element={<div data-testid="checkout-page">novo checkout</div>} />
-            <Route path="/eventos/:id/assentos" element={<div data-testid="seat-page" />} />
-          </Routes>
-        </MemoryRouter>
-      </ToastProvider>
-    </QueryClientProvider>,
+  return renderWithProviders(
+    <Routes>
+      <Route path="/checkout/:orderId/retorno" element={<CheckoutReturnPage />} />
+      <Route path="/checkout/:orderId" element={<div data-testid="checkout-page">novo checkout</div>} />
+      <Route path="/eventos/:id/assentos" element={<div data-testid="seat-page" />} />
+    </Routes>,
+    { initialEntries: ['/checkout/order-1/retorno'] },
   )
 }
 

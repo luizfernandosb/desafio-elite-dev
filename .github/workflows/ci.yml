@@ -108,10 +108,14 @@ jobs:
       - name: Instalar dependências
         run: npm ci
 
+      - name: Typecheck
+        run: npm run typecheck
+
       - name: Lint
         run: npm run lint
 
+      - name: Testes
+        run: npm run test
+
       - name: Build
         run: npm run build
-
-      # Suíte de testes do front entra na etapa 13 do plano de front-end.

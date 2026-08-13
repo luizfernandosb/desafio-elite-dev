@@ -1,24 +1,21 @@
-import { QueryClientProvider } from '@tanstack/react-query'
-import { render, screen } from '@testing-library/react'
+import { screen } from '@testing-library/react'
 import { http, HttpResponse } from 'msw'
-import { MemoryRouter, Route, Routes } from 'react-router-dom'
+import { Route, Routes } from 'react-router-dom'
 import { afterEach, describe, expect, it } from 'vitest'
 import { env } from '../../../lib/env'
 import { queryClient } from '../../../lib/query-client'
 import { server } from '../../../test/msw/server'
+import { renderWithProviders } from '../../../test/render'
 import SharedTicketPage from './SharedTicketPage'
 
 const API = env.VITE_API_URL
 
 function renderAt(shareToken: string) {
-  return render(
-    <QueryClientProvider client={queryClient}>
-      <MemoryRouter initialEntries={[`/share/${shareToken}`]}>
-        <Routes>
-          <Route path="/share/:shareToken" element={<SharedTicketPage />} />
-        </Routes>
-      </MemoryRouter>
-    </QueryClientProvider>,
+  return renderWithProviders(
+    <Routes>
+      <Route path="/share/:shareToken" element={<SharedTicketPage />} />
+    </Routes>,
+    { initialEntries: [`/share/${shareToken}`] },
   )
 }
 

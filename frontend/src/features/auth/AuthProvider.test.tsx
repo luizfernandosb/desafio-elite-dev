@@ -1,11 +1,11 @@
-import { QueryClientProvider } from '@tanstack/react-query'
-import { render, screen, waitFor } from '@testing-library/react'
+import { screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
 import { afterEach, describe, expect, it } from 'vitest'
 import { env } from '../../lib/env'
 import { queryClient } from '../../lib/query-client'
 import { server } from '../../test/msw/server'
+import { renderWithProviders } from '../../test/render'
 import { AuthProvider } from './AuthProvider'
 import { useAuth } from './useAuth'
 
@@ -24,13 +24,15 @@ function Probe() {
   )
 }
 
-function renderWithProviders() {
-  return render(
-    <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <Probe />
-      </AuthProvider>
-    </QueryClientProvider>,
+// `renderWithProviders` já envolve numa sessão stub (AuthContext.Provider,
+// anônima) -- o AuthProvider REAL renderizado aqui dentro é o provider mais
+// PRÓXIMO, então seu valor de verdade sobrepõe o stub para `<Probe>` sem precisar
+// de um modo especial no helper de teste.
+function renderAuthProvider() {
+  return renderWithProviders(
+    <AuthProvider>
+      <Probe />
+    </AuthProvider>,
   )
 }
 
@@ -47,7 +49,7 @@ describe('AuthProvider', () => {
       ),
     )
 
-    renderWithProviders()
+    renderAuthProvider()
 
     expect(screen.getByTestId('status')).toHaveTextContent('loading')
 
@@ -62,7 +64,7 @@ describe('AuthProvider', () => {
       ),
     )
 
-    renderWithProviders()
+    renderAuthProvider()
 
     await waitFor(() => expect(screen.getByTestId('status')).toHaveTextContent('anonymous'))
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
@@ -80,7 +82,7 @@ describe('AuthProvider', () => {
 
     queryClient.setQueryData(['sentinela-do-usuario-anterior'], 'ainda-em-cache')
 
-    renderWithProviders()
+    renderAuthProvider()
     await waitFor(() => expect(screen.getByTestId('status')).toHaveTextContent('authenticated'))
 
     await user.click(screen.getByRole('button', { name: 'Sair' }))

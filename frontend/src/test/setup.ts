@@ -1,11 +1,18 @@
 import '@testing-library/jest-dom/vitest'
 import { afterAll, afterEach, beforeAll } from 'vitest'
+import { resetTestStores } from './msw/handlers/index'
 import { server } from './msw/server'
 
 // 'error': qualquer requisição sem handler quebra o teste -- não existe loopback para
 // proteger aqui (diferente do back-end), então não há motivo para 'bypass'/'warn'.
 beforeAll(() => server.listen({ onUnhandledRequest: 'error' }))
-afterEach(() => server.resetHandlers())
+afterEach(() => {
+  server.resetHandlers()
+  // pedidos/ingressos emitidos pelos handlers dinâmicos (orders.ts/tickets.ts)
+  // são estado em memória do MÓDULO, não do MSW -- resetHandlers() não toca
+  // nisso; sem isto, um ingresso emitido num teste vazaria para o próximo.
+  resetTestStores()
+})
 afterAll(() => server.close())
 
 // jsdom não implementa Pointer Events nem `scrollIntoView` -- sem isto, abrir o
