@@ -117,7 +117,7 @@ export function EventEditForm({ event }: EventEditFormProps) {
       )}
       {hasSales && (
         <p className={styles.notice} role="status">
-          Esta sessão já vendeu ingressos -- cidade, data, horário, fuso e preço não podem mais mudar.
+          Esta sessão já vendeu ingressos - cidade, data, horário, fuso e preço não podem mais mudar.
         </p>
       )}
 
@@ -167,7 +167,7 @@ export function EventEditForm({ event }: EventEditFormProps) {
         min={0}
         step="0.01"
         disabled={hasSales}
-        hint={hasSales ? lockedHint : 'Valor em reais -- enviado ao servidor em centavos'}
+        hint={hasSales ? lockedHint : 'Valor em reais - enviado ao servidor em centavos'}
         error={errors.priceInReais?.message}
         {...register('priceInReais', { valueAsNumber: true })}
       />

@@ -76,7 +76,7 @@ describe('EventDetailPage -- remover capa', () => {
 
     await user.click(await screen.findByRole('button', { name: 'Remover capa' }))
 
-    expect(await screen.findByText('Capa removida -- pôster do catálogo restaurado.')).toBeInTheDocument()
+    expect(await screen.findByText('Capa removida - pôster do catálogo restaurado.')).toBeInTheDocument()
   })
 
   it('falha -- mostra erro inline, não fica em silêncio (antes desta correção, `removeMutation` não tinha `onError`)', async () => {

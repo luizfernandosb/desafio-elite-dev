@@ -44,7 +44,7 @@ export default function StyleGuidePage() {
   return (
     <div className={styles.page}>
       <h1>Guia de estilo</h1>
-      <p>Página de desenvolvimento -- conferência visual dos tokens e componentes (etapa 02).</p>
+      <p>Página de desenvolvimento - conferência visual dos tokens e componentes (etapa 02).</p>
 
       <section className={styles.section}>
         <h2>Cores</h2>
@@ -61,13 +61,13 @@ export default function StyleGuidePage() {
       <section className={styles.section}>
         <h2>Tipografia</h2>
         <p className="text-display">Display</p>
-        <h1>H1 -- título de página</h1>
-        <h2>H2 -- título de card</h2>
-        <h3>H3 -- subtítulo</h3>
-        <p className="text-body">Body -- texto corrido, descrição de evento e demais parágrafos.</p>
-        <p className="text-small">Small -- metadados, datas, locais.</p>
-        <p className="text-caption">Caption -- labels em uppercase</p>
-        <p className="tabular-nums">Tabular nums: R$ 32,00 -- 09m 45s -- assento A12</p>
+        <h1>H1 - título de página</h1>
+        <h2>H2 - título de card</h2>
+        <h3>H3 - subtítulo</h3>
+        <p className="text-body">Body - texto corrido, descrição de evento e demais parágrafos.</p>
+        <p className="text-small">Small - metadados, datas, locais.</p>
+        <p className="text-caption">Caption - labels em uppercase</p>
+        <p className="tabular-nums">Tabular nums: R$ 32,00 - 09m 45s - assento A12</p>
       </section>
 
       <section className={styles.section}>
@@ -117,7 +117,7 @@ export default function StyleGuidePage() {
         <Dialog
           trigger={<Button variant="secondary">Abrir dialog</Button>}
           title="Confirmar ação"
-          description="Foco preso, Esc fecha, foco volta ao gatilho -- comportamento do Radix."
+          description="Foco preso, Esc fecha, foco volta ao gatilho - comportamento do Radix."
         >
           <Button variant="primary">Confirmar</Button>
         </Dialog>
@@ -150,7 +150,7 @@ export default function StyleGuidePage() {
             <EventCard
               imageUrl="https://image.tmdb.org/t/p/w500/duna-parte-dois.jpg"
               title="Duna: Parte Dois"
-              subtitle="Cine Elite -- Sala 1"
+              subtitle="Cine Elite - Sala 1"
               priceLabel="R$ 32,00"
             />
           </div>

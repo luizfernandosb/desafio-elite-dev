@@ -29,7 +29,7 @@ export function OfflineBanner() {
 
   return (
     <div className={styles.banner} role="status">
-      Sem conexão com a internet -- verifique sua rede. Tentaremos de novo quando ela voltar.
+      Sem conexão com a internet - verifique sua rede. Tentaremos de novo quando ela voltar.
     </div>
   )
 }

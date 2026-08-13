@@ -149,7 +149,7 @@ export default function CheckoutPage() {
     <div className={styles.page}>
       <h1>Pagamento</h1>
       <p className={styles.amount}>Total: {formatMoney(order.amountInCents, order.currency)}</p>
-      <p className={styles.notice}>Ambiente de simulação -- nenhum cartão de verdade é processado aqui.</p>
+      <p className={styles.notice}>Ambiente de simulação - nenhum cartão de verdade é processado aqui.</p>
 
       <TestCardsPanel />
 

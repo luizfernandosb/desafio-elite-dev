@@ -61,7 +61,7 @@ export default function TicketDetailPage() {
 
       <p className={styles.meta}>{formatEventDate(event.startsAt, event.timezone)}</p>
       <p className={styles.meta}>
-        {event.venueName} -- {event.venueCity}
+        {event.venueName} - {event.venueCity}
       </p>
       <p className={styles.seat}>
         {seat ? `Fileira ${seat.row}, assento ${seat.number}` : 'Assento não atribuído'}

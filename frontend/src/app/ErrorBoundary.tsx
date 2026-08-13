@@ -64,7 +64,7 @@ export function RouteErrorBoundary() {
   const error = useRouteError()
 
   if (isRouteErrorResponse(error)) {
-    return <ErrorFallback message={`${error.status} -- ${error.statusText || 'Erro ao carregar a rota'}`} />
+    return <ErrorFallback message={`${error.status} - ${error.statusText || 'Erro ao carregar a rota'}`} />
   }
 
   const message = error instanceof Error ? error.message : 'Erro inesperado ao carregar a rota'

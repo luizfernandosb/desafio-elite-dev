@@ -22,7 +22,10 @@ export class CatalogService {
   ) {}
 
   async search(query: string, page: number, log: Logger): Promise<CatalogSearchResponse> {
-    const cacheKey = `search:${query.trim().toLowerCase()}:${page}`
+    // sufixo de idioma na chave -- o provider passou a pedir pt-BR ao TMDb; sem isto,
+    // uma linha de cache gravada em en-US (antes desta mudança) seria servida como
+    // "fresca" e a busca voltaria a mostrar sinopse em inglês até o TTL vencer
+    const cacheKey = `search:${query.trim().toLowerCase()}:${page}:pt-BR`
 
     const fresh = await this.repo.findFresh(prisma, this.provider.source, cacheKey)
     if (fresh) {
@@ -52,7 +55,7 @@ export class CatalogService {
   }
 
   async getById(externalId: string, log: Logger): Promise<CatalogDetailResponse> {
-    const cacheKey = `movie:${externalId}`
+    const cacheKey = `movie:${externalId}:pt-BR` // mesmo raciocínio do cacheKey de search()
 
     const fresh = await this.repo.findFresh(prisma, this.provider.source, cacheKey)
     if (fresh) {

@@ -63,7 +63,7 @@ export function EventList({ q, from, to, page, onPageChange, onClearFilters }: E
       // cenário real se o seed não rodou (§ etapa 05) -- mensagem que não parece bug
       <EmptyState
         title="Nenhuma sessão publicada ainda"
-        description="Volte em breve -- novas sessões aparecem aqui assim que forem publicadas."
+        description="Volte em breve - novas sessões aparecem aqui assim que forem publicadas."
       />
     )
   }
@@ -77,7 +77,7 @@ export function EventList({ q, from, to, page, onPageChange, onClearFilters }: E
               imageUrl={event.imageUrl}
               title={event.title}
               subtitle={formatEventDate(event.startsAt, event.timezone)}
-              meta={`${event.venueName} -- ${event.venueCity}`}
+              meta={`${event.venueName} - ${event.venueCity}`}
               priceLabel={`A partir de ${formatMoney(event.priceInCents, event.currency)}`}
               badge={event.genres[0]}
               eager={index < EAGER_CARD_COUNT}

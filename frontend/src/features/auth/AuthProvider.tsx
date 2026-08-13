@@ -94,6 +94,9 @@ export function AuthProvider({ children }: Props) {
       // ...mas limpa local mesmo se a chamada falhar -- uma falha de rede no logout
       // não pode deixar o usuário "logado" localmente para sempre
       clearSession()
+      // volta pra home pública -- ficar numa tela autenticada (ex.: /organizador)
+      // sem sessão só levaria a um redirect pro login de qualquer jeito
+      router.navigate('/')
     }
   }, [clearSession])
 

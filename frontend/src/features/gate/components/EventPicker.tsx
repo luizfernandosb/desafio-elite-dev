@@ -27,7 +27,7 @@ export function EventPicker({ value, onChange }: EventPickerProps) {
 
   const options = (data?.data ?? []).map((event) => ({
     value: event.id,
-    label: `${event.title} -- ${formatEventDate(event.startsAt, event.timezone)}`,
+    label: `${event.title} - ${formatEventDate(event.startsAt, event.timezone)}`,
   }))
 
   return (

@@ -59,7 +59,7 @@ describe('CatalogService.search', () => {
     expect(provider.search).toHaveBeenCalledWith('matrix', 1)
     expect(repo.upsert).toHaveBeenCalledWith(
       expect.anything(),
-      expect.objectContaining({ cacheKey: 'search:matrix:1' }),
+      expect.objectContaining({ cacheKey: 'search:matrix:1:pt-BR' }),
     )
     expect(result.data).toEqual([MATRIX])
     expect(result.meta.total).toBe(1)

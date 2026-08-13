@@ -9,6 +9,10 @@ const IMAGE_BASE_URL = 'https://image.tmdb.org/t/p/w500'
 const REQUEST_TIMEOUT_MS = 5000
 const RETRY_BACKOFF_MS = 300
 const GENRE_CACHE_TTL_MS = 24 * 60 * 60 * 1000
+// título/sinopse/gêneros localizados quando o TMDb tiver tradução para o filme --
+// sem isto, a API devolve en-US (default) mesmo pra quem só lê PT-BR na tela.
+// TMDb cai de volta pro idioma original quando não existe tradução, nunca erro.
+const TMDB_LANGUAGE = 'pt-BR'
 
 interface TmdbMovieSummary {
   id: number
@@ -48,7 +52,7 @@ export class TmdbProvider implements CatalogProvider {
 
   async search(query: string, page: number): Promise<CatalogSearchResult> {
     const data = await this.request<TmdbSearchResponse>(
-      `/search/movie?query=${encodeURIComponent(query)}&page=${page}`,
+      `/search/movie?query=${encodeURIComponent(query)}&page=${page}&language=${TMDB_LANGUAGE}`,
     )
     const genreMap = await this.getGenreMap()
 
@@ -59,7 +63,9 @@ export class TmdbProvider implements CatalogProvider {
   }
 
   async getById(externalId: string): Promise<CatalogItem> {
-    const movie = await this.request<TmdbMovieDetail>(`/movie/${encodeURIComponent(externalId)}`)
+    const movie = await this.request<TmdbMovieDetail>(
+      `/movie/${encodeURIComponent(externalId)}?language=${TMDB_LANGUAGE}`,
+    )
     return this.normalizeDetail(movie)
   }
 
@@ -98,7 +104,7 @@ export class TmdbProvider implements CatalogProvider {
     }
 
     try {
-      const data = await this.request<TmdbGenreListResponse>('/genre/movie/list')
+      const data = await this.request<TmdbGenreListResponse>(`/genre/movie/list?language=${TMDB_LANGUAGE}`)
       const map = new Map(data.genres.map((genre) => [genre.id, genre.name] as const))
       this.genreCache = { map, expiresAt: Date.now() + GENRE_CACHE_TTL_MS }
       return map

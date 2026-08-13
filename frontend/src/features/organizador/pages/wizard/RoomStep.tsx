@@ -123,7 +123,7 @@ export function RoomStep({
         type="number"
         min={0}
         step="0.01"
-        hint="Valor em reais -- enviado ao servidor em centavos (§4.6.1)"
+        hint="Valor em reais - enviado ao servidor em centavos (§4.6.1)"
         error={errors.priceInReais?.message}
         {...register('priceInReais', { valueAsNumber: true })}
       />

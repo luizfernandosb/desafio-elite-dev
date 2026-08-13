@@ -78,7 +78,7 @@ export default function SharedTicketPage() {
         <h1 className={styles.title}>{event.title}</h1>
         <p className={styles.meta}>{formatEventDate(event.startsAt, event.timezone)}</p>
         <p className={styles.meta}>
-          {event.venueName} -- {event.venueCity}
+          {event.venueName} - {event.venueCity}
         </p>
         <p className={styles.seat}>
           {seat ? `Fileira ${seat.row}, assento ${seat.number}` : 'Assento não atribuído'}

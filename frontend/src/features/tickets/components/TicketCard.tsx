@@ -27,7 +27,7 @@ export function TicketCard({ ticket }: TicketCardProps) {
           </div>
           <p className={styles.meta}>{formatEventDate(event.startsAt, event.timezone)}</p>
           <p className={styles.meta}>
-            {event.venueName} -- {event.venueCity}
+            {event.venueName} - {event.venueCity}
           </p>
           {/* `seat` é opcional no tipo (schema: `seatId String?`, "sempre preenchido
               nesta versão SEATED-only") -- fallback nunca deveria aparecer hoje, mas

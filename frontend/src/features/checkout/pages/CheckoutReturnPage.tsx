@@ -170,7 +170,7 @@ export default function CheckoutReturnPage() {
       ) : (
         <EmptyState
           title="Estamos confirmando seu pagamento"
-          description="Ainda não recebemos a confirmação -- isso pode ser só demora, não necessariamente uma falha."
+          description="Ainda não recebemos a confirmação - isso pode ser só demora, não necessariamente uma falha."
           action={
             <Button variant="secondary" onClick={handleCheckAgain}>
               Verificar novamente

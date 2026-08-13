@@ -86,7 +86,7 @@ export default function EventDetailPage() {
 
       <h1>{event.title}</h1>
       <p className={styles.meta}>
-        {formatEventDate(event.startsAt, event.timezone)} -- {event.venueName}, {event.venueCity}
+        {formatEventDate(event.startsAt, event.timezone)} - {event.venueName}, {event.venueCity}
       </p>
 
       <div className={styles.badges}>

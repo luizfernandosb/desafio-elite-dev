@@ -80,7 +80,7 @@ export function GateScanner({ paused, onScan }: GateScannerProps) {
   if (cameraState === 'unavailable') {
     return (
       <p className={styles.notice} role="status">
-        Não foi possível acessar a câmera -- confira a permissão nas configurações do
+        Não foi possível acessar a câmera - confira a permissão nas configurações do
         navegador e recarregue a página. A digitação manual abaixo continua funcionando.
       </p>
     )

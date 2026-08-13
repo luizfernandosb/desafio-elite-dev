@@ -183,7 +183,7 @@ export default function SeatSelectionPage() {
       <div>
         <h1>{event.title}</h1>
         <p className={styles.meta}>
-          {formatEventDate(event.startsAt, event.timezone)} -- {event.venueName}, {event.venueCity}
+          {formatEventDate(event.startsAt, event.timezone)} - {event.venueName}, {event.venueCity}
         </p>
       </div>
 
@@ -200,7 +200,7 @@ export default function SeatSelectionPage() {
           rows={mapRows}
           onSeatClick={handleSeatClick}
           legend
-          ariaLabel={`Mapa de assentos -- ${event.venueName}`}
+          ariaLabel={`Mapa de assentos - ${event.venueName}`}
         />
       </ErrorBoundary>
 

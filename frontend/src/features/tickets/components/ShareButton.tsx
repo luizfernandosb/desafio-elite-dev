@@ -85,7 +85,7 @@ export function ShareButton({ ticketId }: ShareButtonProps) {
   return (
     <div className={styles.wrapper}>
       <p className={styles.notice}>
-        Quem abrir o link consegue entrar com este ingresso -- revogue se compartilhar por engano.
+        Quem abrir o link consegue entrar com este ingresso - revogue se compartilhar por engano.
       </p>
 
       {shareLink ? (

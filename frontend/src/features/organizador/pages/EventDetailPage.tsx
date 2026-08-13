@@ -30,7 +30,7 @@ import styles from './EventDetailPage.module.css'
 
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024
 const ACCEPTED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp']
-const INVALID_IMAGE_MESSAGE = 'Imagem inválida -- use JPEG, PNG ou WebP de até 5 MB.'
+const INVALID_IMAGE_MESSAGE = 'Imagem inválida - use JPEG, PNG ou WebP de até 5 MB.'
 
 function buildOccupancyRows(seatmap: EventSeatmap): SeatMapRow[] {
   return seatmap.rows.map((row) => ({
@@ -108,7 +108,7 @@ function CancelEventDialog({ event }: { event: OrganizerEvent }) {
     <Dialog
       trigger={<Button variant="danger">Cancelar sessão</Button>}
       title="Cancelar sessão"
-      description="Ação irreversível e sem estorno nesta versão -- ingressos já vendidos não são reembolsados automaticamente."
+      description="Ação irreversível e sem estorno nesta versão - ingressos já vendidos não são reembolsados automaticamente."
       open={open}
       onOpenChange={setOpen}
     >
@@ -151,7 +151,7 @@ function EventImageSection({ event }: { event: OrganizerEvent }) {
     mutationFn: () => removeEventImage(event.id),
     onSuccess: (updated) => {
       queryClient.setQueryData(organizadorKeys.eventDetail(event.id), updated)
-      showToast('Capa removida -- pôster do catálogo restaurado.', 'success')
+      showToast('Capa removida - pôster do catálogo restaurado.', 'success')
     },
     onError: (err) => setLocalError(imageErrorMessage(err)),
   })
@@ -182,7 +182,7 @@ function EventImageSection({ event }: { event: OrganizerEvent }) {
         <img src={previewUrl ?? event.imageUrl} alt="" className={styles.poster} />
       )}
       {/* Corte nº 3 (§12.1): sem imagem própria, o pôster do TMDb cobre tudo */}
-      {!hasCustomImage && <p className={styles.note}>Usando o pôster do TMDb -- envie uma imagem para substituí-lo.</p>}
+      {!hasCustomImage && <p className={styles.note}>Usando o pôster do TMDb - envie uma imagem para substituí-lo.</p>}
       {localError && (
         <p role="alert" className={styles.formError}>
           {localError}

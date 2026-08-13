@@ -50,7 +50,7 @@ export function GateStatsPanel({ eventId }: GateStatsPanelProps) {
           {data.used} de {data.total}
         </strong>{' '}
         validados
-        <span className={styles.remaining}> -- {data.remaining} restantes</span>
+        <span className={styles.remaining}> - {data.remaining} restantes</span>
       </p>
 
       {/* `GateStats.lastValidations` do back não inclui assento (`gate.service.ts`,
