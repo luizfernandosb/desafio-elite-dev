@@ -56,4 +56,24 @@ describe('GateStatsPanel', () => {
     expect(await screen.findByText('0 de 50')).toBeInTheDocument()
     expect(screen.queryByLabelText('Últimas validações')).not.toBeInTheDocument()
   })
+
+  // § etapa 11, bugs.md -- antes desta etapa, uma falha aqui deixava o skeleton para
+  // sempre (nem erro, nem conteúdo): `isLoading || !data` nunca virava falso depois
+  // que a query esgotava os retries.
+  it('erro -- ErrorState com retry, nunca skeleton para sempre', async () => {
+    server.use(
+      http.get(`${API}/gate/events/evt-1/stats`, () =>
+        HttpResponse.json({ code: 'INTERNAL_ERROR', message: 'Erro interno' }, { status: 500 }),
+      ),
+    )
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <GateStatsPanel eventId="evt-1" />
+      </QueryClientProvider>,
+    )
+
+    // 500 aciona 1 retry (query-client.ts) antes do erro aparecer
+    expect(await screen.findByRole('alert', {}, { timeout: 3000 })).toHaveTextContent('Erro interno')
+  })
 })

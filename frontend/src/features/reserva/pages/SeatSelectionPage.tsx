@@ -1,14 +1,14 @@
 import { useMemo, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { EmptyState, SeatMap, Skeleton, type SeatMapRow } from '../../../components'
+import { ErrorBoundary } from '../../../app/ErrorBoundary'
+import { EmptyState, ErrorState, SeatMap, Skeleton, type SeatMapRow } from '../../../components'
 import { formatEventDate } from '../../../shared/date'
 import { applySeatPatch } from '../applySeatPatch'
 import { getEvent, getSeatmap, reservaKeys, type Seatmap, type SeatHold } from '../api'
 import { ConnectionBadge } from '../components/ConnectionBadge'
 import { HoldExpiredModal } from '../components/HoldExpiredModal'
 import { SelectionBar } from '../components/SelectionBar'
-import { seatmapErrorMessage } from '../error-messages'
 import { useHold } from '../useHold'
 import { isOwnSeatChange, useLiveAnnouncements } from '../useLiveAnnouncements'
 import { usePollingFallback } from '../usePollingFallback'
@@ -31,6 +31,8 @@ export default function SeatSelectionPage() {
     data: event,
     isLoading: isEventLoading,
     isError: isEventError,
+    error: eventError,
+    refetch: refetchEvent,
   } = useQuery({
     queryKey: reservaKeys.event(eventId),
     queryFn: () => getEvent(eventId),
@@ -42,6 +44,7 @@ export default function SeatSelectionPage() {
     isLoading: isSeatmapLoading,
     isError: isSeatmapError,
     error: seatmapError,
+    refetch: refetchSeatmap,
   } = useQuery({
     queryKey: reservaKeys.seatmap(eventId),
     queryFn: () => getSeatmap(eventId),
@@ -146,11 +149,14 @@ export default function SeatSelectionPage() {
   if (isEventError || isSeatmapError || !event || !seatmap) {
     return (
       <div className={styles.page}>
-        <EmptyState
-          title="Não foi possível carregar o mapa de assentos"
-          description={seatmapError ? seatmapErrorMessage(seatmapError) : undefined}
-          action={<Link to={`/eventos/${eventId}`}>Voltar para a sessão</Link>}
+        <ErrorState
+          error={eventError ?? seatmapError}
+          onRetry={() => {
+            void refetchEvent()
+            void refetchSeatmap()
+          }}
         />
+        <Link to={`/eventos/${eventId}`}>Voltar para a sessão</Link>
       </div>
     )
   }
@@ -185,12 +191,18 @@ export default function SeatSelectionPage() {
         <ConnectionBadge status={connectionStatus} />
       </div>
 
-      <SeatMap
-        rows={mapRows}
-        onSeatClick={handleSeatClick}
-        legend
-        ariaLabel={`Mapa de assentos -- ${event.venueName}`}
-      />
+      {/* Boundary por seção (§ etapa 11) -- um erro de render no mapa (a parte mais
+          densa desta tela: grade dinâmica, patches de realtime) some só com o mapa,
+          nunca com o header/nav do resto da aplicação (não há `errorElement` de
+          rota entre esta página e a raiz). */}
+      <ErrorBoundary>
+        <SeatMap
+          rows={mapRows}
+          onSeatClick={handleSeatClick}
+          legend
+          ariaLabel={`Mapa de assentos -- ${event.venueName}`}
+        />
+      </ErrorBoundary>
 
       {/* preparada na etapa 06, alimentada aqui: só mudanças de OUTROS assentos,
           nunca a própria seleção (já anunciada pelo clique em si) */}

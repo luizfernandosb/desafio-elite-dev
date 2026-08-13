@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { Link, Navigate, useLocation, useNavigate, useParams } from 'react-router-dom'
-import { Button, EmptyState, Select, Skeleton, useToast } from '../../../components'
+import { ErrorBoundary } from '../../../app/ErrorBoundary'
+import { Button, EmptyState, ErrorState, Select, Skeleton, useToast } from '../../../components'
 import { formatMoney } from '../../../shared/money'
 import { checkoutKeys, createOrder, getOrder, simulatePayment, type SimulateOutcome } from '../api'
 import { TestCardsPanel } from '../components/TestCardsPanel'
@@ -41,6 +42,7 @@ export default function CheckoutPage() {
     isLoading: isCreating,
     isError: isCreateError,
     error: createError,
+    refetch: refetchCreateOrder,
   } = useQuery({
     queryKey: checkoutKeys.createOrder(idempotencyKey),
     queryFn: () => createOrder(state.eventId as string, state.holdIds as string[], idempotencyKey),
@@ -67,6 +69,8 @@ export default function CheckoutPage() {
     data: order,
     isLoading: isOrderLoading,
     isError: isOrderError,
+    error: orderError,
+    refetch: refetchOrder,
   } = useQuery({
     queryKey: checkoutKeys.order(orderId ?? ''),
     queryFn: () => getOrder(orderId as string),
@@ -106,10 +110,11 @@ export default function CheckoutPage() {
 
   if (isNewOrder && isCreateError) {
     // HOLD_EXPIRED já foi tratado (redirect) no efeito acima -- este ramo só
-    // renderiza por um instante antes do redirect, ou para qualquer outro erro
+    // renderiza por um instante antes do redirect, ou para qualquer outro erro de
+    // infraestrutura (rede/500/timeout), que cai no `ErrorState` central (§ etapa 11)
     return (
       <div className={styles.page}>
-        <EmptyState title="Não foi possível iniciar o pagamento" description={checkoutErrorMessage(createError)} />
+        <ErrorState error={createError} onRetry={() => refetchCreateOrder()} />
       </div>
     )
   }
@@ -126,7 +131,8 @@ export default function CheckoutPage() {
   if (!isNewOrder && (isOrderError || !order)) {
     return (
       <div className={styles.page}>
-        <EmptyState title="Pedido não encontrado" action={<Link to="/">Voltar para o catálogo</Link>} />
+        <ErrorState error={orderError} onRetry={() => refetchOrder()} />
+        <Link to="/">Voltar para o catálogo</Link>
       </div>
     )
   }
@@ -147,27 +153,33 @@ export default function CheckoutPage() {
 
       <TestCardsPanel />
 
-      <div className={styles.form}>
-        <Select
-          label="Resultado do pagamento (simulação)"
-          options={[
-            { value: 'succeeded', label: 'Aprovar pagamento' },
-            { value: 'requires_payment_method', label: 'Recusar pagamento' },
-          ]}
-          value={outcome}
-          onValueChange={(value) => setOutcome(value as SimulateOutcome)}
-        />
+      {/* Boundary por seção (§ etapa 11) -- fase fake hoje, mas é o ponto exato onde
+          o Stripe Elements real entra no Dia 3 (iframe de terceiro, historicamente o
+          tipo de coisa que quebra em runtime). Um erro aqui não deveria levar nem o
+          total já mostrado acima nem o header/nav do resto da aplicação. */}
+      <ErrorBoundary>
+        <div className={styles.form}>
+          <Select
+            label="Resultado do pagamento (simulação)"
+            options={[
+              { value: 'succeeded', label: 'Aprovar pagamento' },
+              { value: 'requires_payment_method', label: 'Recusar pagamento' },
+            ]}
+            value={outcome}
+            onValueChange={(value) => setOutcome(value as SimulateOutcome)}
+          />
 
-        {submitError && (
-          <p role="alert" className={styles.formError}>
-            {checkoutErrorMessage(submitError)}
-          </p>
-        )}
+          {submitError && (
+            <p role="alert" className={styles.formError}>
+              {checkoutErrorMessage(submitError)}
+            </p>
+          )}
 
-        <Button onClick={() => submitPayment()} loading={isSubmitting}>
-          Pagar {formatMoney(order.amountInCents, order.currency)}
-        </Button>
-      </div>
+          <Button onClick={() => submitPayment()} loading={isSubmitting}>
+            Pagar {formatMoney(order.amountInCents, order.currency)}
+          </Button>
+        </div>
+      </ErrorBoundary>
     </div>
   )
 }

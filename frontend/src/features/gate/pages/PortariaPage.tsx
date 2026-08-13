@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { ErrorBoundary } from '../../../app/ErrorBoundary'
 import { Button } from '../../../components'
 import { useAuth } from '../../auth/useAuth'
 import { EventPicker } from '../components/EventPicker'
@@ -39,7 +40,13 @@ export default function PortariaPage() {
         <div className={styles.body}>
           <GateStatsPanel eventId={eventId} />
 
-          <GateScanner paused={busy} onScan={submit} />
+          {/* Boundary por seção (§ etapa 11) -- câmera é a parte mais instável desta
+              tela (device API, lib de terceiro); um erro de render aqui nunca deve
+              tirar a digitação manual do ar -- "a portaria nunca para por causa da
+              câmera" (§ etapa 10) vale para erro de render, não só HTTPS/permissão. */}
+          <ErrorBoundary>
+            <GateScanner paused={busy} onScan={submit} />
+          </ErrorBoundary>
 
           <ManualEntry disabled={busy} onSubmit={submit} />
         </div>

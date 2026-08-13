@@ -162,8 +162,26 @@ async function rawFetch(path: string, options: RequestOptions): Promise<Response
   })
 }
 
+// `fetch()` em si (rede fora do ar, DNS, CORS) rejeita com `TypeError`; o timeout de
+// 15s (`AbortSignal.timeout`) rejeita com `DOMException` nomeada `TimeoutError` --
+// nenhum dos dois é o `{ code, message }` do back, então nenhum vira `ApiError`
+// sozinho. Sem isto, toda tela teria que checar `instanceof ApiError` E os dois
+// casos crus separadamente (§ etapa 11, "sem resposta -> Sem conexão"). `status: 0`
+// marca os dois como "sem resposta HTTP de verdade", nunca confundível com um 4xx/5xx.
+export function classifyFetchFailure(err: unknown): ApiError {
+  if (err instanceof DOMException && err.name === 'TimeoutError') {
+    return new ApiError('TIMEOUT', 'A operação demorou mais que o esperado.', 0)
+  }
+  return new ApiError('NETWORK_ERROR', 'Sem conexão com o servidor. Verifique sua internet.', 0)
+}
+
 async function apiFetch<T>(path: string, options: RequestOptions, isRetry = false): Promise<T> {
-  const res = await rawFetch(path, options)
+  let res: Response
+  try {
+    res = await rawFetch(path, options)
+  } catch (err) {
+    throw classifyFetchFailure(err)
+  }
 
   if (res.status === 401 && !options.skipAuth) {
     if (!isRetry) {

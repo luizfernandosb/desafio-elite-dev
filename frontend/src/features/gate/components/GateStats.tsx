@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
-import { Skeleton } from '../../../components'
+import { ErrorState, Skeleton } from '../../../components'
+import { useQueryState } from '../../../shared/useQueryState'
 import { gateKeys, getGateStats } from '../api'
 import { resultIcon, resultTone } from '../status'
 import styles from './GateStats.module.css'
@@ -19,15 +20,28 @@ function formatTime(iso: string): string {
 }
 
 export function GateStatsPanel({ eventId }: GateStatsPanelProps) {
-  const { data, isLoading } = useQuery({
+  const query = useQuery({
     queryKey: gateKeys.stats(eventId),
     queryFn: () => getGateStats(eventId),
     refetchInterval: REFRESH_MS,
   })
+  // nunca "vazio" -- `total: 0` (evento sem ingressos) ainda é conteúdo válido a
+  // mostrar, não ausência de dado (§ etapa 11: antes desta etapa, um 500 aqui
+  // deixava o skeleton para sempre, sem nunca virar erro visível -- `isLoading ||
+  // !data` nunca saía de `true` depois que a query esgotava os retries)
+  const state = useQueryState(query, () => false)
 
-  if (isLoading || !data) {
+  if (state.status === 'loading') {
     return <Skeleton height="72px" radius="md" />
   }
+
+  if (state.status === 'error') {
+    return <ErrorState error={state.error} onRetry={() => query.refetch()} />
+  }
+
+  if (state.status !== 'content') return null // inalcançável (isEmpty sempre false) -- só para o TS
+
+  const data = state.data
 
   return (
     <div className={styles.panel}>

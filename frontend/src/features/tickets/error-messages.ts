@@ -1,15 +1,9 @@
 import { ApiError } from '../../lib/api'
 
-export function ticketListErrorMessage(err: unknown): string {
-  if (err instanceof ApiError) return err.message
-  return 'Não foi possível carregar seus ingressos. Tente de novo.'
-}
-
-export function ticketDetailErrorMessage(err: unknown): string {
-  if (err instanceof ApiError) return err.message
-  return 'Não foi possível carregar o ingresso. Tente de novo.'
-}
-
+// Erro de listagem/detalhe do ingresso não tem mais função própria aqui -- vira
+// `ErrorState` central (§ etapa 11, `shared/errors.ts`), igual a qualquer outra
+// tela. As duas funções abaixo continuam locais porque `TICKET_CANCELLED`/
+// `SHARE_*` são negócio (compartilhamento), não infraestrutura.
 export function shareErrorMessage(err: unknown): string {
   if (err instanceof ApiError) {
     if (err.code === 'TICKET_CANCELLED') return 'Ingresso cancelado não pode ser compartilhado.'

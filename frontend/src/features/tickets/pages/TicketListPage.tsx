@@ -1,10 +1,10 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
-import { Button, EmptyState, Pagination, Skeleton } from '../../../components'
+import { EmptyState, ErrorState, Pagination, Skeleton } from '../../../components'
+import { useQueryState } from '../../../shared/useQueryState'
 import { listTickets, ticketKeys, type Ticket } from '../api'
 import { TicketCard } from '../components/TicketCard'
-import { ticketListErrorMessage } from '../error-messages'
 import styles from './TicketListPage.module.css'
 
 // Agrupar por `startsAt` vs. agora, não pelo `status` do ingresso (§ etapa 09) --
@@ -32,12 +32,17 @@ function splitByTime(tickets: Ticket[]): { upcoming: Ticket[]; past: Ticket[] } 
 export default function TicketListPage() {
   const [page, setPage] = useState(1)
 
-  const { data, isLoading, isError, error, refetch } = useQuery({
+  const query = useQuery({
     queryKey: ticketKeys.list(page),
     queryFn: () => listTickets(page),
   })
 
-  if (isLoading) {
+  // Os quatro estados padrão (§ etapa 11) -- "vazio" aqui é a página inteira sem
+  // nenhum ingresso, não "sem resultado para esta página" (paginação nunca some
+  // sozinha para uma página vazia, ver `Pagination`).
+  const state = useQueryState(query, (data) => data.data.length === 0)
+
+  if (state.status === 'loading') {
     return (
       <div className={styles.page}>
         <h1>Meus ingressos</h1>
@@ -50,24 +55,16 @@ export default function TicketListPage() {
     )
   }
 
-  if (isError) {
+  if (state.status === 'error') {
     return (
       <div className={styles.page}>
         <h1>Meus ingressos</h1>
-        <EmptyState
-          title="Não foi possível carregar seus ingressos"
-          description={ticketListErrorMessage(error)}
-          action={
-            <Button variant="secondary" onClick={() => refetch()}>
-              Tentar de novo
-            </Button>
-          }
-        />
+        <ErrorState error={state.error} onRetry={() => query.refetch()} />
       </div>
     )
   }
 
-  if (!data || data.data.length === 0) {
+  if (state.status === 'empty') {
     return (
       <div className={styles.page}>
         <h1>Meus ingressos</h1>
@@ -80,7 +77,7 @@ export default function TicketListPage() {
     )
   }
 
-  const { upcoming, past } = splitByTime(data.data)
+  const { upcoming, past } = splitByTime(state.data.data)
 
   return (
     <div className={styles.page}>
@@ -109,10 +106,10 @@ export default function TicketListPage() {
       )}
 
       <Pagination
-        page={data.meta.page}
-        totalPages={data.meta.totalPages}
-        hasPrev={data.meta.hasPrev}
-        hasNext={data.meta.hasNext}
+        page={state.data.meta.page}
+        totalPages={state.data.meta.totalPages}
+        hasPrev={state.data.meta.hasPrev}
+        hasNext={state.data.meta.hasNext}
         onPageChange={setPage}
       />
     </div>

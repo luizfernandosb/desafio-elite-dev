@@ -5,7 +5,7 @@ import {
   Badge,
   Button,
   Dialog,
-  EmptyState,
+  ErrorState,
   Input,
   SeatMap,
   Skeleton,
@@ -211,6 +211,7 @@ export default function EventDetailPage() {
     isLoading,
     isError,
     error,
+    refetch,
   } = useQuery({
     queryKey: organizadorKeys.eventDetail(eventId),
     queryFn: () => getEvent(eventId),
@@ -235,10 +236,7 @@ export default function EventDetailPage() {
   if (isError || !event) {
     return (
       <div className={styles.page}>
-        <EmptyState
-          title="Sessão não encontrada"
-          description={error ? eventErrorMessage(error) : undefined}
-        />
+        <ErrorState error={error} onRetry={() => refetch()} />
       </div>
     )
   }

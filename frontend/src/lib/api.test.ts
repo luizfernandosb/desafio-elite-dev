@@ -1,7 +1,7 @@
 import { http, HttpResponse } from 'msw'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { server } from '../test/msw/server'
-import { api, ApiError, getAccessToken, onSessionExpired, setAccessToken } from './api'
+import { api, ApiError, classifyFetchFailure, getAccessToken, onSessionExpired, setAccessToken } from './api'
 import { env } from './env'
 
 const API = env.VITE_API_URL
@@ -62,6 +62,22 @@ describe('api -- erro tipado (§5.5.4)', () => {
     )
 
     await expect(api.get('/probe')).rejects.toMatchObject({ requestId: 'req-123' })
+  })
+})
+
+describe('api -- rede fora do ar e timeout (§ etapa 11, "sem resposta -> Sem conexão")', () => {
+  it('fetch rejeitado (rede fora do ar) vira ApiError NETWORK_ERROR, não um TypeError cru', async () => {
+    server.use(http.get(`${API}/probe`, () => HttpResponse.error()))
+
+    await expect(api.get('/probe')).rejects.toMatchObject({ code: 'NETWORK_ERROR', status: 0 })
+  })
+
+  it('classifyFetchFailure -- DOMException TimeoutError vira TIMEOUT, resto vira NETWORK_ERROR', () => {
+    const timeout = classifyFetchFailure(new DOMException('aborted', 'TimeoutError'))
+    expect(timeout).toMatchObject({ code: 'TIMEOUT', status: 0 })
+
+    const network = classifyFetchFailure(new TypeError('Failed to fetch'))
+    expect(network).toMatchObject({ code: 'NETWORK_ERROR', status: 0 })
   })
 })
 

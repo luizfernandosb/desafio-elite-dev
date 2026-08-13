@@ -1,11 +1,10 @@
 import { useQuery } from '@tanstack/react-query'
 import { Link, useParams } from 'react-router-dom'
 import { QRCodeSVG } from 'qrcode.react'
-import { Badge, EmptyState, Skeleton } from '../../../components'
+import { Badge, ErrorState, Skeleton } from '../../../components'
 import { formatEventDate } from '../../../shared/date'
 import { getTicket, ticketKeys } from '../api'
 import { ShareButton } from '../components/ShareButton'
-import { ticketDetailErrorMessage } from '../error-messages'
 import { ticketStatusLabel, ticketStatusVariant } from '../status'
 import styles from './TicketDetailPage.module.css'
 
@@ -20,6 +19,7 @@ export default function TicketDetailPage() {
     isLoading,
     isError,
     error,
+    refetch,
   } = useQuery({
     queryKey: ticketKeys.detail(ticketId),
     queryFn: () => getTicket(ticketId),
@@ -35,14 +35,13 @@ export default function TicketDetailPage() {
     )
   }
 
+  // `ErrorState` distingue NOT_FOUND (ingresso de outro dono ou id inexistente,
+  // sem retry) de erro de infraestrutura (com retry) -- § etapa 11.
   if (isError || !ticket) {
     return (
       <div className={styles.page}>
-        <EmptyState
-          title="Ingresso não encontrado"
-          description={error ? ticketDetailErrorMessage(error) : undefined}
-          action={<Link to="/ingressos">Voltar para meus ingressos</Link>}
-        />
+        <ErrorState error={error} onRetry={() => refetch()} />
+        <Link to="/ingressos">Voltar para meus ingressos</Link>
       </div>
     )
   }

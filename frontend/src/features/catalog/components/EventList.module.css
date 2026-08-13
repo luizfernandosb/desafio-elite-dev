@@ -21,18 +21,3 @@
   outline: 2px solid var(--primary-hover);
   outline-offset: 2px;
 }
-
-.errorCard {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-  align-items: flex-start;
-  max-width: 480px;
-}
-
-.requestId {
-  margin: 0;
-  font-size: 0.75rem;
-  color: var(--text-secondary);
-  font-family: monospace;
-}

@@ -19,8 +19,3 @@ export function holdErrorMessage(err: unknown): string {
   }
   return 'Não foi possível reservar os assentos. Tente de novo.'
 }
-
-export function seatmapErrorMessage(err: unknown): string {
-  if (err instanceof ApiError) return err.message
-  return 'Não foi possível carregar o mapa de assentos. Tente de novo.'
-}

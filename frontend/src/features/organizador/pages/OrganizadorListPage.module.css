@@ -56,11 +56,3 @@
   font-size: 0.875rem;
   white-space: nowrap;
 }
-
-.error {
-  padding: var(--space-2) var(--space-3);
-  border-radius: var(--radius-sm);
-  background: color-mix(in srgb, var(--danger) 12%, transparent);
-  color: var(--danger);
-  font-size: 0.875rem;
-}

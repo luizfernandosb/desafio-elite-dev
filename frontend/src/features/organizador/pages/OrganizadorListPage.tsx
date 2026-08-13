@@ -1,11 +1,11 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
-import { Badge, Button, Card, EmptyState, Pagination, Skeleton, Tabs } from '../../../components'
+import { Badge, Button, Card, EmptyState, ErrorState, Pagination, Skeleton, Tabs } from '../../../components'
 import { formatEventDate } from '../../../shared/date'
 import { formatMoney } from '../../../shared/money'
+import { useQueryState } from '../../../shared/useQueryState'
 import { listOrganizerEvents, organizadorKeys, type EventStatus, type OrganizerEvent } from '../api'
-import { eventErrorMessage } from '../error-messages'
 import { eventStatusLabel } from '../status'
 import styles from './OrganizadorListPage.module.css'
 
@@ -50,12 +50,13 @@ function EventRow({ event }: { event: OrganizerEvent }) {
 
 function EventStatusList({ status }: { status: EventStatus }) {
   const [page, setPage] = useState(1)
-  const { data, isLoading, isError, error } = useQuery({
+  const query = useQuery({
     queryKey: organizadorKeys.eventList({ status, page }),
     queryFn: () => listOrganizerEvents({ status, page }),
   })
+  const state = useQueryState(query, (data) => data.data.length === 0)
 
-  if (isLoading) {
+  if (state.status === 'loading') {
     return (
       <div className={styles.list} aria-hidden="true">
         {Array.from({ length: 3 }, (_, index) => (
@@ -65,15 +66,11 @@ function EventStatusList({ status }: { status: EventStatus }) {
     )
   }
 
-  if (isError) {
-    return (
-      <p role="alert" className={styles.error}>
-        {eventErrorMessage(error)}
-      </p>
-    )
+  if (state.status === 'error') {
+    return <ErrorState error={state.error} onRetry={() => query.refetch()} />
   }
 
-  if (!data || data.data.length === 0) {
+  if (state.status === 'empty') {
     const copy = emptyStateCopy(status)
     return (
       <EmptyState
@@ -90,14 +87,14 @@ function EventStatusList({ status }: { status: EventStatus }) {
 
   return (
     <div className={styles.list}>
-      {data.data.map((event) => (
+      {state.data.data.map((event) => (
         <EventRow key={event.id} event={event} />
       ))}
       <Pagination
-        page={data.meta.page}
-        totalPages={data.meta.totalPages}
-        hasPrev={data.meta.hasPrev}
-        hasNext={data.meta.hasNext}
+        page={state.data.meta.page}
+        totalPages={state.data.meta.totalPages}
+        hasPrev={state.data.meta.hasPrev}
+        hasNext={state.data.meta.hasNext}
         onPageChange={setPage}
       />
     </div>

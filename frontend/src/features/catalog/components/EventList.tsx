@@ -1,10 +1,9 @@
 import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
-import { Button, Card, EmptyState, EventCard, Pagination, Skeleton } from '../../../components'
+import { Button, EmptyState, ErrorState, EventCard, Pagination, Skeleton } from '../../../components'
 import { formatEventDate } from '../../../shared/date'
 import { formatMoney } from '../../../shared/money'
 import { catalogKeys, listPublicEvents } from '../api'
-import { catalogListErrorMessage, catalogRequestId } from '../error-messages'
 import styles from './EventList.module.css'
 
 interface EventListProps {
@@ -41,17 +40,12 @@ export function EventList({ q, from, to, page, onPageChange, onClearFilters }: E
     )
   }
 
+  // Erro de infraestrutura (rede, 500, timeout) -- `ErrorState` central (§ etapa 11),
+  // não mais um `<Card>` com `role="alert"` reimplementado aqui. Filtro sem
+  // resultado (abaixo) continua `EmptyState`: é ausência de dado, não falha de
+  // requisição -- os dois nunca se confundem.
   if (isError) {
-    const requestId = catalogRequestId(error)
-    return (
-      <Card className={styles.errorCard}>
-        <p role="alert">{catalogListErrorMessage(error)}</p>
-        {requestId && <p className={styles.requestId}>ID da requisição: {requestId}</p>}
-        <Button variant="secondary" onClick={() => refetch()}>
-          Tentar de novo
-        </Button>
-      </Card>
-    )
+    return <ErrorState error={error} onRetry={() => refetch()} />
   }
 
   if (!data || data.data.length === 0) {

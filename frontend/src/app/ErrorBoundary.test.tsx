@@ -21,6 +21,28 @@ describe('ErrorBoundary', () => {
 
     expect(screen.getByRole('alert')).toHaveTextContent('bum')
   })
+
+  // § etapa 11 -- mapa de assentos, checkout e portaria envolvem só a seção pesada
+  // num `<ErrorBoundary>` (nunca a página inteira); este teste prova o motivo:
+  // um irmão FORA do boundary sobrevive ao erro de dentro, então o header/nav (que
+  // fica fora de qualquer seção) nunca some por causa de um erro no mapa/scanner.
+  it('erro isolado por seção -- um irmão fora do boundary sobrevive, nunca propaga para a página inteira', () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+
+    render(
+      <div>
+        <header>Cabeçalho da aplicação</header>
+        <ErrorBoundary>
+          <Boom />
+        </ErrorBoundary>
+        <footer>Resto da página</footer>
+      </div>,
+    )
+
+    expect(screen.getByText('Cabeçalho da aplicação')).toBeInTheDocument()
+    expect(screen.getByText('Resto da página')).toBeInTheDocument()
+    expect(screen.getByRole('alert')).toHaveTextContent('bum')
+  })
 })
 
 describe('RouteErrorBoundary', () => {

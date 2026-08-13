@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { Button, EmptyState, Skeleton, useToast } from '../../../components'
+import { Button, EmptyState, ErrorState, Skeleton, useToast } from '../../../components'
 import { formatMoney } from '../../../shared/money'
 import { checkoutKeys, createOrder, getOrder } from '../api'
 import { checkoutErrorMessage, isHoldExpired } from '../error-messages'
@@ -27,6 +27,7 @@ export default function CheckoutReturnPage() {
     isLoading,
     isError,
     error,
+    refetch,
   } = useQuery({
     queryKey: checkoutKeys.order(orderId ?? ''),
     queryFn: () => getOrder(orderId as string),
@@ -91,11 +92,8 @@ export default function CheckoutReturnPage() {
   if (isError || !order) {
     return (
       <div className={styles.page}>
-        <EmptyState
-          title="Não foi possível carregar o resultado do pagamento"
-          description={error ? checkoutErrorMessage(error) : undefined}
-          action={<Link to="/">Voltar para o catálogo</Link>}
-        />
+        <ErrorState error={error} onRetry={() => refetch()} />
+        <Link to="/">Voltar para o catálogo</Link>
       </div>
     )
   }

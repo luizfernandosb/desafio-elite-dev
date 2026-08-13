@@ -1,11 +1,10 @@
 import { useQuery } from '@tanstack/react-query'
 import { Link, useParams } from 'react-router-dom'
-import { Badge, EmptyState, Skeleton } from '../../../components'
+import { Badge, ErrorState, Skeleton } from '../../../components'
 import { useAuth } from '../../auth/useAuth'
 import { formatEventDate } from '../../../shared/date'
 import { formatMoney } from '../../../shared/money'
 import { catalogKeys, getPublicEvent, getPublicEventSeatmap } from '../api'
-import { catalogListErrorMessage } from '../error-messages'
 import styles from './EventDetailPage.module.css'
 
 function totalSeats(seatmap: { rows: { seats: unknown[] }[] } | undefined): number | null {
@@ -23,6 +22,7 @@ export default function EventDetailPage() {
     isLoading,
     isError,
     error,
+    refetch,
   } = useQuery({
     queryKey: catalogKeys.detail(eventId),
     queryFn: () => getPublicEvent(eventId),
@@ -45,14 +45,15 @@ export default function EventDetailPage() {
     )
   }
 
+  // `ErrorState` distingue sozinho NOT_FOUND (sem retry, mensagem do back) de um
+  // erro de infraestrutura (rede/500/timeout, com retry) -- §5.5.4/§ etapa 11, em
+  // vez de um `EmptyState` com título fixo "Sessão não encontrada" independente da
+  // causa real.
   if (isError || !event) {
     return (
       <div className={styles.page}>
-        <EmptyState
-          title="Sessão não encontrada"
-          description={error ? catalogListErrorMessage(error) : 'Ela pode ter sido removida ou cancelada.'}
-          action={<Link to="/">Voltar para o catálogo</Link>}
-        />
+        <ErrorState error={error} onRetry={() => refetch()} />
+        <Link to="/">Voltar para o catálogo</Link>
       </div>
     )
   }
