@@ -1,6 +1,6 @@
 import { useState, type ChangeEvent } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useParams } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 import {
   Badge,
   Button,
@@ -85,6 +85,7 @@ function CancelEventDialog({ event }: { event: OrganizerEvent }) {
   const [confirmText, setConfirmText] = useState('')
   const queryClient = useQueryClient()
   const { showToast } = useToast()
+  const navigate = useNavigate()
 
   const { mutate, isPending, error } = useMutation({
     mutationFn: () => cancelEvent(event.id),
@@ -94,6 +95,10 @@ function CancelEventDialog({ event }: { event: OrganizerEvent }) {
       showToast('Sessão cancelada.', 'success')
       setOpen(false)
       setConfirmText('')
+      // sai do detalhe (que só mostra "Cancelar sessão" de novo, sem ação possível) e
+      // volta pra lista já na aba "Publicadas" -- de onde a maioria dos cancelamentos
+      // parte -- com dados frescos (a invalidação acima já forçou o refetch)
+      navigate('/organizador?status=PUBLISHED')
     },
   })
 
@@ -148,6 +153,7 @@ function EventImageSection({ event }: { event: OrganizerEvent }) {
       queryClient.setQueryData(organizadorKeys.eventDetail(event.id), updated)
       showToast('Capa removida -- pôster do catálogo restaurado.', 'success')
     },
+    onError: (err) => setLocalError(imageErrorMessage(err)),
   })
 
   function handleFileChange(changeEvent: ChangeEvent<HTMLInputElement>) {

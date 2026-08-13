@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { Badge, Button, Card, EmptyState, ErrorState, Pagination, Skeleton, Tabs } from '../../../components'
 import { formatEventDate } from '../../../shared/date'
 import { formatMoney } from '../../../shared/money'
@@ -102,6 +102,13 @@ function EventStatusList({ status }: { status: EventStatus }) {
 }
 
 export default function OrganizadorListPage() {
+  // `?status=` na URL escolhe a aba inicial (mesmo padrão de `?passo=` no
+  // CreateEventWizard) -- permite outras telas linkarem direto pra aba certa, ex.:
+  // cancelar uma sessão e cair em "Publicadas" já mostrando as demais.
+  const [searchParams] = useSearchParams()
+  const statusParam = searchParams.get('status')
+  const initialTab = STATUS_TABS.find((tab) => tab.value === statusParam)?.value
+
   return (
     <div className={styles.page}>
       <div className={styles.header}>
@@ -112,6 +119,7 @@ export default function OrganizadorListPage() {
       </div>
       <Tabs
         label="Sessões por status"
+        defaultValue={initialTab}
         items={STATUS_TABS.map((tab) => ({
           value: tab.value,
           label: tab.label,
