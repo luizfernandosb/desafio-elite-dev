@@ -13,6 +13,7 @@ interface RoomStepProps {
   movie: CatalogItem
   venueName: string
   venueCity: string
+  venueState: string
   startsAtUtc: Date
   timezone: string
   accessibleSeats: string[]
@@ -44,6 +45,7 @@ export function RoomStep({
   movie,
   venueName,
   venueCity,
+  venueState,
   startsAtUtc,
   timezone,
   accessibleSeats,
@@ -136,7 +138,7 @@ export function RoomStep({
           <div>
             <dt>Local</dt>
             <dd>
-              {venueName}, {venueCity}
+              {venueName}, {venueCity} - {venueState}
             </dd>
           </div>
           <div>

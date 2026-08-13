@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { BRAZIL_UF_CODES } from './brazil-states'
 import { MAX_ROWS, MAX_SEATS_PER_ROW } from './room-layout'
 import { zonedWallTimeToUtcDate } from './timezones'
 
@@ -13,11 +14,18 @@ function isValidIanaTimezone(timezone: string): boolean {
   }
 }
 
+function isValidBrazilUf(uf: string): boolean {
+  return (BRAZIL_UF_CODES as readonly string[]).includes(uf)
+}
+
+const venueStateSchema = z.string().refine(isValidBrazilUf, 'Estado obrigatório')
+
 // Espelha backend/src/modules/events/events.schema.ts (createEventSchema) -- mesmos
 // limites, validados aqui só para feedback rápido; a autoridade é sempre o servidor.
 export const venueStepSchema = z
   .object({
     venueName: z.string().trim().min(1, 'Local obrigatório').max(200),
+    venueState: venueStateSchema,
     venueCity: z.string().trim().min(1, 'Cidade obrigatória').max(100),
     date: z.string().min(1, 'Data obrigatória'),
     time: z.string().min(1, 'Horário obrigatório'),
@@ -60,6 +68,7 @@ export type RoomStepValues = z.infer<typeof roomStepSchema>
 // PATCH /events/:id, exceto os que ficam bloqueados após venda (ver EventEditForm.tsx).
 export const editEventSchema = z.object({
   venueName: z.string().trim().min(1, 'Local obrigatório').max(200),
+  venueState: venueStateSchema,
   venueCity: z.string().trim().min(1, 'Cidade obrigatória').max(100),
   synopsis: z.string().max(2000).optional(),
   date: z.string().min(1, 'Data obrigatória'),

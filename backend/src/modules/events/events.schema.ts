@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import { CatalogSource, EventStatus } from '../../../generated/prisma/enums'
+import { BRAZIL_UF_CODES } from '../../shared/brazil-states'
 import { paginationSchema } from '../../shared/pagination'
 import { isValidSeatLabel, MAX_ROWS, MAX_SEATS_PER_ROW } from './seatmap.service'
 
@@ -34,6 +35,7 @@ export const createEventSchema = {
       externalId: z.string().trim().min(1),
       venueName: z.string().trim().min(1).max(200),
       venueCity: z.string().trim().min(1).max(100),
+      venueState: z.enum(BRAZIL_UF_CODES),
       startsAt: z.coerce.date(),
       endsAt: z.coerce.date().optional(),
       timezone: timezoneSchema,
@@ -64,6 +66,7 @@ export const updateEventSchema = {
       venueName: z.string().trim().min(1).max(200).optional(),
       synopsis: z.string().max(2000).optional(),
       venueCity: z.string().trim().min(1).max(100).optional(),
+      venueState: z.enum(BRAZIL_UF_CODES).optional(),
       startsAt: z.coerce.date().optional(),
       endsAt: z.coerce.date().optional(),
       timezone: timezoneSchema.optional(),

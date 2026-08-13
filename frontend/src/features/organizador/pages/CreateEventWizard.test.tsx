@@ -58,7 +58,14 @@ async function selectMovieAndAdvance(user: ReturnType<typeof userEvent.setup>) {
 async function fillVenueStepAndAdvance(user: ReturnType<typeof userEvent.setup>) {
   const { date, time } = futureDateParts()
   await user.type(await screen.findByLabelText('Local'), 'Cinemark Shopping')
-  await user.type(screen.getByLabelText('Cidade'), 'São Paulo')
+
+  await user.click(screen.getByLabelText('Estado'))
+  await user.click(await screen.findByRole('option', { name: 'São Paulo' }))
+
+  await waitFor(() => expect(screen.getByLabelText('Cidade')).toBeEnabled())
+  await user.click(screen.getByLabelText('Cidade'))
+  await user.click(await screen.findByRole('option', { name: 'São Paulo' }))
+
   fireEvent.change(screen.getByLabelText('Data'), { target: { value: date } })
   fireEvent.change(screen.getByLabelText('Horário'), { target: { value: time } })
   await user.click(screen.getByRole('button', { name: 'Continuar' }))

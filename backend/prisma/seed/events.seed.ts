@@ -55,6 +55,7 @@ interface EnsureEventInput {
   movie: MovieSnapshot
   venueName: string
   venueCity: string
+  venueState: string
   status: EventStatus
   startsAt: Date
   endsAt: Date | null
@@ -97,6 +98,7 @@ async function ensureEvent(prisma: PrismaClient, input: EnsureEventInput): Promi
       genres: input.movie.genres,
       venueName: input.venueName,
       venueCity: input.venueCity,
+      venueState: input.venueState,
       type: EventType.SEATED,
       status: input.status,
       startsAt: input.startsAt,
@@ -141,6 +143,7 @@ export async function seedEvents(prisma: PrismaClient, organizerId: string): Pro
     movie: MOVIE_A,
     venueName: 'Cine Elite',
     venueCity: 'São Paulo',
+    venueState: 'SP',
     status: EventStatus.PUBLISHED,
     startsAt: new Date(now - HOUR_MS),
     endsAt: null,
@@ -154,6 +157,7 @@ export async function seedEvents(prisma: PrismaClient, organizerId: string): Pro
     movie: MOVIE_B,
     venueName: 'Cine Elite 2',
     venueCity: 'São Paulo',
+    venueState: 'SP',
     status: EventStatus.PUBLISHED,
     startsAt: new Date(now + 5 * DAY_MS),
     endsAt: null,
@@ -167,6 +171,7 @@ export async function seedEvents(prisma: PrismaClient, organizerId: string): Pro
     movie: MOVIE_C,
     venueName: 'Cine Elite',
     venueCity: 'São Paulo',
+    venueState: 'SP',
     status: EventStatus.DRAFT,
     startsAt: new Date(now + 10 * DAY_MS),
     endsAt: null,

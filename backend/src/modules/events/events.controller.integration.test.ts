@@ -31,6 +31,7 @@ function validPayload(overrides: Record<string, unknown> = {}) {
     externalId: '603',
     venueName: 'Cine Belas Artes',
     venueCity: 'São Paulo',
+    venueState: 'SP',
     startsAt: new Date(Date.now() + 30 * 86_400_000).toISOString(),
     timezone: 'America/Sao_Paulo',
     priceInCents: 3200,

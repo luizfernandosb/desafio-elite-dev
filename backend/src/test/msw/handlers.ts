@@ -13,6 +13,16 @@ export const TMDB_MOVIE = {
   ],
 }
 
+export const IBGE_STATES = [
+  { id: 31, sigla: 'MG', nome: 'Minas Gerais' },
+  { id: 35, sigla: 'SP', nome: 'São Paulo' },
+]
+
+export const IBGE_CITIES_MG = [
+  { id: 3106200, nome: 'Belo Horizonte' },
+  { id: 3136702, nome: 'Juiz de Fora' },
+]
+
 export const handlers = [
   http.get('https://api.themoviedb.org/3/search/movie', ({ request }) => {
     const query = new URL(request.url).searchParams.get('query')
@@ -44,4 +54,13 @@ export const handlers = [
   http.get('https://api.themoviedb.org/3/genre/movie/list', () =>
     HttpResponse.json({ genres: TMDB_MOVIE.genres }),
   ),
+
+  http.get('https://servicodados.ibge.gov.br/api/v1/localidades/estados', () =>
+    HttpResponse.json(IBGE_STATES),
+  ),
+
+  http.get('https://servicodados.ibge.gov.br/api/v1/localidades/estados/:uf/municipios', ({ params }) => {
+    if (params.uf === 'MG') return HttpResponse.json(IBGE_CITIES_MG)
+    return HttpResponse.json([])
+  }),
 ]

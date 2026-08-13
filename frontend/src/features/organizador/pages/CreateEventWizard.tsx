@@ -20,6 +20,7 @@ interface WizardDraft {
   movie: CatalogItem | null
   venueName: string
   venueCity: string
+  venueState: string
   date: string
   time: string
   timezone: string
@@ -35,6 +36,7 @@ const EMPTY_DRAFT: WizardDraft = {
   movie: null,
   venueName: '',
   venueCity: '',
+  venueState: '',
   date: '',
   time: '',
   timezone: 'America/Sao_Paulo',
@@ -136,6 +138,7 @@ export default function CreateEventWizard() {
       externalId: draft.movie.externalId,
       venueName: draft.venueName,
       venueCity: draft.venueCity,
+      venueState: draft.venueState,
       startsAt: startsAt.toISOString(),
       timezone: draft.timezone,
       priceInCents: Math.round(values.priceInReais * 100),
@@ -176,6 +179,7 @@ export default function CreateEventWizard() {
           defaultValues={{
             venueName: draft.venueName,
             venueCity: draft.venueCity,
+            venueState: draft.venueState,
             date: draft.date,
             time: draft.time,
             timezone: draft.timezone,
@@ -195,6 +199,7 @@ export default function CreateEventWizard() {
           movie={draft.movie}
           venueName={draft.venueName}
           venueCity={draft.venueCity}
+          venueState={draft.venueState}
           startsAtUtc={zonedWallTimeToUtcDate(draft.date, draft.time, draft.timezone)}
           timezone={draft.timezone}
           accessibleSeats={draft.accessibleSeats}

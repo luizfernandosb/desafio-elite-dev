@@ -21,6 +21,7 @@ function makeEvent(overrides: Partial<OrganizerEvent> = {}): OrganizerEvent {
     genres: [],
     venueName: 'Cinemark Shopping',
     venueCity: 'São Paulo',
+    venueState: 'SP',
     type: 'SEATED',
     status: 'DRAFT',
     startsAt: '2026-09-20T23:00:00.000Z',
@@ -49,25 +50,33 @@ describe('EventEditForm', () => {
     server.use(
       http.patch(`${API}/events/evt-1`, async ({ request }) => {
         receivedBody = (await request.json()) as Record<string, unknown>
-        return HttpResponse.json(makeEvent({ venueCity: 'Rio de Janeiro' }))
+        return HttpResponse.json(makeEvent({ venueCity: 'Rio de Janeiro', venueState: 'RJ' }))
       }),
     )
     const user = userEvent.setup()
     renderForm(makeEvent())
 
-    const cityInput = screen.getByLabelText('Cidade')
-    expect(cityInput).toBeEnabled()
-    await user.clear(cityInput)
-    await user.type(cityInput, 'Rio de Janeiro')
+    const stateTrigger = screen.getByLabelText('Estado')
+    await waitFor(() => expect(stateTrigger).toBeEnabled())
+    await user.click(stateTrigger)
+    await user.click(await screen.findByRole('option', { name: 'Rio de Janeiro' }))
+
+    // trocar de estado limpa a cidade e refaz a busca de municípios pela UF nova --
+    // espera o picker sair do estado "buscando" (desabilitado) antes de abrir
+    await waitFor(() => expect(screen.getByLabelText('Cidade')).toBeEnabled())
+    await user.click(screen.getByLabelText('Cidade'))
+    await user.click(await screen.findByRole('option', { name: 'Rio de Janeiro' }))
+
     await user.click(screen.getByRole('button', { name: 'Salvar alterações' }))
 
     await waitFor(() => expect(receivedBody).not.toBeNull())
-    expect(receivedBody).toMatchObject({ venueCity: 'Rio de Janeiro', priceInCents: 3200 })
+    expect(receivedBody).toMatchObject({ venueCity: 'Rio de Janeiro', venueState: 'RJ', priceInCents: 3200 })
   })
 
-  it('com vendas -- cidade, data, horário, fuso e preço ficam desabilitados; local continua editável', () => {
+  it('com vendas -- estado, cidade, data, horário, fuso e preço ficam desabilitados; local continua editável', () => {
     renderForm(makeEvent({ _count: { tickets: 5 } }))
 
+    expect(screen.getByLabelText('Estado')).toBeDisabled()
     expect(screen.getByLabelText('Cidade')).toBeDisabled()
     expect(screen.getByLabelText('Data')).toBeDisabled()
     expect(screen.getByLabelText('Horário')).toBeDisabled()

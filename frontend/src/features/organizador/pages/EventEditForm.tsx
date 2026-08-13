@@ -3,6 +3,8 @@ import { useForm } from 'react-hook-form'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { Button, Input, Textarea, useToast } from '../../../components'
 import { organizadorKeys, updateEvent, type OrganizerEvent, type UpdateEventInput } from '../api'
+import { CityPicker } from '../components/CityPicker'
+import { StatePicker } from '../components/StatePicker'
 import { TimezonePicker } from '../components/TimezonePicker'
 import { eventErrorMessage } from '../error-messages'
 import { editEventSchema, type EditEventValues } from '../schemas'
@@ -57,6 +59,7 @@ export function EventEditForm({ event }: EventEditFormProps) {
     mode: 'onBlur',
     defaultValues: {
       venueName: event.venueName,
+      venueState: event.venueState,
       venueCity: event.venueCity,
       synopsis: event.synopsis ?? '',
       date: toDateInputValue(event.startsAt, event.timezone),
@@ -89,6 +92,7 @@ export function EventEditForm({ event }: EventEditFormProps) {
     }
     if (!hasSales) {
       input.venueCity = values.venueCity
+      input.venueState = values.venueState
       input.startsAt = zonedWallTimeToUtcDate(values.date, values.time, values.timezone).toISOString()
       input.timezone = values.timezone
       input.priceInCents = Math.round(values.priceInReais * 100)
@@ -99,6 +103,8 @@ export function EventEditForm({ event }: EventEditFormProps) {
   const date = watch('date')
   const time = watch('time')
   const timezone = watch('timezone')
+  const venueState = watch('venueState')
+  const venueCity = watch('venueCity')
   const lockedHint = 'Bloqueado: há ingressos vendidos para esta sessão'
 
   return (
@@ -116,12 +122,21 @@ export function EventEditForm({ event }: EventEditFormProps) {
       )}
 
       <Input label="Local" error={errors.venueName?.message} {...register('venueName')} />
-      <Input
-        label="Cidade"
+      <StatePicker
+        value={venueState}
+        onChange={(value) => {
+          setValue('venueState', value, { shouldValidate: true, shouldDirty: true })
+          setValue('venueCity', '', { shouldValidate: true, shouldDirty: true })
+        }}
+        error={errors.venueState?.message}
         disabled={hasSales}
-        hint={hasSales ? lockedHint : undefined}
+      />
+      <CityPicker
+        uf={venueState}
+        value={venueCity}
+        onChange={(value) => setValue('venueCity', value, { shouldValidate: true, shouldDirty: true })}
         error={errors.venueCity?.message}
-        {...register('venueCity')}
+        disabled={hasSales}
       />
       <Textarea label="Sinopse" error={errors.synopsis?.message} {...register('synopsis')} />
 
@@ -139,7 +154,7 @@ export function EventEditForm({ event }: EventEditFormProps) {
 
       <TimezonePicker
         value={timezone}
-        onChange={(value) => setValue('timezone', value, { shouldValidate: true })}
+        onChange={(value) => setValue('timezone', value, { shouldValidate: true, shouldDirty: true })}
         date={date}
         time={time}
         error={errors.timezone?.message}

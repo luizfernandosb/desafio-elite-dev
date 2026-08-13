@@ -12,7 +12,7 @@ const TICKETS_COUNT = { select: { tickets: true } }
 
 export class EventsRepository {
   create(db: Db, data: EventUncheckedCreateInput) {
-    return db.event.create({ data })
+    return db.event.create({ data, include: { organizer: ORGANIZER_SELECT, _count: TICKETS_COUNT } })
   }
 
   createSeats(db: Db, seats: SeatCreateManyInput[]) {
@@ -45,7 +45,11 @@ export class EventsRepository {
   }
 
   update(db: Db, id: string, data: EventUpdateInput) {
-    return db.event.update({ where: { id }, data })
+    return db.event.update({
+      where: { id },
+      data,
+      include: { organizer: ORGANIZER_SELECT, _count: TICKETS_COUNT },
+    })
   }
 
   delete(db: Db, id: string) {

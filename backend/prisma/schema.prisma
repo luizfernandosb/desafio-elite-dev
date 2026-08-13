@@ -124,6 +124,7 @@ model Event {
   // definido pelo organizador
   venueName       String
   venueCity       String
+  venueState      String        @db.Char(2) // UF, ex.: "SP" -- select em cascata validado contra a lista do IBGE
   type            EventType     @default(SEATED)
   status          EventStatus   @default(DRAFT)
   startsAt        DateTime      @db.Timestamptz(3) // UTC

@@ -22,6 +22,17 @@ export interface CatalogSearchResult extends Paginated<CatalogItem> {
   meta: Paginated<CatalogItem>['meta'] & { stale?: boolean }
 }
 
+export interface StateOption {
+  id: number
+  sigla: string
+  nome: string
+}
+
+export interface CityOption {
+  id: number
+  nome: string
+}
+
 export interface OrganizerEvent {
   id: string
   organizerId: string
@@ -37,6 +48,7 @@ export interface OrganizerEvent {
   genres: string[]
   venueName: string
   venueCity: string
+  venueState: string
   type: 'SEATED'
   status: EventStatus
   startsAt: string
@@ -73,6 +85,7 @@ export interface CreateEventInput {
   externalId: string
   venueName: string
   venueCity: string
+  venueState: string
   startsAt: string // ISO -- o back faz `z.coerce.date()`, aceita string
   endsAt?: string
   timezone: string
@@ -90,6 +103,7 @@ export interface UpdateEventInput {
   venueName?: string
   synopsis?: string
   venueCity?: string
+  venueState?: string
   startsAt?: string
   endsAt?: string
   timezone?: string
@@ -110,11 +124,23 @@ export const organizadorKeys = {
   eventList: (params: ListOrganizerEventsParams) => [...organizadorKeys.events(), 'list', params] as const,
   eventDetail: (id: string) => [...organizadorKeys.events(), 'detail', id] as const,
   eventSeatmap: (id: string) => [...organizadorKeys.events(), 'seatmap', id] as const,
+  states: () => [...organizadorKeys.all, 'locations', 'states'] as const,
+  cities: (uf: string) => [...organizadorKeys.all, 'locations', 'states', uf, 'cities'] as const,
 }
 
 export function searchCatalog(q: string, page = 1) {
   const search = new URLSearchParams({ q, page: String(page) })
   return api.get<CatalogSearchResult>(`/catalog/search?${search.toString()}`)
+}
+
+// estados e municípios do IBGE não mudam de um dia para o outro -- só o back cacheia
+// (locations.service.ts); aqui é só o `unwrap` do envelope `{ data }` de resposta
+export function getStates() {
+  return api.get<{ data: StateOption[] }>('/locations/states').then((res) => res.data)
+}
+
+export function getCities(uf: string) {
+  return api.get<{ data: CityOption[] }>(`/locations/states/${uf}/cities`).then((res) => res.data)
 }
 
 export function listOrganizerEvents(params: ListOrganizerEventsParams) {

@@ -10,7 +10,7 @@ import type { EventsRepository } from './events.repository'
 import { buildSeatmap, generateSeats, type Seatmap } from './seatmap.service'
 
 // campos que alteram o contrato de compra -- bloqueados por PATCH depois da primeira venda
-const SALE_LOCKED_FIELDS = ['startsAt', 'endsAt', 'timezone', 'priceInCents', 'venueCity'] as const
+const SALE_LOCKED_FIELDS = ['startsAt', 'endsAt', 'timezone', 'priceInCents', 'venueCity', 'venueState'] as const
 
 interface Requester {
   id: string
@@ -41,6 +41,7 @@ export class EventsService {
         genres: catalogItem.genres,
         venueName: dto.venueName,
         venueCity: dto.venueCity,
+        venueState: dto.venueState,
         type: EventType.SEATED,
         status: EventStatus.DRAFT,
         startsAt: dto.startsAt,

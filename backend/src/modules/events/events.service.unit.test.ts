@@ -27,6 +27,7 @@ const CREATE_DTO = {
   externalId: '603',
   venueName: 'Cine Belas Artes',
   venueCity: 'São Paulo',
+  venueState: 'SP' as never,
   startsAt: new Date(Date.now() + 86_400_000),
   timezone: 'America/Sao_Paulo',
   priceInCents: 3200,

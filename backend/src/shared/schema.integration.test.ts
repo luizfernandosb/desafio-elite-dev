@@ -13,6 +13,7 @@ async function seedEventWithSeat() {
       title: 'Show de teste',
       venueName: 'Arena',
       venueCity: 'São Paulo',
+      venueState: 'SP',
       startsAt: new Date(),
       timezone: 'America/Sao_Paulo',
       priceInCents: 5000,

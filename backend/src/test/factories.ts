@@ -26,6 +26,7 @@ export async function seedEventWithSeats(
       title: 'Evento de teste',
       venueName: 'Casa de Shows',
       venueCity: 'São Paulo',
+      venueState: 'SP',
       // 24h no futuro por padrão -- fora da janela de portaria de propósito (2h antes
       // até 6h depois, §4.6.3). Testes de portaria (etapa 10) passam um `startsAt`
       // dentro da janela explicitamente.

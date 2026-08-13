@@ -59,11 +59,20 @@
   box-shadow: var(--shadow-md);
   /* mesma largura do trigger que abriu -- Radix expõe essa variável */
   width: var(--radix-select-trigger-width);
+  /* espaço livre entre o trigger e a borda da tela, calculado pelo Radix (position
+     "popper") -- sem isto, uma lista longa (27 UFs, ou os ~645 municípios de SP no
+     CityPicker) cresce além da viewport, com itens de baixo inalcançáveis: o popper
+     é `position: fixed` (ancorado à tela, não à página), então rolar a página não
+     move nada, e sem `max-height` não há o que a rolagem do viewport role="listbox"
+     (abaixo) precise conter */
+  max-height: var(--radix-select-content-available-height);
   z-index: 50;
 }
 
 .viewport {
   padding: var(--space-1);
+  max-height: inherit;
+  overflow-y: auto;
 }
 
 .item {
