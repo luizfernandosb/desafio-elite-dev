@@ -1,0 +1,69 @@
+/* Os quatro blocos de cor da portaria são a única exceção documentada ao resto do
+   design system (tokens.css, § etapa 02/10) -- literais do plano, fixos nos dois
+   temas de propósito: o resultado precisa ser legível a 2 metros de distância sob
+   luz de ambiente variável, não seguir claro/escuro do sistema. */
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-4);
+  padding: var(--space-8);
+  text-align: center;
+}
+
+.icon {
+  font-size: 6rem;
+  line-height: 1;
+  font-weight: 700;
+}
+
+.message {
+  margin: 0;
+  font-size: 2rem;
+  font-weight: 700;
+}
+
+.details {
+  margin: 0;
+}
+
+.eventTitle {
+  margin: 0;
+  font-size: 1.25rem;
+}
+
+.seat {
+  margin: var(--space-1) 0 0;
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+.extra {
+  margin: 0;
+  font-size: 1.125rem;
+}
+
+.valid {
+  background: #e6f9ee;
+  color: #0a7a35;
+}
+
+.invalid {
+  background: #fff0f0;
+  color: #cc1b1b;
+}
+
+.used {
+  background: #fff4e5;
+  color: #995700;
+}
+
+.neutral {
+  background: #f0f0f0;
+  color: #555555;
+}

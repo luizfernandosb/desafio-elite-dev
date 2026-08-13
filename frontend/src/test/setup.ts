@@ -7,3 +7,15 @@ import { server } from './msw/server'
 beforeAll(() => server.listen({ onUnhandledRequest: 'error' }))
 afterEach(() => server.resetHandlers())
 afterAll(() => server.close())
+
+// jsdom não implementa Pointer Events nem `scrollIntoView` -- sem isto, abrir o
+// `<Select>` (Radix, § etapa 02) em qualquer teste lança "hasPointerCapture is not a
+// function" antes mesmo de o primeiro teste que precisa disso existir (§ etapa 10,
+// EventPicker/PortariaPage). Global aqui, não por arquivo de teste: qualquer tela
+// futura que abra um Select herda o mesmo ambiente sem repetir o polyfill.
+if (typeof Element !== 'undefined') {
+  Element.prototype.hasPointerCapture ??= () => false
+  Element.prototype.setPointerCapture ??= () => {}
+  Element.prototype.releasePointerCapture ??= () => {}
+  Element.prototype.scrollIntoView ??= () => {}
+}

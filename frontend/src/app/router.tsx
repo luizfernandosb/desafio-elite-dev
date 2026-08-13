@@ -29,10 +29,11 @@ const devOnlyRoutes: RouteObject[] = import.meta.env.DEV
 // nenhum dos três.
 //
 // Guards por papel (etapa 03, §7.5): `RequireAuth` engloba ingressos/checkout/
-// assentos/organizador/portaria; `RequireRole` aninhado dentro dele só checa o
-// papel (a autenticação já foi resolvida pelo pai). Só `/`, `/eventos/:id`,
-// `/share/:token`, `/entrar` e `/cadastrar` seguem públicas -- ver evento é público de
-// propósito (etapa 05), mas escolher assentos e pagar exigem conta (back:
+// assentos/organizador (dentro de `<Layout>`) e portaria (fora, § etapa 10, própria
+// árvore no fim deste array); `RequireRole` aninhado dentro dele só checa o papel (a
+// autenticação já foi resolvida pelo pai). Só `/`, `/eventos/:id`, `/share/:token`,
+// `/entrar` e `/cadastrar` seguem públicas -- ver evento é público de propósito
+// (etapa 05), mas escolher assentos e pagar exigem conta (back:
 // `requireRole(Role.CUSTOMER)` em holds e orders).
 export const router = createBrowserRouter([
   {
@@ -115,16 +116,6 @@ export const router = createBrowserRouter([
               },
             ],
           },
-
-          {
-            element: <RequireRole role="GATE" />,
-            children: [
-              {
-                path: 'portaria',
-                lazy: () => import('./routes/PortariaPage').then((m) => ({ Component: m.default })),
-              },
-            ],
-          },
         ],
       },
 
@@ -143,5 +134,27 @@ export const router = createBrowserRouter([
     path: '/share/:shareToken',
     errorElement: <RouteErrorBoundary />,
     lazy: () => import('../features/tickets/pages/SharedTicketPage').then((m) => ({ Component: m.default })),
+  },
+
+  // também fora de <Layout> (§ etapa 10) -- "tela cheia, sem o header/nav do resto da
+  // aplicação" é uma decisão explícita do plano, não um esquecimento: portaria não
+  // navega para outro lugar durante o turno, cada pixel de header é distração num
+  // fluxo de alta frequência. Ainda atrás de `RequireAuth`/`RequireRole('GATE')` --
+  // só a casca visual (Layout) fica de fora, a autorização continua igual.
+  {
+    path: '/portaria',
+    errorElement: <RouteErrorBoundary />,
+    element: <RequireAuth />,
+    children: [
+      {
+        element: <RequireRole role="GATE" />,
+        children: [
+          {
+            index: true,
+            lazy: () => import('../features/gate/pages/PortariaPage').then((m) => ({ Component: m.default })),
+          },
+        ],
+      },
+    ],
   },
 ])
