@@ -4,7 +4,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useToast } from '../../../components'
 import { createEvent, organizadorKeys, type CatalogItem, type CreateEventInput, type OrganizerEvent } from '../api'
 import { eventErrorMessage } from '../error-messages'
-import type { RoomStepValues, SlotValues, VenueStepValues } from '../schemas'
+import type { RoomStepValues, SessionAttrsValues, SlotValues, VenueStepValues } from '../schemas'
 import { zonedWallTimeToUtcDate } from '../timezones'
 import { MovieStep } from './wizard/MovieStep'
 import { RoomStep } from './wizard/RoomStep'
@@ -21,7 +21,8 @@ interface WizardDraft {
   venueName: string
   venueCity: string
   venueState: string
-  // um item por sessão a criar -- mesmo filme/local/sala/preço, horários diferentes
+  // um item por sessão a criar -- mesmo filme/local/sala física/preço-base, horários
+  // diferentes
   slots: SlotValues[]
   timezone: string
   // '' até o passo 3 ser preenchido pela primeira vez -- os inputs usam
@@ -30,10 +31,16 @@ interface WizardDraft {
   seatsPerRow: number | ''
   priceInReais: number | ''
   accessibleSeats: string[]
-  format: RoomStepValues['format']
-  audio: RoomStepValues['audio']
-  roomType: RoomStepValues['roomType']
-  vipSurchargePercent: number | undefined
+  // formato/áudio/sala variam por horário -- um item por posição de `slots` (mesmo
+  // índice = mesmo horário), não um valor só pro lote inteiro (ver RoomStep.tsx)
+  sessions: SessionAttrsValues[]
+}
+
+const DEFAULT_SESSION_ATTRS: SessionAttrsValues = {
+  format: 'TWO_D',
+  audio: 'DUBBED',
+  roomType: 'STANDARD',
+  vipSurchargePercent: undefined,
 }
 
 const EMPTY_DRAFT: WizardDraft = {
@@ -47,10 +54,7 @@ const EMPTY_DRAFT: WizardDraft = {
   seatsPerRow: '',
   priceInReais: '',
   accessibleSeats: [],
-  format: 'TWO_D',
-  audio: 'DUBBED',
-  roomType: 'STANDARD',
-  vipSurchargePercent: undefined,
+  sessions: [DEFAULT_SESSION_ATTRS],
 }
 
 function loadDraft(): WizardDraft {
@@ -71,7 +75,12 @@ function clampStep(value: string | null): WizardStep {
   return 1
 }
 
-function buildCreateInput(draft: WizardDraft, roomValues: RoomStepValues, slot: SlotValues): CreateEventInput {
+function buildCreateInput(
+  draft: WizardDraft,
+  roomValues: RoomStepValues,
+  slot: SlotValues,
+  sessionAttrs: SessionAttrsValues,
+): CreateEventInput {
   const startsAt = zonedWallTimeToUtcDate(slot.date, slot.time, draft.timezone)
   return {
     source: draft.movie!.source,
@@ -82,10 +91,10 @@ function buildCreateInput(draft: WizardDraft, roomValues: RoomStepValues, slot: 
     startsAt: startsAt.toISOString(),
     timezone: draft.timezone,
     priceInCents: Math.round(roomValues.priceInReais * 100),
-    format: roomValues.format,
-    audio: roomValues.audio,
-    roomType: roomValues.roomType,
-    vipSurchargePercent: roomValues.roomType === 'VIP' ? roomValues.vipSurchargePercent : undefined,
+    format: sessionAttrs.format,
+    audio: sessionAttrs.audio,
+    roomType: sessionAttrs.roomType,
+    vipSurchargePercent: sessionAttrs.roomType === 'VIP' ? sessionAttrs.vipSurchargePercent : undefined,
     layout: {
       rows: roomValues.rows,
       seatsPerRow: roomValues.seatsPerRow,
@@ -140,7 +149,14 @@ export default function CreateEventWizard() {
   }
 
   function handleVenueSubmit(values: VenueStepValues) {
-    setDraft((prev) => ({ ...prev, ...values }))
+    setDraft((prev) => ({
+      ...prev,
+      ...values,
+      // horário adicionado/removido no passo 2 -- sincroniza `sessions` pro mesmo
+      // tamanho de `slots` (mesmo índice = mesmo horário), preservando o que o
+      // organizador já tinha ajustado pros horários que continuam na lista
+      sessions: values.slots.map((_, index) => prev.sessions[index] ?? DEFAULT_SESSION_ATTRS),
+    }))
     goToStep(3)
   }
 
@@ -150,10 +166,7 @@ export default function CreateEventWizard() {
       rows: values.rows,
       seatsPerRow: values.seatsPerRow,
       priceInReais: values.priceInReais,
-      format: values.format,
-      audio: values.audio,
-      roomType: values.roomType,
-      vipSurchargePercent: values.vipSurchargePercent,
+      sessions: values.sessions,
     }
     setDraft(nextDraft)
 
@@ -166,8 +179,9 @@ export default function CreateEventWizard() {
     setSubmitError(null)
 
     const attemptedSlots = nextDraft.slots
+    const attemptedSessions = values.sessions
     const results = await Promise.allSettled(
-      attemptedSlots.map((slot) => createEvent(buildCreateInput(nextDraft, values, slot))),
+      attemptedSlots.map((slot, index) => createEvent(buildCreateInput(nextDraft, values, slot, attemptedSessions[index]!))),
     )
 
     setIsSubmitting(false)
@@ -176,7 +190,11 @@ export default function CreateEventWizard() {
     const succeeded = results.filter(
       (result): result is PromiseFulfilledResult<OrganizerEvent> => result.status === 'fulfilled',
     )
-    const failedSlots = attemptedSlots.filter((_, index) => results[index]?.status === 'rejected')
+    const failedIndexes = attemptedSlots
+      .map((_, index) => index)
+      .filter((index) => results[index]?.status === 'rejected')
+    const failedSlots = failedIndexes.map((index) => attemptedSlots[index]!)
+    const failedSessions = failedIndexes.map((index) => attemptedSessions[index]!)
 
     if (failedSlots.length === 0) {
       sessionStorage.removeItem(DRAFT_KEY)
@@ -191,9 +209,10 @@ export default function CreateEventWizard() {
       return
     }
 
-    // Falha parcial ou total: mantém no rascunho só os horários que NÃO foram criados
-    // -- um novo clique tenta de novo só esses, nunca recria os que já deram certo.
-    setDraft((prev) => ({ ...prev, slots: failedSlots }))
+    // Falha parcial ou total: mantém no rascunho só os horários (e respectivos
+    // formato/áudio/sala) que NÃO foram criados -- um novo clique tenta de novo só
+    // esses, nunca recria os que já deram certo.
+    setDraft((prev) => ({ ...prev, slots: failedSlots, sessions: failedSessions }))
 
     const firstRejection = results.find(
       (result): result is PromiseRejectedResult => result.status === 'rejected',
@@ -248,10 +267,7 @@ export default function CreateEventWizard() {
             rows: draft.rows === '' ? undefined : draft.rows,
             seatsPerRow: draft.seatsPerRow === '' ? undefined : draft.seatsPerRow,
             priceInReais: draft.priceInReais === '' ? undefined : draft.priceInReais,
-            format: draft.format,
-            audio: draft.audio,
-            roomType: draft.roomType,
-            vipSurchargePercent: draft.vipSurchargePercent,
+            sessions: draft.slots.map((_, index) => draft.sessions[index] ?? DEFAULT_SESSION_ATTRS),
           }}
           movie={draft.movie}
           venueName={draft.venueName}

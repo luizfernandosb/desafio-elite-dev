@@ -245,4 +245,61 @@ describe('CreateEventWizard', () => {
     },
     WIZARD_TEST_TIMEOUT,
   )
+
+  it(
+    'formato/áudio/sala são por horário -- só o horário marcado VIP mostra o campo de porcentagem',
+    async () => {
+      const receivedBodies: Record<string, unknown>[] = []
+      server.use(
+        http.post(`${API}/events`, async ({ request }) => {
+          const body = (await request.json()) as Record<string, unknown>
+          receivedBodies.push(body)
+          return HttpResponse.json({ id: `evt-${receivedBodies.length}` }, { status: 201 })
+        }),
+      )
+      const user = userEvent.setup()
+      renderWizard()
+
+      await selectMovieAndAdvance(user)
+      await fillVenueStepWithTwoSlotsAndAdvance(user)
+
+      await user.type(await screen.findByLabelText('Fileiras'), '8')
+      await user.type(screen.getByLabelText('Assentos por fileira'), '12')
+      await user.type(screen.getByLabelText('Preço (R$)'), '32')
+
+      // nenhum horário é VIP ainda -- campo de porcentagem não existe
+      expect(screen.queryByLabelText(/Porcentagem adicional da Sala VIP/)).not.toBeInTheDocument()
+
+      // segundo horário vira 3D + Sala VIP; o primeiro continua 2D/Padrão
+      const formatSelects = screen.getAllByLabelText('Formato')
+      await user.click(formatSelects[1]!)
+      await user.click(await screen.findByRole('option', { name: '3D' }))
+
+      const roomTypeSelects = screen.getAllByLabelText('Sala')
+      await user.click(roomTypeSelects[1]!)
+      await user.click(await screen.findByRole('option', { name: 'VIP' }))
+
+      // só UM campo de porcentagem aparece -- o do horário marcado VIP, não os dois
+      const vipInputs = await screen.findAllByLabelText(/Porcentagem adicional da Sala VIP/)
+      expect(vipInputs).toHaveLength(1)
+      await user.type(vipInputs[0]!, '20')
+
+      await user.click(screen.getByRole('button', { name: 'Criar 2 sessões' }))
+
+      await waitFor(() => expect(receivedBodies).toHaveLength(2))
+      expect(receivedBodies[0]).toMatchObject({
+        format: 'TWO_D',
+        audio: 'DUBBED',
+        roomType: 'STANDARD',
+      })
+      expect(receivedBodies[0]).not.toHaveProperty('vipSurchargePercent')
+      expect(receivedBodies[1]).toMatchObject({
+        format: 'THREE_D',
+        audio: 'DUBBED',
+        roomType: 'VIP',
+        vipSurchargePercent: 20,
+      })
+    },
+    WIZARD_TEST_TIMEOUT,
+  )
 })

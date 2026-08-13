@@ -71,13 +71,31 @@ export const venueStepSchema = z
     })
   })
 
-// rows/seatsPerRow espelham MAX_ROWS/MAX_SEATS_PER_ROW do back (seatmap.service.ts,
-// 26 e 40) -- accessibleSeats não entra aqui: vem do clique no SeatMap, não de um
-// campo de texto, e não tem "inválido" possível (o próprio componente só gera
-// rótulos dentro do layout atual). Sem `z.coerce`: o `<input>` já entrega `number`
-// via `register(campo, { valueAsNumber: true })`, então o tipo de entrada e saída do
-// schema é o mesmo -- evita a divergência de tipo do RHF entre valor "de tela"
-// (string) e valor validado (number) que `z.coerce` introduziria aqui.
+// Formato/áudio/sala variam por horário -- a mesma sala física pode passar o filme
+// dublado às 19h e legendado às 22h, ou virar sessão VIP só numa das exibições -- por
+// isso um item por horário (mesma ordem de `venueStepSchema.slots`), não um valor
+// só pro lote inteiro (ver RoomStep.tsx).
+const sessionAttrsSchema = z.object({
+  format: sessionFormatSchema,
+  audio: sessionAudioSchema,
+  roomType: sessionRoomTypeSchema,
+  // só obrigatório quando roomType === 'VIP' (ver superRefine abaixo) -- mesmos
+  // limites do back (events.schema.ts)
+  vipSurchargePercent: z.coerce.number().int().min(1).max(300).optional(),
+})
+
+export type SessionAttrsValues = z.infer<typeof sessionAttrsSchema>
+
+// rows/seatsPerRow/priceInReais espelham MAX_ROWS/MAX_SEATS_PER_ROW do back
+// (seatmap.service.ts, 26 e 40) -- accessibleSeats não entra aqui: vem do clique no
+// SeatMap, não de um campo de texto, e não tem "inválido" possível (o próprio
+// componente só gera rótulos dentro do layout atual). Sem `z.coerce` em rows/
+// seatsPerRow/priceInReais: o `<input>` já entrega `number` via `register(campo, {
+// valueAsNumber: true })`, então o tipo de entrada e saída do schema é o mesmo --
+// evita a divergência de tipo do RHF entre valor "de tela" (string) e valor validado
+// (number) que `z.coerce` introduziria aqui. Sala/local/preço continuam um valor só
+// pro lote inteiro (mesma sala física, mesmo preço-base); só `sessions` varia por
+// horário.
 export const roomStepSchema = z
   .object({
     rows: z.number().int().min(1, 'Mínimo 1 fileira').max(MAX_ROWS, `Máximo ${MAX_ROWS} fileiras`),
@@ -87,16 +105,20 @@ export const roomStepSchema = z
       .min(1, 'Mínimo 1 assento por fileira')
       .max(MAX_SEATS_PER_ROW, `Máximo ${MAX_SEATS_PER_ROW} assentos por fileira`),
     priceInReais: z.number().min(0, 'Preço não pode ser negativo'),
-    format: sessionFormatSchema,
-    audio: sessionAudioSchema,
-    roomType: sessionRoomTypeSchema,
-    // só obrigatório quando roomType === 'VIP' (ver refine abaixo) -- mesmos limites
-    // do back (events.schema.ts)
-    vipSurchargePercent: z.coerce.number().int().min(1).max(300).optional(),
+    sessions: z.array(sessionAttrsSchema).min(1, 'Adicione pelo menos um horário'),
   })
-  .refine((data) => data.roomType !== 'VIP' || data.vipSurchargePercent !== undefined, {
-    message: 'Informe a porcentagem adicional da Sala VIP',
-    path: ['vipSurchargePercent'],
+  // `superRefine` (não `refine`) pelo mesmo motivo do `slots` em `venueStepSchema`:
+  // o erro precisa apontar pro horário ERRADO, não pro array inteiro.
+  .superRefine((data, ctx) => {
+    data.sessions.forEach((session, index) => {
+      if (session.roomType === 'VIP' && session.vipSurchargePercent === undefined) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'Informe a porcentagem adicional da Sala VIP',
+          path: ['sessions', index, 'vipSurchargePercent'],
+        })
+      }
+    })
   })
 
 export type VenueStepValues = z.infer<typeof venueStepSchema>
