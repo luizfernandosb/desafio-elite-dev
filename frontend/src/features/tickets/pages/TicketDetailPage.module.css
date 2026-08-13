@@ -1,0 +1,106 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  max-width: 480px;
+  margin: 0 auto;
+  padding: var(--space-8) var(--space-4);
+}
+
+.back {
+  align-self: flex-start;
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+  text-decoration: none;
+}
+
+.back:hover {
+  text-decoration: underline;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.header h1 {
+  margin: 0;
+}
+
+.meta {
+  margin: 0;
+  color: var(--text-secondary);
+}
+
+.seat {
+  margin: 0;
+  font-weight: 500;
+}
+
+.cancelledNotice {
+  padding: var(--space-3);
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--danger) 12%, transparent);
+  color: var(--danger);
+}
+
+.qrSection {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: var(--space-4);
+  padding: var(--space-6);
+  border-radius: var(--radius-md);
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+}
+
+.qrWrapper {
+  position: relative;
+  display: inline-flex;
+  padding: var(--space-3);
+  background: #fff;
+  border-radius: var(--radius-sm);
+}
+
+/* QR nunca some quando usado -- só esmaece, o selo por cima é que comunica o estado
+   (§ etapa 09: esconder passaria a impressão de erro, não de "já usado") */
+.qrDimmed {
+  opacity: 0.25;
+}
+
+.usedStamp {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-2);
+  text-align: center;
+  font-weight: 700;
+  color: var(--warning);
+}
+
+.codeLabel {
+  margin: var(--space-2) 0 0;
+  color: var(--text-secondary);
+  font-size: 0.8125rem;
+}
+
+.code {
+  max-width: 100%;
+  word-break: break-all;
+  text-align: center;
+  user-select: all;
+  font-size: 0.8125rem;
+}
+
+.hint {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 0.8125rem;
+  text-align: center;
+}

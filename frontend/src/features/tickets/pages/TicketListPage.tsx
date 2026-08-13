@@ -1,0 +1,120 @@
+import { useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
+import { Link } from 'react-router-dom'
+import { Button, EmptyState, Pagination, Skeleton } from '../../../components'
+import { listTickets, ticketKeys, type Ticket } from '../api'
+import { TicketCard } from '../components/TicketCard'
+import { ticketListErrorMessage } from '../error-messages'
+import styles from './TicketListPage.module.css'
+
+// Agrupar por `startsAt` vs. agora, não pelo `status` do ingresso (§ etapa 09) --
+// `status` sozinho confundiria "ainda vou usar" com "evento já aconteceu": um
+// ingresso `ACTIVE` de uma sessão de ontem é passado, não próximo. Dentro de cada
+// grupo, ordena por proximidade da data (próximos: mais cedo primeiro; passados:
+// mais recente primeiro) -- só faz sentido calcular isto no cliente porque a
+// paginação do back ordena por `createdAt`, não por `startsAt` (`ticket.repository.ts`).
+function splitByTime(tickets: Ticket[]): { upcoming: Ticket[]; past: Ticket[] } {
+  const now = Date.now()
+  const upcoming: Ticket[] = []
+  const past: Ticket[] = []
+
+  for (const ticket of tickets) {
+    if (new Date(ticket.event.startsAt).getTime() >= now) upcoming.push(ticket)
+    else past.push(ticket)
+  }
+
+  upcoming.sort((a, b) => new Date(a.event.startsAt).getTime() - new Date(b.event.startsAt).getTime())
+  past.sort((a, b) => new Date(b.event.startsAt).getTime() - new Date(a.event.startsAt).getTime())
+
+  return { upcoming, past }
+}
+
+export default function TicketListPage() {
+  const [page, setPage] = useState(1)
+
+  const { data, isLoading, isError, error, refetch } = useQuery({
+    queryKey: ticketKeys.list(page),
+    queryFn: () => listTickets(page),
+  })
+
+  if (isLoading) {
+    return (
+      <div className={styles.page}>
+        <h1>Meus ingressos</h1>
+        <div className={styles.list} aria-hidden="true">
+          {Array.from({ length: 3 }, (_, index) => (
+            <Skeleton key={index} height="120px" radius="md" />
+          ))}
+        </div>
+      </div>
+    )
+  }
+
+  if (isError) {
+    return (
+      <div className={styles.page}>
+        <h1>Meus ingressos</h1>
+        <EmptyState
+          title="Não foi possível carregar seus ingressos"
+          description={ticketListErrorMessage(error)}
+          action={
+            <Button variant="secondary" onClick={() => refetch()}>
+              Tentar de novo
+            </Button>
+          }
+        />
+      </div>
+    )
+  }
+
+  if (!data || data.data.length === 0) {
+    return (
+      <div className={styles.page}>
+        <h1>Meus ingressos</h1>
+        <EmptyState
+          title="Você ainda não tem ingressos"
+          description="Escolha uma sessão no catálogo e garanta seu lugar."
+          action={<Link to="/">Ver catálogo</Link>}
+        />
+      </div>
+    )
+  }
+
+  const { upcoming, past } = splitByTime(data.data)
+
+  return (
+    <div className={styles.page}>
+      <h1>Meus ingressos</h1>
+
+      {upcoming.length > 0 && (
+        <section>
+          <h2 className={styles.sectionTitle}>Próximos</h2>
+          <div className={styles.list}>
+            {upcoming.map((ticket) => (
+              <TicketCard key={ticket.id} ticket={ticket} />
+            ))}
+          </div>
+        </section>
+      )}
+
+      {past.length > 0 && (
+        <section>
+          <h2 className={styles.sectionTitle}>Passados</h2>
+          <div className={styles.list}>
+            {past.map((ticket) => (
+              <TicketCard key={ticket.id} ticket={ticket} />
+            ))}
+          </div>
+        </section>
+      )}
+
+      <Pagination
+        page={data.meta.page}
+        totalPages={data.meta.totalPages}
+        hasPrev={data.meta.hasPrev}
+        hasNext={data.meta.hasNext}
+        onPageChange={setPage}
+      />
+    </div>
+  )
+}

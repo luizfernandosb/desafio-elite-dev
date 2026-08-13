@@ -7,7 +7,6 @@ import { RegisterPage } from '../features/auth/pages/RegisterPage'
 import { Layout } from './Layout'
 import { RouteErrorBoundary } from './ErrorBoundary'
 import { NotFoundPage } from './routes/NotFoundPage'
-import { PlaceholderPage } from './routes/PlaceholderPage'
 
 // /estilo é ferramenta de desenvolvimento (conferência visual dos tokens/componentes,
 // substitui Storybook -- etapa 02), não tela de produto: `import.meta.env.DEV` é
@@ -32,7 +31,7 @@ const devOnlyRoutes: RouteObject[] = import.meta.env.DEV
 // Guards por papel (etapa 03, §7.5): `RequireAuth` engloba ingressos/checkout/
 // assentos/organizador/portaria; `RequireRole` aninhado dentro dele só checa o
 // papel (a autenticação já foi resolvida pelo pai). Só `/`, `/eventos/:id`,
-// `/s/:token`, `/entrar` e `/cadastrar` seguem públicas -- ver evento é público de
+// `/share/:token`, `/entrar` e `/cadastrar` seguem públicas -- ver evento é público de
 // propósito (etapa 05), mas escolher assentos e pagar exigem conta (back:
 // `requireRole(Role.CUSTOMER)` em holds e orders).
 export const router = createBrowserRouter([
@@ -47,16 +46,22 @@ export const router = createBrowserRouter([
       { index: true, element: <CatalogPage /> },
       { path: 'eventos/:id', element: <EventDetailPage /> },
 
-      { path: 's/:shareToken', element: <PlaceholderPage title="Ingresso compartilhado" etapa="etapa 09" /> },
-
       { path: 'entrar', element: <LoginPage /> },
       { path: 'cadastrar', element: <RegisterPage /> },
 
       {
         element: <RequireAuth />,
         children: [
-          { path: 'ingressos', element: <PlaceholderPage title="Meus ingressos" etapa="etapa 09" /> },
-          { path: 'ingressos/:id', element: <PlaceholderPage title="Ingresso" etapa="etapa 09" /> },
+          {
+            path: 'ingressos',
+            lazy: () =>
+              import('../features/tickets/pages/TicketListPage').then((m) => ({ Component: m.default })),
+          },
+          {
+            path: 'ingressos/:id',
+            lazy: () =>
+              import('../features/tickets/pages/TicketDetailPage').then((m) => ({ Component: m.default })),
+          },
 
           {
             // escolher assentos exige conta (§ etapa 05, decidido no CTA de
@@ -127,5 +132,16 @@ export const router = createBrowserRouter([
 
       { path: '*', element: <NotFoundPage /> },
     ],
+  },
+
+  // fora de <Layout> de propósito (§ etapa 09) -- é a página que um estranho abre a
+  // partir de um link de compartilhamento, sem header, sem nav, sem sessão. URL
+  // (`/share/:token`) espelha exatamente o que o back monta em `APP_PUBLIC_URL`
+  // (`ticket.service.ts`, `buildShareUrl`) -- mudar aqui sem mudar lá quebra todo link
+  // já compartilhado.
+  {
+    path: '/share/:shareToken',
+    errorElement: <RouteErrorBoundary />,
+    lazy: () => import('../features/tickets/pages/SharedTicketPage').then((m) => ({ Component: m.default })),
   },
 ])
