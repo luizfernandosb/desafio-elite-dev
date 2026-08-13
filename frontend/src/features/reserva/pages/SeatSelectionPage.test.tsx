@@ -10,6 +10,24 @@ import { queryClient } from '../../../lib/query-client'
 import { server } from '../../../test/msw/server'
 import SeatSelectionPage from './SeatSelectionPage'
 
+// Mock do cliente Supabase -- os testes desta página não devem depender de rede de
+// verdade (§ etapa 07); `useSeatRealtime`/`usePollingFallback` são testados a fundo
+// em isolamento nos próprios arquivos. Aqui só garantimos que a página monta o canal,
+// mostra "ao vivo" quando conecta, e aplica um patch recebido sem quebrar o resto do
+// fluxo -- `postgresChangesCallback` guardado para os testes disparem um patch à mão.
+let postgresChangesCallback: ((payload: { new: Record<string, unknown> }) => void) | undefined
+vi.mock('../../../lib/supabase', () => ({
+  supabase: {
+    channel: () => ({
+      on: (_event: string, _filter: unknown, callback: (payload: { new: Record<string, unknown> }) => void) => {
+        postgresChangesCallback = callback
+        return { subscribe: (statusCallback?: (status: string) => void) => statusCallback?.('SUBSCRIBED') }
+      },
+    }),
+    removeChannel: vi.fn(),
+  },
+}))
+
 const API = env.VITE_API_URL
 
 function makeEvent(overrides: Record<string, unknown> = {}) {
@@ -188,5 +206,24 @@ describe('SeatSelectionPage', () => {
 
     expect(await screen.findByText('Esta sessão não está mais disponível para reserva')).toBeInTheDocument()
     expect(screen.queryByRole('grid')).not.toBeInTheDocument()
+  })
+
+  it('canal conectado -- badge mostra "Ao vivo"', async () => {
+    mockEventAndSeatmap()
+    renderPage()
+
+    expect(await screen.findByText('Ao vivo')).toBeInTheDocument()
+  })
+
+  it('patch do Realtime (outro usuário vendendo A2) atualiza o mapa sem nenhuma ação do cliente', async () => {
+    mockEventAndSeatmap()
+    renderPage()
+
+    await screen.findByLabelText('Assento A2, disponível')
+    expect(postgresChangesCallback).toBeDefined()
+
+    postgresChangesCallback?.({ new: { seatId: 'seat-a2', eventId: 'evt-1', status: 'SOLD', expiresAt: null } })
+
+    expect(await screen.findByLabelText('Assento A2, vendido')).toBeInTheDocument()
   })
 })

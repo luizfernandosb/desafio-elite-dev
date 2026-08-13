@@ -3,11 +3,16 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { EmptyState, SeatMap, Skeleton, type SeatMapRow } from '../../../components'
 import { formatEventDate } from '../../../shared/date'
-import { getEvent, getSeatmap, reservaKeys, type SeatHold } from '../api'
+import { applySeatPatch } from '../applySeatPatch'
+import { getEvent, getSeatmap, reservaKeys, type Seatmap, type SeatHold } from '../api'
+import { ConnectionBadge } from '../components/ConnectionBadge'
 import { HoldExpiredModal } from '../components/HoldExpiredModal'
 import { SelectionBar } from '../components/SelectionBar'
 import { seatmapErrorMessage } from '../error-messages'
 import { useHold } from '../useHold'
+import { isOwnSeatChange, useLiveAnnouncements } from '../useLiveAnnouncements'
+import { usePollingFallback } from '../usePollingFallback'
+import { useSeatRealtime } from '../useSeatRealtime'
 import { useSeatSelection } from '../useSeatSelection'
 import styles from './SeatSelectionPage.module.css'
 
@@ -20,6 +25,7 @@ export default function SeatSelectionPage() {
   const [hold, setHold] = useState<SeatHold[] | null>(null)
   const [holdExpired, setHoldExpired] = useState(false)
   const selection = useSeatSelection()
+  const { announcement, announce } = useLiveAnnouncements()
 
   const {
     data: event,
@@ -56,6 +62,23 @@ export default function SeatSelectionPage() {
     }
     return { idByLabel: idByLabelMap, labelById: labelByIdMap }
   }, [seatmap])
+
+  // Leitura, nunca decisão (§ etapa 07, "o princípio que não pode ser violado"): só
+  // aplica o patch no snapshot local e, se não for um assento do PRÓPRIO usuário,
+  // anuncia. O botão de reservar continua dependendo só do retorno de `POST /holds`
+  // (`useHold`, etapa 06) -- nunca do que chega por aqui.
+  const connectionStatus = useSeatRealtime(eventId, (patch) => {
+    queryClient.setQueryData(reservaKeys.seatmap(eventId), (old: Seatmap | undefined) =>
+      old ? applySeatPatch(old, patch) : old,
+    )
+
+    const ownSeatIds = [...selection.selectedSeatIds, ...(hold?.map((h) => h.seatId) ?? [])]
+    if (isOwnSeatChange(patch.seatId, ownSeatIds)) return // já anunciado pelo próprio clique
+
+    const label = labelById.get(patch.seatId)
+    if (label) announce({ seatId: patch.seatId, label, status: patch.status })
+  })
+  usePollingFallback(connectionStatus, eventId)
 
   const mapRows: SeatMapRow[] = useMemo(
     () =>
@@ -158,6 +181,10 @@ export default function SeatSelectionPage() {
         </p>
       </div>
 
+      <div className={styles.mapHeader}>
+        <ConnectionBadge status={connectionStatus} />
+      </div>
+
       <SeatMap
         rows={mapRows}
         onSeatClick={handleSeatClick}
@@ -165,9 +192,11 @@ export default function SeatSelectionPage() {
         ariaLabel={`Mapa de assentos -- ${event.venueName}`}
       />
 
-      {/* preparado nesta etapa, alimentado pela etapa 07 (Realtime) -- o componente
-          já existe, vazio de conteúdo dinâmico até lá (§ etapa 06) */}
-      <div role="status" aria-live="polite" aria-atomic="false" className="sr-only" />
+      {/* preparada na etapa 06, alimentada aqui: só mudanças de OUTROS assentos,
+          nunca a própria seleção (já anunciada pelo clique em si) */}
+      <div role="status" aria-live="polite" aria-atomic="false" className="sr-only">
+        {announcement}
+      </div>
 
       <SelectionBar
         selectedLabels={selectedLabels}

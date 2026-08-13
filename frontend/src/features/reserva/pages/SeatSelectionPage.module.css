@@ -15,3 +15,8 @@
   margin: 0;
   color: var(--text-secondary);
 }
+
+.mapHeader {
+  display: flex;
+  justify-content: flex-end;
+}
