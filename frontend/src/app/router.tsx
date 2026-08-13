@@ -29,11 +29,12 @@ const devOnlyRoutes: RouteObject[] = import.meta.env.DEV
 // organizador em /organizador/*. Quem só navega no catálogo público nunca baixa
 // nenhum dos três.
 //
-// Guards por papel (etapa 03, §7.5): `RequireAuth` engloba ingressos/organizador/
-// portaria; `RequireRole` aninhado dentro dele só checa o papel (a autenticação já
-// foi resolvida pelo pai). `/`, `/eventos/*`, `/s/:token`, `/entrar`, `/cadastrar` e
-// `/checkout/*` seguem públicas -- nem o plano nem o back-end (rotas com
-// `optionalAuth`) pedem sessão para elas ainda.
+// Guards por papel (etapa 03, §7.5): `RequireAuth` engloba ingressos/checkout/
+// assentos/organizador/portaria; `RequireRole` aninhado dentro dele só checa o
+// papel (a autenticação já foi resolvida pelo pai). Só `/`, `/eventos/:id`,
+// `/s/:token`, `/entrar` e `/cadastrar` seguem públicas -- ver evento é público de
+// propósito (etapa 05), mas escolher assentos e pagar exigem conta (back:
+// `requireRole(Role.CUSTOMER)` em holds e orders).
 export const router = createBrowserRouter([
   {
     path: '/',
@@ -45,15 +46,6 @@ export const router = createBrowserRouter([
       // que só uma fração de quem acessa o site chega a baixar
       { index: true, element: <CatalogPage /> },
       { path: 'eventos/:id', element: <EventDetailPage /> },
-
-      {
-        path: 'checkout/:orderId',
-        lazy: () => import('./routes/CheckoutPage').then((m) => ({ Component: m.default })),
-      },
-      {
-        path: 'checkout/:orderId/retorno',
-        lazy: () => import('./routes/CheckoutPage').then((m) => ({ Component: m.default })),
-      },
 
       { path: 's/:shareToken', element: <PlaceholderPage title="Ingresso compartilhado" etapa="etapa 09" /> },
 
@@ -75,6 +67,19 @@ export const router = createBrowserRouter([
             path: 'eventos/:id/assentos',
             lazy: () =>
               import('../features/reserva/pages/SeatSelectionPage').then((m) => ({ Component: m.default })),
+          },
+
+          // checkout também exige conta (mesmo raciocínio do mapa de assentos --
+          // POST /orders e /simulate-payment exigem CUSTOMER, etapa 08)
+          {
+            path: 'checkout/:orderId',
+            lazy: () =>
+              import('../features/checkout/pages/CheckoutPage').then((m) => ({ Component: m.default })),
+          },
+          {
+            path: 'checkout/:orderId/retorno',
+            lazy: () =>
+              import('../features/checkout/pages/CheckoutReturnPage').then((m) => ({ Component: m.default })),
           },
 
           {

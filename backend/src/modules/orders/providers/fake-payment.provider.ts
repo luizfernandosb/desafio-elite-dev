@@ -5,6 +5,8 @@ import type { CreateIntentInput, PaymentIntentResult, PaymentProvider } from './
 // depende de rede nem de credenciais reais do Stripe. Idempotente do mesmo jeito que o
 // Stripe real: a mesma `idempotencyKey` sempre devolve o mesmo intent.
 export class FakePaymentProvider implements PaymentProvider {
+  readonly supportsSimulation = true as const
+
   private readonly intentsByIdempotencyKey = new Map<string, PaymentIntentResult>()
 
   async createIntent(input: CreateIntentInput): Promise<PaymentIntentResult> {

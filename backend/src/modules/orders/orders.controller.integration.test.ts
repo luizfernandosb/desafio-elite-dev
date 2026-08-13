@@ -161,3 +161,75 @@ describe('GET /api/v1/orders/:id', () => {
     expect(res.status).toBe(404)
   })
 })
+
+describe('POST /api/v1/orders/:id/simulate-payment', () => {
+  beforeEach(cleanDatabase)
+
+  it('succeeded -- transita para PAID e emite o ingresso (substituto de dev para o webhook)', async () => {
+    const { event, seats } = await seedEventWithSeats({ seatCount: 1 })
+    const { user, token } = await tokenForNewUser(Role.CUSTOMER)
+    const hold = await seedActiveHold(event.id, seats[0]!.id, user.id)
+
+    const created = await supertest(app)
+      .post('/api/v1/orders')
+      .set('Authorization', `Bearer ${token}`)
+      .set('Idempotency-Key', randomUUID())
+      .send({ eventId: event.id, holdIds: [hold.id] })
+
+    const res = await supertest(app)
+      .post(`/api/v1/orders/${created.body.order.id}/simulate-payment`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ outcome: 'succeeded' })
+
+    expect(res.status).toBe(204)
+
+    const order = await prisma.order.findUniqueOrThrow({ where: { id: created.body.order.id } })
+    expect(order.status).toBe('PAID')
+    const ticketCount = await prisma.ticket.count({ where: { orderId: order.id } })
+    expect(ticketCount).toBe(1)
+  })
+
+  it('requires_payment_method -- transita para FAILED e preserva o hold (cliente pode tentar de novo)', async () => {
+    const { event, seats } = await seedEventWithSeats({ seatCount: 1 })
+    const { user, token } = await tokenForNewUser(Role.CUSTOMER)
+    const hold = await seedActiveHold(event.id, seats[0]!.id, user.id)
+
+    const created = await supertest(app)
+      .post('/api/v1/orders')
+      .set('Authorization', `Bearer ${token}`)
+      .set('Idempotency-Key', randomUUID())
+      .send({ eventId: event.id, holdIds: [hold.id] })
+
+    const res = await supertest(app)
+      .post(`/api/v1/orders/${created.body.order.id}/simulate-payment`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ outcome: 'requires_payment_method' })
+
+    expect(res.status).toBe(204)
+
+    const order = await prisma.order.findUniqueOrThrow({ where: { id: created.body.order.id } })
+    expect(order.status).toBe('FAILED')
+    const stillHeld = await prisma.seatHold.findUniqueOrThrow({ where: { id: hold.id } })
+    expect(stillHeld.releasedAt).toBeNull()
+  })
+
+  it('404 -- outro cliente não pode simular pagamento de um pedido que não é seu', async () => {
+    const { event, seats } = await seedEventWithSeats({ seatCount: 1 })
+    const owner = await tokenForNewUser(Role.CUSTOMER)
+    const other = await tokenForNewUser(Role.CUSTOMER)
+    const hold = await seedActiveHold(event.id, seats[0]!.id, owner.user.id)
+
+    const created = await supertest(app)
+      .post('/api/v1/orders')
+      .set('Authorization', `Bearer ${owner.token}`)
+      .set('Idempotency-Key', randomUUID())
+      .send({ eventId: event.id, holdIds: [hold.id] })
+
+    const res = await supertest(app)
+      .post(`/api/v1/orders/${created.body.order.id}/simulate-payment`)
+      .set('Authorization', `Bearer ${other.token}`)
+      .send({ outcome: 'succeeded' })
+
+    expect(res.status).toBe(404)
+  })
+})

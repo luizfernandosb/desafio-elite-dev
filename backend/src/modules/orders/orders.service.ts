@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto'
 import type { Logger } from 'pino'
 import { OrderStatus } from '../../../generated/prisma/enums'
 import { prisma } from '../../lib/prisma'
-import { ConflictError, InvalidTransitionError, NotFoundError, ValidationError } from '../../shared/errors'
+import { ConflictError, ForbiddenError, InvalidTransitionError, NotFoundError, ValidationError } from '../../shared/errors'
 import { isUniqueViolation } from '../../shared/prisma-errors'
 import { assertTransition, ORDER_TRANSITIONS } from '../../shared/state-machines'
 import type { EventsRepository } from '../events/events.repository'
@@ -11,7 +11,7 @@ import type { SeatStateRepository } from '../seats/seat-state.repository'
 import { generateTicketCode } from '../tickets/qr.service'
 import type { TicketRepository } from '../tickets/ticket.repository'
 import type { OrdersRepository } from './orders.repository'
-import type { CreateOrderDto } from './orders.schema'
+import type { CreateOrderDto, SimulatePaymentDto } from './orders.schema'
 import type { PaymentProvider } from './providers/payment-provider'
 import type { WebhookEventRepository } from './webhook-event.repository'
 
@@ -86,6 +86,33 @@ export class OrdersService {
     if (!order || order.userId !== userId) throw new NotFoundError('Order') // privado -- não revela
 
     return order
+  }
+
+  // Só existe com `FakePaymentProvider` ativo (§4.5, etapa 08 do front, "Dia 2") --
+  // o próprio Stripe não tem como o BROWSER decidir se um pagamento foi aprovado ou
+  // recusado; normalmente é o webhook que confirma. Esta rota é o substituto de
+  // desenvolvimento para esse webhook, para o fluxo inteiro (criação → aprovação/
+  // recusa → emissão de ingresso) fechar sem depender de credenciais reais do
+  // Stripe. `outcome` usa o mesmo vocabulário de `paymentIntent.status` do Stripe --
+  // o front trata os dois caminhos (fake e Stripe de verdade) da mesma forma.
+  async simulatePayment(
+    orderId: string,
+    userId: string,
+    outcome: SimulatePaymentDto['outcome'],
+    log: Logger,
+  ): Promise<void> {
+    if (!this.paymentProvider.supportsSimulation) {
+      throw new ForbiddenError('Simulação de pagamento não está disponível com o provedor de pagamento atual')
+    }
+
+    const order = await this.repo.findById(prisma, orderId)
+    if (!order || order.userId !== userId) throw new NotFoundError('Order') // privado -- não revela
+
+    if (outcome === 'succeeded') {
+      await this.confirmPayment(orderId, log)
+    } else {
+      await this.failPayment(orderId, log)
+    }
   }
 
   // chamado pelo Service, não pelo controller do webhook direto -- lança

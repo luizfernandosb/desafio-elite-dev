@@ -8,7 +8,7 @@ import { SeatStateRepository } from '../seats/seat-state.repository'
 import { TicketRepository } from '../tickets/ticket.repository'
 import { OrdersController } from './orders.controller'
 import { OrdersRepository } from './orders.repository'
-import { createOrderSchema, orderIdSchema } from './orders.schema'
+import { createOrderSchema, orderIdSchema, simulatePaymentSchema } from './orders.schema'
 import { OrdersService } from './orders.service'
 import { FakePaymentProvider } from './providers/fake-payment.provider'
 import type { PaymentProvider } from './providers/payment-provider'
@@ -46,6 +46,16 @@ ordersRoutes.get(
   requireRole(Role.CUSTOMER),
   validate(orderIdSchema),
   ordersController.getById,
+)
+// substituto de dev para o webhook do Stripe (§4.5, etapa 08 do front, "Dia 2") --
+// só funciona com `FakePaymentProvider` (`supportsSimulation`, checado no Service);
+// trocar para Stripe real (§12) faz este endpoint parar de funcionar sozinho.
+ordersRoutes.post(
+  '/:id/simulate-payment',
+  requireAuth,
+  requireRole(Role.CUSTOMER),
+  validate(simulatePaymentSchema),
+  ordersController.simulatePayment,
 )
 
 // composto aqui (mesma instância de OrdersService) mas montado direto em app.ts, antes

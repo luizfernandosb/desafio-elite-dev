@@ -1,7 +1,7 @@
 import type { Logger } from 'pino'
 import { describe, expect, it, vi } from 'vitest'
 import { EventStatus, OrderStatus } from '../../../generated/prisma/enums'
-import { InvalidTransitionError, NotFoundError } from '../../shared/errors'
+import { ForbiddenError, InvalidTransitionError, NotFoundError } from '../../shared/errors'
 import type { EventsRepository } from '../events/events.repository'
 import type { SeatHoldRepository } from '../seats/seat-hold.repository'
 import type { SeatStateRepository } from '../seats/seat-state.repository'
@@ -79,9 +79,16 @@ function makeMockPaymentProvider(): PaymentProvider {
   }
 }
 
+// `supportsSimulation` presente -- só o `FakePaymentProvider` de verdade tem essa
+// propriedade (payment-provider.ts); um mock "tipo Stripe" (acima) não tem.
+function makeMockFakePaymentProvider(): PaymentProvider {
+  return { ...makeMockPaymentProvider(), supportsSimulation: true }
+}
+
 function makeService(overrides: {
   ordersRepo?: OrdersRepository
   holdRepo?: SeatHoldRepository
+  paymentProvider?: PaymentProvider
 } = {}) {
   return new OrdersService(
     overrides.ordersRepo ?? makeMockOrdersRepo(),
@@ -90,7 +97,7 @@ function makeService(overrides: {
     makeMockSeatStateRepo(),
     makeMockTicketRepo(),
     makeMockWebhookEventRepo(),
-    makeMockPaymentProvider(),
+    overrides.paymentProvider ?? makeMockPaymentProvider(),
   )
 }
 
@@ -192,6 +199,48 @@ describe('OrdersService.failPayment', () => {
 
     expect(ordersRepo.updateStatus).toHaveBeenCalledWith(expect.anything(), 'order-1', OrderStatus.FAILED)
     expect(holdRepo.consume).not.toHaveBeenCalled()
+  })
+})
+
+describe('OrdersService.simulatePayment', () => {
+  it('sem supportsSimulation (provedor tipo Stripe) -- lança ForbiddenError, não toca a order', async () => {
+    const ordersRepo = makeMockOrdersRepo()
+    const service = makeService({ ordersRepo, paymentProvider: makeMockPaymentProvider() })
+
+    await expect(service.simulatePayment('order-1', 'user-1', 'succeeded', log)).rejects.toThrow(ForbiddenError)
+    expect(ordersRepo.findById).not.toHaveBeenCalled()
+  })
+
+  it('succeeded -- delega para confirmPayment (PENDING → PAID)', async () => {
+    const ordersRepo = makeMockOrdersRepo()
+    vi.mocked(ordersRepo.findById).mockResolvedValue(makeOrder({ status: OrderStatus.PENDING }) as never)
+    const holdRepo = makeMockHoldRepo()
+    vi.mocked(holdRepo.findByOrderId).mockResolvedValue([{ id: 'hold-1', seatId: 'seat-1' }] as never)
+
+    const service = makeService({ ordersRepo, holdRepo, paymentProvider: makeMockFakePaymentProvider() })
+    await service.simulatePayment('order-1', 'user-1', 'succeeded', log)
+
+    expect(ordersRepo.updateStatus).toHaveBeenCalledWith('fake-tx', 'order-1', OrderStatus.PAID)
+  })
+
+  it('requires_payment_method -- delega para failPayment (PENDING → FAILED), preserva o hold', async () => {
+    const ordersRepo = makeMockOrdersRepo()
+    vi.mocked(ordersRepo.findById).mockResolvedValue(makeOrder({ status: OrderStatus.PENDING }) as never)
+    const holdRepo = makeMockHoldRepo()
+
+    const service = makeService({ ordersRepo, holdRepo, paymentProvider: makeMockFakePaymentProvider() })
+    await service.simulatePayment('order-1', 'user-1', 'requires_payment_method', log)
+
+    expect(ordersRepo.updateStatus).toHaveBeenCalledWith(expect.anything(), 'order-1', OrderStatus.FAILED)
+    expect(holdRepo.consume).not.toHaveBeenCalled()
+  })
+
+  it('404 -- order de outro usuário (privado, não revela)', async () => {
+    const ordersRepo = makeMockOrdersRepo()
+    vi.mocked(ordersRepo.findById).mockResolvedValue(makeOrder({ userId: 'user-2' }) as never)
+
+    const service = makeService({ ordersRepo, paymentProvider: makeMockFakePaymentProvider() })
+    await expect(service.simulatePayment('order-1', 'user-1', 'succeeded', log)).rejects.toThrow(NotFoundError)
   })
 })
 

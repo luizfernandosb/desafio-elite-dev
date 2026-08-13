@@ -15,4 +15,10 @@ export interface PaymentIntentResult {
 export interface PaymentProvider {
   createIntent(input: CreateIntentInput): Promise<PaymentIntentResult>
   refund(intentId: string): Promise<void>
+  // presente só no `FakePaymentProvider` -- dá ao Service uma forma de checar "esta
+  // simulação de pagamento pode rodar?" sem importar a classe concreta (§4.5, etapa
+  // 08 do front, "Dia 2": aprovar/recusar sem Stripe de verdade). Trocar para
+  // `StripePaymentProvider` (§12, "nada mais muda") faz este capability check virar
+  // `undefined` sozinho -- a rota de simulação nunca funciona contra Stripe real.
+  readonly supportsSimulation?: true
 }

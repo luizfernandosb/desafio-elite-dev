@@ -14,4 +14,13 @@ export const orderIdSchema = {
   params: z.object({ id: z.string().min(1) }),
 }
 
+// Mesmo vocabulário do `paymentIntent.status` do Stripe de verdade (§ etapa 08 do
+// front) -- o tratamento de resultado no front não muda entre a fase fake e a fase
+// com Stripe Elements, só a origem do status muda.
+export const simulatePaymentSchema = {
+  params: z.object({ id: z.string().min(1) }),
+  body: z.object({ outcome: z.enum(['succeeded', 'requires_payment_method']) }),
+}
+
 export type CreateOrderDto = z.infer<typeof createOrderSchema.body>
+export type SimulatePaymentDto = z.infer<typeof simulatePaymentSchema.body>
