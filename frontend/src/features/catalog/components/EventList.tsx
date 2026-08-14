@@ -1,10 +1,8 @@
 import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 import { Button, EmptyState, ErrorState, EventCard, Pagination, Skeleton } from '../../../components'
-import { formatEventDate } from '../../../shared/date'
-import { formatMoney } from '../../../shared/money'
-import { sessionAttributeBadges } from '../../../shared/session-attributes'
 import { catalogKeys, listPublicEvents } from '../api'
+import { eventCardProps } from '../eventCardProps'
 import styles from './EventList.module.css'
 
 interface EventListProps {
@@ -74,15 +72,7 @@ export function EventList({ q, from, to, page, onPageChange, onClearFilters }: E
       <div className={styles.grid}>
         {data.data.map((event, index) => (
           <Link key={event.id} to={`/eventos/${event.id}`} className={styles.cardLink}>
-            <EventCard
-              imageUrl={event.imageUrl}
-              title={event.title}
-              subtitle={formatEventDate(event.startsAt, event.timezone)}
-              meta={`${event.venueName} - ${event.venueCity}`}
-              priceLabel={`A partir de ${formatMoney(event.effectivePriceInCents, event.currency)}`}
-              badge={[event.genres[0], ...sessionAttributeBadges(event)].filter(Boolean).join(' · ')}
-              eager={index < EAGER_CARD_COUNT}
-            />
+            <EventCard {...eventCardProps(event)} eager={index < EAGER_CARD_COUNT} />
           </Link>
         ))}
       </div>

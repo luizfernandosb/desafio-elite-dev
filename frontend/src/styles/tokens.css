@@ -9,7 +9,8 @@
   --primary-hover: #024ddf; /* hover/active, sombra de foco */
   --primary-light: #33aaff; /* acento em hover de card, ícone secundário */
   --primary-dark: #001f6b; /* âncora escura: rodapé, nav em dark mode */
-  --primary-tint: #e6f4ff; /* superfície tintada: badge de gênero, input focado */
+  /* superfície tintada: badge de gênero, input focado -- valor real definido mais
+     abaixo (aponta pra --primary-tint-dark, já que escuro é o padrão) */
 
   --success: #1db954; /* válido, pagamento aprovado, ingresso ativo */
   --danger: #ff3b30; /* inválido, pagamento recusado, assento indisponível */
@@ -22,28 +23,33 @@
      mede ~1.9-3:1 (falha WCAG AA de sobra). Mesmo raciocínio de `--primary-hover`
      sobre `--primary-tint`: tom mais escuro para texto, o vívido continua livre
      para ícone/fundo/acento. Só o tema claro precisa do tom escurecido -- no
-     escuro, o token vívido já mede >4.5:1 sobre o próprio tint (fundo escuro atrás
-     dele), então os overrides de tema abaixo apontam pro vívido de novo, não pra
-     uma terceira cor. `contrast.test.ts` mede os dois tons nos dois temas. */
-  --success-text: #096829;
-  --warning-text: #8a4e00;
-  --danger-text: #b71c1c;
-  --neutral-gate-text: #5f5f64; /* mesmo raciocínio -- --neutral-gate cru mede 2.75:1 sobre --surface-2 claro */
+     escuro (o padrão agora), o token vívido já mede >4.5:1 sobre o próprio tint
+     (fundo escuro atrás dele), então a base aponta pro vívido de novo, não pra uma
+     terceira cor; `[data-theme='light']` mais abaixo é quem ganha o tom escurecido.
+     `contrast.test.ts` mede os dois tons nos dois temas. Exceção: --danger vívido
+     mede só 4.18:1 sobre o tint em cima de --surface-1 escuro (Card) -- abaixo do
+     mínimo, então o escuro ganha um vermelho mais claro só para texto (a marca
+     --danger em si não muda). */
+  --success-text: var(--success);
+  --warning-text: var(--warning);
+  --danger-text: #ff6b60;
+  --neutral-gate-text: var(--neutral-gate);
 
-  /* ---- Superfícies e texto (claro) ---- */
-  --surface-0: #ffffff; /* fundo da página */
-  --surface-1: #f4f6f8; /* card, input, assento vendido */
-  --surface-2: #e9ecf0; /* hover de superfície, divisor forte */
-  --text-primary: #14161a;
-  --text-secondary: #5b6270;
-  /* #88909c, não um cinza mais claro/subtil -- é o tom mais claro que ainda cruza
-     3:1 contra --surface-0 branco (medido, não estimado: contrast.test.ts). Um
-     cinza "discreto" de verdade (ex. #d8dce2) mede ~1.4:1 e falha WCAG 1.4.11. */
-  --border: #88909c;
+  /* ---- Superfícies e texto (escuro é o padrão do produto -- não é mais "segue o
+     SO", é a identidade visual escolhida; claro vira opt-out explícito via
+     data-theme="light" logo abaixo) ---- */
+  --surface-0: #14161a; /* fundo da página */
+  --surface-1: #1c1f24; /* card, input, assento vendido */
+  --surface-2: #262a31; /* hover de superfície, divisor forte */
+  --text-primary: #e8eaed;
+  --text-secondary: #9aa1ac;
+  --border: #666d7a; /* mesma régua do claro -- 3:1 medido contra --surface-0 escuro */
 
   /* par escuro do tint -- em dark mode, --primary-tint sólido vira um bloco branco
-     no meio do mapa de assentos (§5.1.1); este é o par usado só sob data-theme="dark" */
+     no meio do mapa de assentos (§5.1.1); este é o par usado sob o padrão escuro e
+     sob data-theme="dark" */
   --primary-tint-dark: rgba(0, 151, 255, 0.14);
+  --primary-tint: var(--primary-tint-dark);
 
   /* ---- Espaçamento -- escala de base 4, nenhum valor fora dela ---- */
   --space-1: 4px;
@@ -73,34 +79,13 @@
   --tap-target: 44px;
 }
 
-/* Dark mode automático a partir do SO, sem uma linha extra de JS (§5.1.1) --
-   redefine só os tokens que mudam; --primary/--success/--danger etc. continuam os
-   mesmos, são âncora de marca em qualquer tema. Nunca #0a0a0a com texto branco puro:
-   --surface-0 escuro é levemente temperado, não preto puro. */
-@media (prefers-color-scheme: dark) {
-  :root {
-    --surface-0: #14161a;
-    --surface-1: #1c1f24;
-    --surface-2: #262a31;
-    --text-primary: #e8eaed;
-    --text-secondary: #9aa1ac;
-    --border: #666d7a; /* mesma régua do claro -- 3:1 medido contra --surface-0 escuro */
-    --primary-tint: var(--primary-tint-dark);
-    /* no escuro o vívido já mede >4.5:1 sobre o próprio tint -- não precisa do tom
-       escurecido do claro (`contrast.test.ts`). Exceção: --danger vívido mede só
-       4.18:1 sobre o tint em cima de --surface-1 escuro (Card) -- abaixo do
-       mínimo, então o escuro ganha um vermelho mais claro só para texto, prática
-       comum de tema escuro (a marca --danger em si não muda). */
-    --success-text: var(--success);
-    --warning-text: var(--warning);
-    --danger-text: #ff6b60;
-    --neutral-gate-text: var(--neutral-gate);
-  }
-}
-
 /* Alternância manual (claro/escuro/sistema) via `data-theme` no `<html>`, aplicada
    antes da primeira pintura por um script inline (index.html) -- ver lib/theme.ts.
-   Portaria costuma operar em ambiente escuro; forçar o tema do SO seria hostil. */
+   "Sistema" (sem `data-theme`) cai na base acima, que já é escura -- não segue mais
+   `prefers-color-scheme` (produto é dark-first por decisão, não "imita o SO"); quem
+   quer claro escolhe explicitamente `[data-theme='light']` abaixo. `[data-theme='dark']`
+   fica idêntico à base só para a opção "Escuro" do seletor ter um valor próprio,
+   não sombra do SO. */
 :root[data-theme='dark'] {
   --surface-0: #14161a;
   --surface-1: #1c1f24;

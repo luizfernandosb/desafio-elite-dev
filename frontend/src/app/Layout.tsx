@@ -1,8 +1,33 @@
-import { Link, Outlet } from 'react-router-dom'
-import { Button } from '../components/Button'
+import type { ReactNode } from 'react'
+import { Film, LayoutDashboard, LogIn, LogOut, ShieldCheck, Ticket } from 'lucide-react'
+import { Link, NavLink, Outlet } from 'react-router-dom'
 import { ThemeToggle } from '../components/ThemeToggle'
 import { useAuth } from '../features/auth/useAuth'
+import { Footer } from './Footer'
 import styles from './Layout.module.css'
+
+interface SidebarLinkProps {
+  to: string
+  icon: ReactNode
+  children: ReactNode
+  // só o Catálogo ("/") precisa disto -- sem `end`, `/` fica "ativo" em qualquer
+  // rota (prefixo de tudo); os demais links não têm esse problema (não são prefixo
+  // de outra rota).
+  end?: boolean
+}
+
+function SidebarLink({ to, icon, children, end }: SidebarLinkProps) {
+  return (
+    <NavLink
+      to={to}
+      end={end}
+      className={({ isActive }) => [styles.navLink, isActive ? styles.navLinkActive : null].filter(Boolean).join(' ')}
+    >
+      <span aria-hidden="true">{icon}</span>
+      {children}
+    </NavLink>
+  )
+}
 
 // Navegação por papel (§ etapa 03): cliente vê "Meus ingressos", organizador vê
 // "Painel", portaria vê só "Portaria" -- o operador não navega no catálogo durante
@@ -13,43 +38,76 @@ function RoleLink() {
   const { user, status } = useAuth()
   if (status !== 'authenticated' || !user) return null
 
-  if (user.role === 'GATE') return <Link to="/portaria">Portaria</Link>
-  if (user.role === 'ORGANIZER') return <Link to="/organizador">Painel</Link>
-  return <Link to="/ingressos">Meus ingressos</Link>
+  if (user.role === 'GATE') {
+    return (
+      <SidebarLink to="/portaria" icon={<ShieldCheck size={18} />}>
+        Portaria
+      </SidebarLink>
+    )
+  }
+  if (user.role === 'ORGANIZER') {
+    return (
+      <SidebarLink to="/organizador" icon={<LayoutDashboard size={18} />}>
+        Painel
+      </SidebarLink>
+    )
+  }
+  return (
+    <SidebarLink to="/ingressos" icon={<Ticket size={18} />}>
+      Meus ingressos
+    </SidebarLink>
+  )
 }
 
 function SessionAction() {
   const { status, logout } = useAuth()
   if (status === 'loading') return null
-  if (status === 'anonymous') return <Link to="/entrar">Entrar</Link>
+  if (status === 'anonymous') {
+    return (
+      <SidebarLink to="/entrar" icon={<LogIn size={18} />}>
+        Entrar
+      </SidebarLink>
+    )
+  }
   return (
-    <Button variant="ghost" onClick={() => void logout()}>
+    <button type="button" className={styles.navLink} onClick={() => void logout()}>
+      <span aria-hidden="true">
+        <LogOut size={18} />
+      </span>
       Sair
-    </Button>
+    </button>
   )
 }
 
 export function Layout() {
   return (
-    <>
+    <div className={styles.shell}>
       <a href="#conteudo" className="skip-link">
         Ir para o conteúdo
       </a>
-      <header className={styles.header}>
+
+      <aside className={styles.sidebar}>
+        <Link to="/" className={styles.logo}>
+          TicketDev
+        </Link>
         <nav className={styles.nav} aria-label="Principal">
-          <Link to="/" className={styles.logo}>
-            TicketDev
-          </Link>
+          <SidebarLink to="/" icon={<Film size={18} />} end>
+            Catálogo
+          </SidebarLink>
           <RoleLink />
         </nav>
-        <div className={styles.actions}>
+        <div className={styles.session}>
           <ThemeToggle />
           <SessionAction />
         </div>
-      </header>
-      <main id="conteudo">
-        <Outlet />
-      </main>
-    </>
+      </aside>
+
+      <div className={styles.column}>
+        <main id="conteudo" className={styles.main}>
+          <Outlet />
+        </main>
+        <Footer />
+      </div>
+    </div>
   )
 }
