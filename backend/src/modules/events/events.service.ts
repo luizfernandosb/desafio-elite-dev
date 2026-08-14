@@ -93,6 +93,7 @@ export class EventsService {
       status: query.status,
       startsAt: { gte: query.from, lte: query.to },
       title: query.q ? { contains: query.q, mode: 'insensitive' } : undefined,
+      externalId: query.externalId,
     }
 
     if (query.status !== EventStatus.PUBLISHED) {

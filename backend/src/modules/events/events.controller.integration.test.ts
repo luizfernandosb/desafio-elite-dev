@@ -204,6 +204,26 @@ describe('GET /api/v1/events', () => {
     expect(res.body.data).toHaveLength(20)
     expect(res.body.meta).toMatchObject({ total: 25, totalPages: 2, hasNext: true, hasPrev: false })
   })
+
+  it('externalId filtra só as sessões do mesmo filme -- base pra tela de escolher horário', async () => {
+    const { token } = await createUserAndToken(Role.ORGANIZER, 'org')
+    const matrix1 = await createEvent(token, { externalId: '603' })
+    await supertest(app).post(`/api/v1/events/${matrix1.body.id}/publish`).set('Authorization', `Bearer ${token}`)
+    const matrix2 = await createEvent(token, {
+      externalId: '603',
+      startsAt: new Date(Date.now() + 1000 * 60 * 60 * 48).toISOString(),
+    })
+    await supertest(app).post(`/api/v1/events/${matrix2.body.id}/publish`).set('Authorization', `Bearer ${token}`)
+    const other = await createEvent(token, { externalId: '999' })
+    await supertest(app).post(`/api/v1/events/${other.body.id}/publish`).set('Authorization', `Bearer ${token}`)
+
+    const res = await supertest(app).get('/api/v1/events?externalId=603')
+    expect(res.status).toBe(200)
+    expect(res.body.data).toHaveLength(2)
+    expect(res.body.data.map((event: { id: string }) => event.id).sort()).toEqual(
+      [matrix1.body.id, matrix2.body.id].sort(),
+    )
+  })
 })
 
 describe('GET /api/v1/events/:id e /seatmap -- visibilidade', () => {

@@ -95,6 +95,11 @@ export const listEventsSchema = {
       from: z.coerce.date().optional(),
       to: z.coerce.date().optional(),
       status: z.enum(EventStatus).default(EventStatus.PUBLISHED),
+      // filtra sessões do MESMO filme (catálogo TMDb) -- usado pela tela pública de
+      // detalhe para listar todos os horários de uma sessão (§ tela "escolher
+      // horário"), não só a que o cliente abriu. Casa com o índice
+      // `@@index([source, externalId])` do schema.
+      externalId: z.string().trim().min(1).optional(),
     })
     .refine((data) => !data.from || !data.to || data.from <= data.to, {
       message: '`from` deve ser anterior a `to`',

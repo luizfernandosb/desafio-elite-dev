@@ -67,7 +67,7 @@ describe('fluxo ponta a ponta -- busca, reserva, pagamento aprovado, ingresso, v
     await user.click(await screen.findByRole('link', { name: /Duna: Parte Dois/ }))
 
     // detalhe do evento -- CTA de reserva
-    await user.click(await screen.findByRole('link', { name: 'Escolher assentos' }))
+    await user.click(await screen.findByRole('link', { name: /Escolher assentos/ }))
 
     // mapa de assentos -- seleciona A1, reserva, segue para o checkout
     await user.click(await screen.findByLabelText('Assento A1, disponível'))

@@ -10,6 +10,11 @@ export type PublicEventStatus = 'PUBLISHED' | 'CANCELLED'
 // aceitamos o que a API decide mostrar.
 export interface PublicEvent {
   id: string
+  // mesmo filme do catálogo TMDb (`@@index([source, externalId])` no back) -- usado
+  // pra buscar as OUTRAS sessões do mesmo filme na tela de detalhe (ver
+  // `listPublicEvents({ externalId })`), não exibido diretamente em nenhuma tela
+  source: string
+  externalId: string
   title: string
   subtitle?: string
   synopsis?: string
@@ -51,6 +56,7 @@ export interface ListPublicEventsParams {
   q?: string
   from?: string
   to?: string
+  externalId?: string
 }
 
 export const catalogKeys = {
@@ -67,6 +73,7 @@ export function listPublicEvents(params: ListPublicEventsParams) {
   if (params.q) search.set('q', params.q)
   if (params.from) search.set('from', params.from)
   if (params.to) search.set('to', params.to)
+  if (params.externalId) search.set('externalId', params.externalId)
   return api.get<Paginated<PublicEvent>>(`/events?${search.toString()}`)
 }
 

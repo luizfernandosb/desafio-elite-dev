@@ -44,7 +44,7 @@ describe('guard + redirect + retorno (§ etapa 13)', () => {
     renderApp('/')
 
     await user.click(await screen.findByRole('link', { name: /Duna: Parte Dois/ }))
-    await user.click(await screen.findByRole('link', { name: 'Escolher assentos' }))
+    await user.click(await screen.findByRole('link', { name: /Escolher assentos/ }))
 
     // guard -- ainda anônimo, cai no login preservando o destino em ?redirect=
     expect(await screen.findByRole('heading', { name: 'Entrar' })).toBeInTheDocument()

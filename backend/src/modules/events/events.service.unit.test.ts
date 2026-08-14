@@ -275,4 +275,22 @@ describe('EventsService.list -- visibilidade', () => {
       20,
     )
   })
+
+  it('repassa externalId pro repositório -- tela de detalhe lista só sessões do mesmo filme', async () => {
+    const repo = makeMockRepo()
+    vi.mocked(repo.findMany).mockResolvedValue({ data: [], total: 0 })
+    const service = new EventsService(repo, makeMockCatalogService())
+
+    await service.list(
+      { page: 1, limit: 20, status: EventStatus.PUBLISHED, externalId: '693134' } as never,
+      undefined,
+    )
+
+    expect(repo.findMany).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ externalId: '693134' }),
+      0,
+      20,
+    )
+  })
 })

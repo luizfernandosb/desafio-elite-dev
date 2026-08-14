@@ -10,6 +10,8 @@ const API = env.VITE_API_URL
 // e o seletor de sessão da portaria (`EventPicker`, reaproveita `GET /events`).
 export const DEFAULT_EVENT: PublicEvent = {
   id: 'evt-1',
+  source: 'TMDB',
+  externalId: '693134',
   title: 'Duna: Parte Dois',
   subtitle: '2024',
   imageUrl: 'https://image.tmdb.org/duna.jpg',

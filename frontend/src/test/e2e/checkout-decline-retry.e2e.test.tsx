@@ -46,7 +46,7 @@ describe('fluxo de recusa e nova tentativa (§ etapa 13)', () => {
     await user.click(screen.getByRole('button', { name: 'Entrar' }))
 
     await user.click(await screen.findByRole('link', { name: /Duna: Parte Dois/ }))
-    await user.click(await screen.findByRole('link', { name: 'Escolher assentos' }))
+    await user.click(await screen.findByRole('link', { name: /Escolher assentos/ }))
     await user.click(await screen.findByLabelText('Assento A1, disponível'))
     await user.click(await screen.findByRole('button', { name: 'Reservar por 10 minutos' }))
     await user.click(await screen.findByRole('button', { name: 'Ir para pagamento' }))

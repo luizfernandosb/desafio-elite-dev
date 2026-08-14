@@ -1,22 +1,20 @@
+import { useEffect, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Link, useParams } from 'react-router-dom'
 import { Badge, ErrorState, Skeleton } from '../../../components'
 import { useAuth } from '../../auth/useAuth'
-import { formatEventDate } from '../../../shared/date'
+import { toEventDateKey } from '../../../shared/date'
 import { formatMoney } from '../../../shared/money'
-import { sessionAttributeBadges } from '../../../shared/session-attributes'
-import { catalogKeys, getPublicEvent, getPublicEventSeatmap } from '../api'
+import { ShowtimePicker } from '../components/ShowtimePicker'
+import { catalogKeys, getPublicEvent, listPublicEvents } from '../api'
+import { buildShowtimesByDay, defaultDayTabKey, type ShowtimeGroup } from '../showtimes'
 import styles from './EventDetailPage.module.css'
-
-function totalSeats(seatmap: { rows: { seats: unknown[] }[] } | undefined): number | null {
-  if (!seatmap) return null
-  return seatmap.rows.reduce((sum, row) => sum + row.seats.length, 0)
-}
 
 export default function EventDetailPage() {
   const { id } = useParams<{ id: string }>()
   const eventId = id ?? ''
   const { status: authStatus } = useAuth()
+  const [selectedDayKey, setSelectedDayKey] = useState('')
 
   const {
     data: event,
@@ -30,11 +28,38 @@ export default function EventDetailPage() {
     enabled: Boolean(eventId),
   })
 
-  const { data: seatmap } = useQuery({
-    queryKey: catalogKeys.seatmap(eventId),
-    queryFn: () => getPublicEventSeatmap(eventId),
+  // Todas as sessões deste MESMO filme (mesmo `source`+`externalId`, § back
+  // `@@index([source, externalId])`) -- é essa lista, não só a sessão que o cliente
+  // abriu, que vira a tela "escolher dia e horário" (ShowtimePicker).
+  const listParams = { externalId: event?.externalId, limit: 100 }
+  const { data: siblings, isLoading: isLoadingSiblings } = useQuery({
+    queryKey: catalogKeys.list(listParams),
+    queryFn: () => listPublicEvents(listParams),
     enabled: Boolean(event),
   })
+
+  const { dayTabs, groupsByDay } = event
+    ? buildShowtimesByDay(siblings?.data ?? [], event.timezone)
+    : { dayTabs: [], groupsByDay: new Map<string, ShowtimeGroup[]>() }
+
+  useEffect(() => {
+    // espera as sessões-irmãs terminarem de carregar antes de escolher a aba padrão
+    // -- calcular antes disso (só com `event`, sem `siblings` ainda) sempre dá
+    // "Hoje" (única aba possível sem sessão nenhuma carregada), e como "Hoje" nunca
+    // deixa de ser uma aba válida (ver `buildShowtimesByDay`), a guarda de "aba
+    // atual ainda existe" abaixo travaria nela pra sempre, mesmo depois de
+    // `siblings` chegar com o dia certo
+    if (!event || isLoadingSiblings || dayTabs.length === 0) return
+    setSelectedDayKey((prev) => {
+      if (prev && dayTabs.some((tab) => tab.key === prev)) return prev
+      return defaultDayTabKey(dayTabs, groupsByDay, toEventDateKey(event.startsAt, event.timezone))
+    })
+    // `dayTabs`/`groupsByDay` são recalculados a cada render (derivados de `siblings`,
+    // não memoizados) -- comparar por identidade os deixaria fora das deps sem
+    // problema, mas incluir causaria loop; a condição de guarda acima (`prev` já
+    // válido) já evita reprocessar sem necessidade.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [event, isLoadingSiblings, siblings])
 
   if (isLoading) {
     return (
@@ -59,41 +84,45 @@ export default function EventDetailPage() {
     )
   }
 
-  const capacity = totalSeats(seatmap)
-  const sold = event._count.tickets
+  // sessões upcoming/PUBLISHED já agrupadas (mesmo filtro do ShowtimePicker) -- "a
+  // partir de" reflete o menor preço entre TODOS os horários disponíveis, não só o
+  // da sessão que o link original apontava
+  const upcomingSessions = Array.from(groupsByDay.values()).flatMap((groups) =>
+    groups.flatMap((group) => group.sessions),
+  )
+  const fromPriceInCents =
+    upcomingSessions.length > 0
+      ? Math.min(...upcomingSessions.map((session) => session.effectivePriceInCents))
+      : event.effectivePriceInCents
+
   const isPast = new Date(event.startsAt).getTime() <= Date.now()
   const isCancelled = event.status === 'CANCELLED'
 
-  const seatsPath = `/eventos/${event.id}/assentos`
-  // conta com login só na hora de reservar, nunca para só ver o evento (§ etapa 05,
-  // "decidir aqui, não improvisar") -- decidido no clique da CTA, não delegado a um
-  // guard de rota que poderia (ou não) existir em `/eventos/:id/assentos`.
-  const ctaHref = authStatus === 'authenticated' ? seatsPath : `/entrar?redirect=${encodeURIComponent(seatsPath)}`
-  const ctaDisabledReason = isCancelled
-    ? 'Esta sessão foi cancelada.'
-    : isPast
-      ? 'Esta sessão já ocorreu.'
-      : null
+  function hrefForSession(sessionId: string): string {
+    const seatsPath = `/eventos/${sessionId}/assentos`
+    // conta com login só na hora de reservar, nunca para só ver o evento (§ etapa
+    // 05, "decidir aqui, não improvisar")
+    return authStatus === 'authenticated' ? seatsPath : `/entrar?redirect=${encodeURIComponent(seatsPath)}`
+  }
 
   return (
     <div className={styles.page}>
       {event.imageUrl && <img src={event.imageUrl} alt="" className={styles.poster} />}
 
-      {ctaDisabledReason && (
+      {isCancelled && (
         <p className={styles.statusBanner} role="status">
-          {ctaDisabledReason}
+          A sessão que você abriu foi cancelada.
+        </p>
+      )}
+      {!isCancelled && isPast && (
+        <p className={styles.statusBanner} role="status">
+          A sessão que você abriu já ocorreu.
         </p>
       )}
 
       <h1>{event.title}</h1>
-      <p className={styles.meta}>
-        {formatEventDate(event.startsAt, event.timezone)} - {event.venueName}, {event.venueCity}
-      </p>
 
       <div className={styles.badges}>
-        {sessionAttributeBadges(event).map((label) => (
-          <Badge key={label}>{label}</Badge>
-        ))}
         {event.genres.map((genre) => (
           <Badge key={genre}>{genre}</Badge>
         ))}
@@ -102,24 +131,18 @@ export default function EventDetailPage() {
 
       {event.synopsis && <p className={styles.synopsis}>{event.synopsis}</p>}
 
-      <p className={styles.price}>A partir de {formatMoney(event.effectivePriceInCents, event.currency)}</p>
+      <p className={styles.price}>A partir de {formatMoney(fromPriceInCents, event.currency)}</p>
 
-      {/* prova social discreta (§ etapa 05) -- mesma informação do back, sem
-          inventar urgência artificial ("restam só 3!!") quando não é bem assim */}
-      {capacity !== null && (
-        <p className={styles.occupancy}>
-          {sold} de {capacity} lugares ocupados
-        </p>
-      )}
-
-      {ctaDisabledReason ? (
-        <button type="button" className={styles.ctaDisabled} disabled title={ctaDisabledReason}>
-          Escolher assentos
-        </button>
+      {isLoadingSiblings ? (
+        <Skeleton height="120px" radius="md" />
       ) : (
-        <Link to={ctaHref} className={styles.cta}>
-          Escolher assentos
-        </Link>
+        <ShowtimePicker
+          dayTabs={dayTabs}
+          groupsByDay={groupsByDay}
+          selectedDayKey={selectedDayKey}
+          onSelectDay={setSelectedDayKey}
+          hrefForSession={hrefForSession}
+        />
       )}
     </div>
   )
