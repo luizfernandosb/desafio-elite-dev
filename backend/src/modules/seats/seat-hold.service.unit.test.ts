@@ -54,19 +54,20 @@ function p2002() {
 
 describe('SeatHoldService.hold', () => {
   const seatIds = ['seat-1', 'seat-2']
+  const seats = seatIds.map((seatId) => ({ seatId, priceType: 'FULL' as const }))
 
   it('404 -- evento não existe', async () => {
     const eventsRepo = { findById: vi.fn().mockResolvedValue(null) } as unknown as EventsRepository
     const service = new SeatHoldService(makeMockHoldRepo(), makeMockSeatStateRepo(), eventsRepo, makeMockSeatRepo())
 
-    await expect(service.hold('user-1', 'event-1', seatIds, log)).rejects.toThrow(NotFoundError)
+    await expect(service.hold('user-1', 'event-1', seats, log)).rejects.toThrow(NotFoundError)
   })
 
   it('409 -- evento não está PUBLISHED', async () => {
     const eventsRepo = makeMockEventsRepo(makeEvent({ status: EventStatus.DRAFT }))
     const service = new SeatHoldService(makeMockHoldRepo(), makeMockSeatStateRepo(), eventsRepo, makeMockSeatRepo())
 
-    await expect(service.hold('user-1', 'event-1', seatIds, log)).rejects.toThrow(ConflictError)
+    await expect(service.hold('user-1', 'event-1', seats, log)).rejects.toThrow(ConflictError)
   })
 
   it('422 -- assento não pertence ao evento', async () => {
@@ -77,7 +78,7 @@ describe('SeatHoldService.hold', () => {
       makeMockSeatRepo(1), // só 1 de 2 pertence
     )
 
-    await expect(service.hold('user-1', 'event-1', seatIds, log)).rejects.toThrow(AppError)
+    await expect(service.hold('user-1', 'event-1', seats, log)).rejects.toThrow(AppError)
   })
 
   it('409 HOLD_LIMIT_EXCEEDED -- já tem holds ativos suficientes para bater o teto', async () => {
@@ -85,7 +86,7 @@ describe('SeatHoldService.hold', () => {
     vi.mocked(holdRepo.countActiveForUser).mockResolvedValue(5)
     const service = new SeatHoldService(holdRepo, makeMockSeatStateRepo(), makeMockEventsRepo(), makeMockSeatRepo())
 
-    await expect(service.hold('user-1', 'event-1', seatIds, log)).rejects.toThrow(ConflictError)
+    await expect(service.hold('user-1', 'event-1', seats, log)).rejects.toThrow(ConflictError)
   })
 
   it('sucesso: cria os holds e marca SeatState como HELD', async () => {
@@ -93,11 +94,25 @@ describe('SeatHoldService.hold', () => {
     const seatStateRepo = makeMockSeatStateRepo()
     const service = new SeatHoldService(holdRepo, seatStateRepo, makeMockEventsRepo(), makeMockSeatRepo())
 
-    const holds = await service.hold('user-1', 'event-1', seatIds, log)
+    const holds = await service.hold('user-1', 'event-1', seats, log)
 
     expect(holds).toHaveLength(2)
     expect(holdRepo.createMany).toHaveBeenCalledWith('fake-tx', expect.any(Array))
     expect(seatStateRepo.markHeld).toHaveBeenCalledWith('fake-tx', seatIds, expect.any(Date))
+  })
+
+  it('preserva o priceType escolhido por assento nos holds criados', async () => {
+    const holdRepo = makeMockHoldRepo()
+    const service = new SeatHoldService(holdRepo, makeMockSeatStateRepo(), makeMockEventsRepo(), makeMockSeatRepo())
+    const mixed = [
+      { seatId: 'seat-1', priceType: 'FULL' as const },
+      { seatId: 'seat-2', priceType: 'HALF' as const },
+    ]
+
+    const holds = await service.hold('user-1', 'event-1', mixed, log)
+
+    expect(holds.find((h) => h.seatId === 'seat-1')?.priceType).toBe('FULL')
+    expect(holds.find((h) => h.seatId === 'seat-2')?.priceType).toBe('HALF')
   })
 
   it('P2002 nunca vaza para o chamador -- vira ConflictError SEAT_TAKEN com takenSeatIds', async () => {
@@ -106,7 +121,7 @@ describe('SeatHoldService.hold', () => {
     vi.mocked(holdRepo.findActiveSeatIds).mockResolvedValue(['seat-1'])
     const service = new SeatHoldService(holdRepo, makeMockSeatStateRepo(), makeMockEventsRepo(), makeMockSeatRepo())
 
-    const error = await service.hold('user-1', 'event-1', seatIds, log).catch((e) => e)
+    const error = await service.hold('user-1', 'event-1', seats, log).catch((e) => e)
 
     expect(error).toBeInstanceOf(ConflictError)
     expect(error.code).toBe('SEAT_TAKEN')
@@ -120,7 +135,7 @@ describe('SeatHoldService.hold', () => {
     const seatStateRepo = makeMockSeatStateRepo()
     const service = new SeatHoldService(holdRepo, seatStateRepo, makeMockEventsRepo(), makeMockSeatRepo())
 
-    const holds = await service.hold('user-1', 'event-1', seatIds, log)
+    const holds = await service.hold('user-1', 'event-1', seats, log)
 
     expect(holds).toHaveLength(2)
     expect(holdRepo.createMany).toHaveBeenCalledTimes(2)

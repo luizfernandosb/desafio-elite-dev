@@ -148,6 +148,22 @@ describe('OrdersService.createOrder', () => {
     expect(ordersRepo.create).toHaveBeenCalledWith('fake-tx', expect.objectContaining({ amountInCents: 14400 }))
   })
 
+  it('meia-entrada -- amountInCents soma por hold, não efetivo x quantidade', async () => {
+    const holdRepo = makeMockHoldRepo()
+    vi.mocked(holdRepo.findManyOwnedActive).mockResolvedValue([
+      { id: 'hold-1', seatId: 'seat-1', priceType: 'FULL' },
+      { id: 'hold-2', seatId: 'seat-2', priceType: 'HALF' },
+    ] as never)
+    const ordersRepo = makeMockOrdersRepo()
+    vi.mocked(ordersRepo.create).mockResolvedValue(makeOrder({ amountInCents: 9000 }) as never)
+
+    const service = makeService({ ordersRepo, holdRepo })
+    await service.createOrder('user-1', { eventId: 'event-1', holdIds: ['hold-1', 'hold-2'] }, 'idem-1', log)
+
+    // 6000 (FULL) + 3000 (HALF, metade de 6000) = 9000 -- nunca 6000 x 2 = 12000
+    expect(ordersRepo.create).toHaveBeenCalledWith('fake-tx', expect.objectContaining({ amountInCents: 9000 }))
+  })
+
   it('409 HOLD_EXPIRED -- algum hold não está ativo/não é do usuário/não é do evento', async () => {
     const holdRepo = makeMockHoldRepo()
     vi.mocked(holdRepo.findManyOwnedActive).mockResolvedValue([{ id: 'hold-1', seatId: 'seat-1' }] as never)
@@ -194,8 +210,8 @@ describe('OrdersService.confirmPayment', () => {
     vi.mocked(ordersRepo.findById).mockResolvedValue(makeOrder({ status: OrderStatus.PENDING }) as never)
     const holdRepo = makeMockHoldRepo()
     vi.mocked(holdRepo.findByOrderId).mockResolvedValue([
-      { id: 'hold-1', seatId: 'seat-1' },
-      { id: 'hold-2', seatId: 'seat-2' },
+      { id: 'hold-1', seatId: 'seat-1', priceType: 'FULL' },
+      { id: 'hold-2', seatId: 'seat-2', priceType: 'HALF' },
     ] as never)
     const ticketRepo = makeMockTicketRepo()
 
@@ -212,6 +228,29 @@ describe('OrdersService.confirmPayment', () => {
 
     expect(ticketRepo.create).toHaveBeenCalledTimes(2)
     expect(holdRepo.consume).toHaveBeenCalledWith('fake-tx', ['hold-1', 'hold-2'])
+  })
+
+  it('copia o priceType do hold para o ticket emitido -- histórico do que foi comprado', async () => {
+    const ordersRepo = makeMockOrdersRepo()
+    vi.mocked(ordersRepo.findById).mockResolvedValue(makeOrder({ status: OrderStatus.PENDING }) as never)
+    const holdRepo = makeMockHoldRepo()
+    vi.mocked(holdRepo.findByOrderId).mockResolvedValue([
+      { id: 'hold-1', seatId: 'seat-1', priceType: 'HALF' },
+    ] as never)
+    const ticketRepo = makeMockTicketRepo()
+
+    const service = new OrdersService(
+      ordersRepo,
+      makeMockEventsRepo(),
+      holdRepo,
+      makeMockSeatStateRepo(),
+      ticketRepo,
+      makeMockWebhookEventRepo(),
+      makeMockPaymentProvider(),
+    )
+    await service.confirmPayment('order-1', log)
+
+    expect(ticketRepo.create).toHaveBeenCalledWith('fake-tx', expect.objectContaining({ priceType: 'HALF' }))
   })
 })
 

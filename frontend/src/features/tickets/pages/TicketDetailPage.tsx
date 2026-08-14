@@ -4,6 +4,7 @@ import { QRCodeSVG } from 'qrcode.react'
 import { Badge, ErrorState, Skeleton } from '../../../components'
 import { formatEventDate } from '../../../shared/date'
 import { sessionAttributeBadges } from '../../../shared/session-attributes'
+import { ticketPriceTypeLabel } from '../../../shared/ticket-price-type'
 import { getTicket, ticketKeys } from '../api'
 import { ShareButton } from '../components/ShareButton'
 import { ticketStatusLabel, ticketStatusVariant } from '../status'
@@ -47,7 +48,7 @@ export default function TicketDetailPage() {
     )
   }
 
-  const { event, seat, status, code, usedAt } = ticket
+  const { event, seat, status, code, usedAt, priceType } = ticket
 
   return (
     <div className={styles.page}>
@@ -65,6 +66,7 @@ export default function TicketDetailPage() {
         {event.venueName} - {event.venueCity}
       </p>
       <div className={styles.badges}>
+        {priceType === 'HALF' && <Badge variant="warning">{ticketPriceTypeLabel(priceType)}</Badge>}
         {sessionAttributeBadges(event).map((label) => (
           <Badge key={label}>{label}</Badge>
         ))}
@@ -72,6 +74,11 @@ export default function TicketDetailPage() {
       <p className={styles.seat}>
         {seat ? `Fileira ${seat.row}, assento ${seat.number}` : 'Assento não atribuído'}
       </p>
+      {priceType === 'HALF' && (
+        <p className={styles.meta}>
+          Meia-entrada: apresente documento comprobatório (ex.: carteira de estudante, RG) na entrada.
+        </p>
+      )}
 
       {status === 'CANCELLED' ? (
         <p className={styles.cancelledNotice}>

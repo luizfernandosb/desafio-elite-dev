@@ -6,8 +6,8 @@ export class SeatHoldController {
   constructor(private readonly service: SeatHoldService) {}
 
   create = async (req: Request, res: Response) => {
-    const { seatIds } = req.body as CreateHoldDto
-    const holds = await this.service.hold(req.user!.id, req.params.id as string, seatIds, req.log)
+    const { seats } = req.body as CreateHoldDto
+    const holds = await this.service.hold(req.user!.id, req.params.id as string, seats, req.log)
     res.status(201).json({ data: holds })
   }
 

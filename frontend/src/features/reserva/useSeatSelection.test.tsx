@@ -53,4 +53,37 @@ describe('useSeatSelection', () => {
     expect(result.current.selectedSeatIds).toEqual([])
     expect(result.current.atMax).toBe(false)
   })
+
+  it('todo assento novo entra como FULL por padrão', () => {
+    const { result } = renderHook(() => useSeatSelection(), { wrapper })
+
+    act(() => result.current.toggle('seat-1'))
+    expect(result.current.selectedSeats).toEqual([{ seatId: 'seat-1', priceType: 'FULL' }])
+  })
+
+  it('setPriceType altera só o assento indicado, preserva os demais como estavam', () => {
+    const { result } = renderHook(() => useSeatSelection(), { wrapper })
+    act(() => {
+      result.current.toggle('seat-1')
+      result.current.toggle('seat-2')
+    })
+
+    act(() => result.current.setPriceType('seat-2', 'HALF'))
+
+    expect(result.current.selectedSeats).toEqual([
+      { seatId: 'seat-1', priceType: 'FULL' },
+      { seatId: 'seat-2', priceType: 'HALF' },
+    ])
+  })
+
+  it('deselecionar e selecionar de novo volta o assento para FULL -- não herda o tipo anterior', () => {
+    const { result } = renderHook(() => useSeatSelection(), { wrapper })
+    act(() => result.current.toggle('seat-1'))
+    act(() => result.current.setPriceType('seat-1', 'HALF'))
+
+    act(() => result.current.toggle('seat-1')) // remove
+    act(() => result.current.toggle('seat-1')) // seleciona de novo
+
+    expect(result.current.selectedSeats).toEqual([{ seatId: 'seat-1', priceType: 'FULL' }])
+  })
 })

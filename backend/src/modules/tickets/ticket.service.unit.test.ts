@@ -22,6 +22,7 @@ function makeTicket(overrides: Partial<Record<string, unknown>> = {}) {
   return {
     id: 'ticket-1',
     status: TicketStatus.ACTIVE,
+    priceType: 'FULL',
     usedAt: null,
     createdAt: new Date(),
     eventId: EVENT.id,
@@ -233,7 +234,7 @@ describe('TicketService.getSharedTicket', () => {
         venueCity: EVENT.venueCity,
       },
       seat: { row: 'A', number: 1 },
-      ticket: { code: expect.any(String), status: TicketStatus.ACTIVE },
+      ticket: { code: expect.any(String), status: TicketStatus.ACTIVE, priceType: 'FULL' },
     })
     const serialized = JSON.stringify(view)
     for (const forbidden of ['ticketId', 'userId', 'orderId', 'email', 'name', 'ticket-1']) {

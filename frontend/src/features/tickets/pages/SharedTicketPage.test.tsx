@@ -51,6 +51,29 @@ describe('SharedTicketPage', () => {
     expect(screen.queryByText(/@/)).not.toBeInTheDocument()
   })
 
+  it('meia-entrada -- mostra o badge na página pública também', async () => {
+    server.use(
+      http.get(`${API}/share/token-abc`, () =>
+        HttpResponse.json({
+          event: {
+            title: 'Duna: Parte Dois',
+            imageUrl: null,
+            startsAt: new Date(Date.now() + 3600_000).toISOString(),
+            timezone: 'America/Sao_Paulo',
+            venueName: 'Cine Elite',
+            venueCity: 'São Paulo',
+          },
+          seat: { row: 'A', number: 12 },
+          ticket: { code: 'TKT1.payload.signature', status: 'ACTIVE', priceType: 'HALF' },
+        }),
+      ),
+    )
+
+    renderAt('token-abc')
+
+    expect(await screen.findByText('Meia-entrada')).toBeInTheDocument()
+  })
+
   it('USED -- QR continua no DOM, com o selo de já utilizado', async () => {
     server.use(
       http.get(`${API}/share/token-abc`, () =>

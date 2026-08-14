@@ -34,6 +34,7 @@ describe('anti-double-booking -- assento marcado (§7.10.4, teste nº 1)', () =>
               eventId: event.id,
               seatId: targetSeat.id,
               userId,
+              priceType: 'FULL',
               expiresAt: new Date(Date.now() + 10 * 60 * 1000),
             },
           ]),
@@ -70,6 +71,7 @@ describe('anti-double-booking -- assento marcado (§7.10.4, teste nº 1)', () =>
               eventId: event.id,
               seatId: seat.id,
               userId: userIds[i]!,
+              priceType: 'FULL',
               expiresAt: new Date(Date.now() + 10 * 60 * 1000),
             },
           ]),
@@ -99,9 +101,9 @@ describe('anti-double-booking -- assento marcado (§7.10.4, teste nº 1)', () =>
     await expect(
       prisma.$transaction((tx) =>
         repo.createMany(tx, [
-          { id: randomUUID(), eventId: event.id, seatId: seatA.id, userId: attemptUserId!, expiresAt: new Date(Date.now() + 600_000) },
-          { id: randomUUID(), eventId: event.id, seatId: seatB.id, userId: attemptUserId!, expiresAt: new Date(Date.now() + 600_000) },
-          { id: randomUUID(), eventId: event.id, seatId: seatC.id, userId: attemptUserId!, expiresAt: new Date(Date.now() + 600_000) },
+          { id: randomUUID(), eventId: event.id, seatId: seatA.id, userId: attemptUserId!, priceType: 'FULL', expiresAt: new Date(Date.now() + 600_000) },
+          { id: randomUUID(), eventId: event.id, seatId: seatB.id, userId: attemptUserId!, priceType: 'FULL', expiresAt: new Date(Date.now() + 600_000) },
+          { id: randomUUID(), eventId: event.id, seatId: seatC.id, userId: attemptUserId!, priceType: 'FULL', expiresAt: new Date(Date.now() + 600_000) },
         ]),
       ),
     ).rejects.toSatisfy(isUniqueViolation)
@@ -134,7 +136,7 @@ describe('anti-double-booking -- assento marcado (§7.10.4, teste nº 1)', () =>
     await expect(
       prisma.$transaction((tx) =>
         repo.createMany(tx, [
-          { id: randomUUID(), eventId: event.id, seatId: seat.id, userId: newUserId!, expiresAt: new Date(Date.now() + 600_000) },
+          { id: randomUUID(), eventId: event.id, seatId: seat.id, userId: newUserId!, priceType: 'FULL', expiresAt: new Date(Date.now() + 600_000) },
         ]),
       ),
     ).resolves.toBeDefined()
@@ -154,7 +156,7 @@ describe('seat_state -- escrita dupla é transacional (etapa 11, §4.4.2)', () =
 
     await prisma.$transaction(async (tx) => {
       await repo.createMany(tx, [
-        { id: randomUUID(), eventId: event.id, seatId: seat.id, userId: userId!, expiresAt },
+        { id: randomUUID(), eventId: event.id, seatId: seat.id, userId: userId!, priceType: 'FULL', expiresAt },
       ])
       await seatStateRepo.markHeld(tx, [seat.id], expiresAt)
     })
@@ -188,6 +190,7 @@ describe('seat_state -- escrita dupla é transacional (etapa 11, §4.4.2)', () =
             eventId: event.id,
             seatId: seat.id,
             userId: attemptId!,
+            priceType: 'FULL',
             expiresAt: new Date(Date.now() + 600_000),
           },
         ])

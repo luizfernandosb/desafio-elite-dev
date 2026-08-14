@@ -105,6 +105,7 @@ describe('GET /api/v1/share/:shareToken -- página pública', () => {
     expect(res.body.seat).toEqual({ row: seat.row, number: seat.number })
     expect(typeof res.body.ticket.code).toBe('string')
     expect(res.body.ticket.status).toBe('ACTIVE')
+    expect(res.body.ticket.priceType).toBe('FULL')
     expect(res.headers['cache-control']).toContain('no-store')
     expect(res.headers['x-robots-tag']).toBe('noindex')
 

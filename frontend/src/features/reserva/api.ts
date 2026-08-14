@@ -1,6 +1,8 @@
 import { api } from '../../lib/api'
 import type { SessionAudio, SessionFormat, SessionRoomType } from '../../shared/session-attributes'
+import type { TicketPriceType } from '../../shared/ticket-price-type'
 
+export type { TicketPriceType }
 export type SeatKind = 'REGULAR' | 'ACCESSIBLE' | 'COMPANION'
 export type SeatStatus = 'FREE' | 'HELD' | 'SOLD'
 
@@ -45,7 +47,13 @@ export interface SeatHold {
   eventId: string
   seatId: string
   userId: string
+  priceType: TicketPriceType
   expiresAt: string
+}
+
+export interface SeatSelection {
+  seatId: string
+  priceType: TicketPriceType
 }
 
 export const reservaKeys = {
@@ -65,8 +73,8 @@ export function getSeatmap(id: string) {
 // teto de 6 assentos por hold, igual ao back (seat-hold.schema.ts, MAX_SEATS_PER_HOLD)
 export const MAX_SEATS_PER_HOLD = 6
 
-export function createHold(eventId: string, seatIds: string[]) {
-  return api.post<{ data: SeatHold[] }>(`/events/${eventId}/holds`, { seatIds })
+export function createHold(eventId: string, seats: SeatSelection[]) {
+  return api.post<{ data: SeatHold[] }>(`/events/${eventId}/holds`, { seats })
 }
 
 export function releaseHold(eventId: string, holdId: string) {

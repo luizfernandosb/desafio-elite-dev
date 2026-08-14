@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom'
 import { Badge, Card } from '../../../components'
 import { formatEventDate } from '../../../shared/date'
 import { sessionAttributeBadges } from '../../../shared/session-attributes'
+import { ticketPriceTypeLabel } from '../../../shared/ticket-price-type'
 import type { Ticket } from '../api'
 import { ticketStatusLabel, ticketStatusVariant } from '../status'
 import styles from './TicketCard.module.css'
@@ -11,7 +12,7 @@ interface TicketCardProps {
 }
 
 export function TicketCard({ ticket }: TicketCardProps) {
-  const { event, seat, status } = ticket
+  const { event, seat, status, priceType } = ticket
 
   return (
     <Link to={`/ingressos/${ticket.id}`} className={styles.link}>
@@ -31,6 +32,7 @@ export function TicketCard({ ticket }: TicketCardProps) {
             {event.venueName} - {event.venueCity}
           </p>
           <div className={styles.badges}>
+            {priceType === 'HALF' && <Badge variant="warning">{ticketPriceTypeLabel(priceType)}</Badge>}
             {sessionAttributeBadges(event).map((label) => (
               <Badge key={label}>{label}</Badge>
             ))}

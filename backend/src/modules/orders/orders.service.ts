@@ -6,7 +6,7 @@ import { ConflictError, ForbiddenError, InvalidTransitionError, NotFoundError, V
 import { isUniqueViolation } from '../../shared/prisma-errors'
 import { assertTransition, ORDER_TRANSITIONS } from '../../shared/state-machines'
 import type { EventsRepository } from '../events/events.repository'
-import { computeEffectivePriceInCents } from '../events/pricing'
+import { computeEffectivePriceInCents, computeSeatPriceInCents } from '../events/pricing'
 import type { SeatHoldRepository } from '../seats/seat-hold.repository'
 import type { SeatStateRepository } from '../seats/seat-state.repository'
 import { generateTicketCode } from '../tickets/qr.service'
@@ -42,7 +42,13 @@ export class OrdersService {
     // amountInCents é sempre calculado aqui a partir do preço do evento -- nunca do corpo.
     // Preço EFETIVO (já com o adicional de Sala VIP, se houver, ver pricing.ts) -- o
     // cliente paga o mesmo valor que viu no catálogo/carrinho, nunca o preço base cru.
-    const amountInCents = computeEffectivePriceInCents(event) * holds.length
+    // Soma por hold (não `efetivo * quantidade`): meia-entrada é decidida por assento
+    // na reserva (SeatHold.priceType), então o total reflete a mistura escolhida.
+    const effectivePriceInCents = computeEffectivePriceInCents(event)
+    const amountInCents = holds.reduce(
+      (sum, hold) => sum + computeSeatPriceInCents(effectivePriceInCents, hold.priceType),
+      0,
+    )
 
     // I/O externo FORA da transação (§5.5.3) -- chamada HTTP dentro de tx aumenta o
     // tempo de lock e o risco de deadlock. Idempotente pela idempotencyKey: em retry,
@@ -143,6 +149,7 @@ export class OrdersService {
           orderId: order.id,
           eventId: order.eventId,
           seatId: hold.seatId,
+          priceType: hold.priceType,
           codeHash,
           qrJti: jti,
         })

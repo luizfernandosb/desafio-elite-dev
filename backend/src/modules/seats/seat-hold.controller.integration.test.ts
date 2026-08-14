@@ -11,6 +11,13 @@ async function tokenForNewUser(role: Role) {
   return { user, token: signAccessToken({ sub: user.id, role }) }
 }
 
+// corpo de `POST .../holds` mudou de `{ seatIds: string[] }` para `{ seats:
+// [{ seatId, priceType }] }` (meia-entrada) -- todo assento aqui é FULL por
+// padrão, já que nenhum destes testes exercita o cálculo de preço em si.
+function toSeats(seatIds: string[]) {
+  return seatIds.map((seatId) => ({ seatId, priceType: 'FULL' as const }))
+}
+
 describe('POST /api/v1/events/:id/holds', () => {
   beforeEach(cleanDatabase)
 
@@ -21,7 +28,7 @@ describe('POST /api/v1/events/:id/holds', () => {
     const res = await supertest(app)
       .post(`/api/v1/events/${event.id}/holds`)
       .set('Authorization', `Bearer ${token}`)
-      .send({ seatIds: [seats[0]!.id] })
+      .send({ seats: toSeats([seats[0]!.id]) })
 
     expect(res.status).toBe(201)
     expect(res.body.data).toHaveLength(1)
@@ -35,7 +42,7 @@ describe('POST /api/v1/events/:id/holds', () => {
     const res = await supertest(app)
       .post(`/api/v1/events/${event.id}/holds`)
       .set('Authorization', `Bearer ${token}`)
-      .send({ seatIds: [seats[0]!.id] })
+      .send({ seats: toSeats([seats[0]!.id]) })
 
     expect(res.status).toBe(403)
   })
@@ -47,7 +54,7 @@ describe('POST /api/v1/events/:id/holds', () => {
     const res = await supertest(app)
       .post(`/api/v1/events/${event.id}/holds`)
       .set('Authorization', `Bearer ${token}`)
-      .send({ seatIds: [seats[0]!.id] })
+      .send({ seats: toSeats([seats[0]!.id]) })
 
     expect(res.status).toBe(403)
   })
@@ -56,7 +63,7 @@ describe('POST /api/v1/events/:id/holds', () => {
     const { event, seats } = await seedEventWithSeats()
     const res = await supertest(app)
       .post(`/api/v1/events/${event.id}/holds`)
-      .send({ seatIds: [seats[0]!.id] })
+      .send({ seats: toSeats([seats[0]!.id]) })
     expect(res.status).toBe(401)
   })
 
@@ -65,7 +72,7 @@ describe('POST /api/v1/events/:id/holds', () => {
     const res = await supertest(app)
       .post('/api/v1/events/id-que-nao-existe/holds')
       .set('Authorization', `Bearer ${token}`)
-      .send({ seatIds: ['seat-1'] })
+      .send({ seats: toSeats(['seat-1']) })
     expect(res.status).toBe(404)
   })
 
@@ -76,7 +83,7 @@ describe('POST /api/v1/events/:id/holds', () => {
     const res = await supertest(app)
       .post(`/api/v1/events/${event.id}/holds`)
       .set('Authorization', `Bearer ${token}`)
-      .send({ seatIds: [seats[0]!.id] })
+      .send({ seats: toSeats([seats[0]!.id]) })
 
     expect(res.status).toBe(409)
     expect(res.body.code).toBe('EVENT_NOT_PUBLISHED')
@@ -90,7 +97,7 @@ describe('POST /api/v1/events/:id/holds', () => {
     const res = await supertest(app)
       .post(`/api/v1/events/${eventA.id}/holds`)
       .set('Authorization', `Bearer ${token}`)
-      .send({ seatIds: [seatsB[0]!.id] })
+      .send({ seats: toSeats([seatsB[0]!.id]) })
 
     expect(res.status).toBe(422)
     expect(res.body.code).toBe('SEAT_NOT_IN_EVENT')
@@ -103,7 +110,7 @@ describe('POST /api/v1/events/:id/holds', () => {
     const res = await supertest(app)
       .post(`/api/v1/events/${event.id}/holds`)
       .set('Authorization', `Bearer ${token}`)
-      .send({ seatIds: seats.slice(0, 7).map((s) => s.id) })
+      .send({ seats: toSeats(seats.slice(0, 7).map((s) => s.id)) })
 
     expect(res.status).toBe(400)
   })
@@ -116,13 +123,13 @@ describe('POST /api/v1/events/:id/holds', () => {
     const firstRes = await supertest(app)
       .post(`/api/v1/events/${event.id}/holds`)
       .set('Authorization', `Bearer ${first.token}`)
-      .send({ seatIds: [seats[0]!.id] })
+      .send({ seats: toSeats([seats[0]!.id]) })
     expect(firstRes.status).toBe(201)
 
     const secondRes = await supertest(app)
       .post(`/api/v1/events/${event.id}/holds`)
       .set('Authorization', `Bearer ${second.token}`)
-      .send({ seatIds: [seats[0]!.id] })
+      .send({ seats: toSeats([seats[0]!.id]) })
 
     expect(secondRes.status).toBe(409)
     expect(secondRes.body.code).toBe('SEAT_TAKEN')
@@ -136,13 +143,13 @@ describe('POST /api/v1/events/:id/holds', () => {
     const first = await supertest(app)
       .post(`/api/v1/events/${event.id}/holds`)
       .set('Authorization', `Bearer ${token}`)
-      .send({ seatIds: seats.slice(0, 6).map((s) => s.id) })
+      .send({ seats: toSeats(seats.slice(0, 6).map((s) => s.id)) })
     expect(first.status).toBe(201)
 
     const second = await supertest(app)
       .post(`/api/v1/events/${event.id}/holds`)
       .set('Authorization', `Bearer ${token}`)
-      .send({ seatIds: [seats[6]!.id] })
+      .send({ seats: toSeats([seats[6]!.id]) })
 
     expect(second.status).toBe(409)
     expect(second.body.code).toBe('HOLD_LIMIT_EXCEEDED')
@@ -159,7 +166,7 @@ describe('DELETE /api/v1/events/:eventId/holds/:holdId', () => {
     const created = await supertest(app)
       .post(`/api/v1/events/${event.id}/holds`)
       .set('Authorization', `Bearer ${token}`)
-      .send({ seatIds: [seats[0]!.id] })
+      .send({ seats: toSeats([seats[0]!.id]) })
     const holdId = created.body.data[0].id
 
     const res = await supertest(app)
@@ -178,7 +185,7 @@ describe('DELETE /api/v1/events/:eventId/holds/:holdId', () => {
     const created = await supertest(app)
       .post(`/api/v1/events/${event.id}/holds`)
       .set('Authorization', `Bearer ${token}`)
-      .send({ seatIds: [seats[0]!.id] })
+      .send({ seats: toSeats([seats[0]!.id]) })
     const holdId = created.body.data[0].id
 
     await supertest(app).delete(`/api/v1/events/${event.id}/holds/${holdId}`).set('Authorization', `Bearer ${token}`)
@@ -197,7 +204,7 @@ describe('DELETE /api/v1/events/:eventId/holds/:holdId', () => {
     const created = await supertest(app)
       .post(`/api/v1/events/${event.id}/holds`)
       .set('Authorization', `Bearer ${owner.token}`)
-      .send({ seatIds: [seats[0]!.id] })
+      .send({ seats: toSeats([seats[0]!.id]) })
     const holdId = created.body.data[0].id
 
     const res = await supertest(app)
@@ -219,11 +226,11 @@ describe('GET /api/v1/events/:id/holds/mine', () => {
     await supertest(app)
       .post(`/api/v1/events/${event.id}/holds`)
       .set('Authorization', `Bearer ${mine.token}`)
-      .send({ seatIds: [seats[0]!.id] })
+      .send({ seats: toSeats([seats[0]!.id]) })
     await supertest(app)
       .post(`/api/v1/events/${event.id}/holds`)
       .set('Authorization', `Bearer ${other.token}`)
-      .send({ seatIds: [seats[1]!.id] })
+      .send({ seats: toSeats([seats[1]!.id]) })
 
     const res = await supertest(app)
       .get(`/api/v1/events/${event.id}/holds/mine`)

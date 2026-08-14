@@ -43,6 +43,33 @@ describe('POST /api/v1/orders', () => {
     expect(res.body.clientSecret).toBeDefined()
   })
 
+  it('201 -- meia-entrada: amountInCents soma o preço cheio + metade, nunca preço x quantidade', async () => {
+    const { event, seats } = await seedEventWithSeats({ seatCount: 2 })
+    const { token } = await tokenForNewUser(Role.CUSTOMER)
+
+    const holdRes = await supertest(app)
+      .post(`/api/v1/events/${event.id}/holds`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        seats: [
+          { seatId: seats[0]!.id, priceType: 'FULL' },
+          { seatId: seats[1]!.id, priceType: 'HALF' },
+        ],
+      })
+    expect(holdRes.status).toBe(201)
+    const holdIds = holdRes.body.data.map((h: { id: string }) => h.id)
+
+    const res = await supertest(app)
+      .post('/api/v1/orders')
+      .set('Authorization', `Bearer ${token}`)
+      .set('Idempotency-Key', randomUUID())
+      .send({ eventId: event.id, holdIds })
+
+    expect(res.status).toBe(201)
+    // 5000 (FULL) + 2500 (HALF, metade de 5000) = 7500 -- nunca 5000 x 2 = 10000
+    expect(res.body.order.amountInCents).toBe(7500)
+  })
+
   it('400 -- falta o header Idempotency-Key', async () => {
     const { event, seats } = await seedEventWithSeats({ seatCount: 1 })
     const { user, token } = await tokenForNewUser(Role.CUSTOMER)
@@ -187,6 +214,30 @@ describe('POST /api/v1/orders/:id/simulate-payment', () => {
     expect(order.status).toBe('PAID')
     const ticketCount = await prisma.ticket.count({ where: { orderId: order.id } })
     expect(ticketCount).toBe(1)
+  })
+
+  it('succeeded -- ingresso emitido carrega o priceType escolhido na reserva (meia-entrada)', async () => {
+    const { event, seats } = await seedEventWithSeats({ seatCount: 1 })
+    const { token } = await tokenForNewUser(Role.CUSTOMER)
+
+    const holdRes = await supertest(app)
+      .post(`/api/v1/events/${event.id}/holds`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ seats: [{ seatId: seats[0]!.id, priceType: 'HALF' }] })
+
+    const created = await supertest(app)
+      .post('/api/v1/orders')
+      .set('Authorization', `Bearer ${token}`)
+      .set('Idempotency-Key', randomUUID())
+      .send({ eventId: event.id, holdIds: [holdRes.body.data[0].id] })
+
+    await supertest(app)
+      .post(`/api/v1/orders/${created.body.order.id}/simulate-payment`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ outcome: 'succeeded' })
+
+    const ticket = await prisma.ticket.findFirstOrThrow({ where: { orderId: created.body.order.id } })
+    expect(ticket.priceType).toBe('HALF')
   })
 
   it('requires_payment_method -- transita para FAILED e preserva o hold (cliente pode tentar de novo)', async () => {

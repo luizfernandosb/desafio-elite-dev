@@ -2,7 +2,7 @@
   position: sticky;
   bottom: var(--space-4);
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   justify-content: space-between;
   gap: var(--space-4);
   padding: var(--space-4);
@@ -14,11 +14,67 @@
 
 .summary {
   min-width: 0;
+  flex: 1;
 }
 
 .seats {
   margin: 0;
   font-weight: 600;
+}
+
+.seatList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0 0 var(--space-2);
+  padding: 0;
+  list-style: none;
+}
+
+.seatRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.seatLabel {
+  font-weight: 600;
+  min-width: 2ch;
+}
+
+.priceTypeToggle {
+  display: inline-flex;
+  gap: var(--space-1);
+}
+
+.priceTypeOption {
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 0.8125rem;
+  cursor: pointer;
+}
+
+.priceTypeActive {
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  background: var(--primary-tint);
+  color: var(--primary-hover);
+  font-weight: 600;
+  font-size: 0.8125rem;
+  cursor: pointer;
+}
+
+.halfNotice {
+  margin: 0 0 var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  background: color-mix(in srgb, var(--warning) 16%, transparent);
+  color: var(--warning-text);
+  border-radius: var(--radius-sm);
+  font-size: 0.8125rem;
 }
 
 .total {

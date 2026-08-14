@@ -36,11 +36,13 @@ export function issueTicket(input: {
   venueName: string
   venueCity: string
   timezone: string
+  priceType?: Ticket['priceType']
 }): StoredTicket {
   const ticket: StoredTicket = {
     id: `ticket-${input.orderId}-${input.seatId}`,
     eventId: input.eventId,
     status: 'ACTIVE',
+    priceType: input.priceType ?? 'FULL',
     usedAt: null,
     createdAt: new Date().toISOString(),
     event: {

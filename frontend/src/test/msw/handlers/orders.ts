@@ -2,8 +2,16 @@ import { http, HttpResponse } from 'msw'
 import { env } from '../../../lib/env'
 import type { Order, SimulateOutcome } from '../../../features/checkout/api'
 import { DEFAULT_EVENT } from './catalog'
-import { seatIdFromHoldId } from './seats'
+import { priceTypeFromHoldId, seatIdFromHoldId } from './seats'
 import { issueTicket } from './tickets'
+
+// meia-entrada: metade do preço efetivo do evento, mesma fórmula do back
+// (events/pricing.ts, computeSeatPriceInCents) -- nunca preço x quantidade.
+function seatPriceInCents(holdId: string): number {
+  return priceTypeFromHoldId(holdId) === 'HALF'
+    ? Math.round(DEFAULT_EVENT.priceInCents / 2)
+    : DEFAULT_EVENT.priceInCents
+}
 
 const API = env.VITE_API_URL
 
@@ -23,7 +31,7 @@ export const ordersHandlers = [
       userId: 'user-cliente',
       eventId: body.eventId,
       status: 'PENDING',
-      amountInCents: DEFAULT_EVENT.priceInCents * body.holdIds.length,
+      amountInCents: body.holdIds.reduce((sum, holdId) => sum + seatPriceInCents(holdId), 0),
       currency: DEFAULT_EVENT.currency,
       expiresAt: new Date(now.getTime() + 30 * 60 * 1000).toISOString(),
       createdAt: now.toISOString(),
@@ -68,6 +76,7 @@ export const ordersHandlers = [
           venueName: DEFAULT_EVENT.venueName,
           venueCity: DEFAULT_EVENT.venueCity,
           timezone: DEFAULT_EVENT.timezone,
+          priceType: priceTypeFromHoldId(hold.id),
         })
       }
     } else {

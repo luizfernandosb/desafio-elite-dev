@@ -1,6 +1,8 @@
 import { api, type Paginated } from '../../lib/api'
 import type { SessionAudio, SessionFormat, SessionRoomType } from '../../shared/session-attributes'
+import type { TicketPriceType } from '../../shared/ticket-price-type'
 
+export type { TicketPriceType }
 export type TicketStatus = 'ACTIVE' | 'USED' | 'CANCELLED'
 
 export interface TicketEventSummary {
@@ -25,6 +27,7 @@ export interface TicketSeat {
 export interface Ticket {
   id: string
   status: TicketStatus
+  priceType: TicketPriceType
   usedAt: string | null
   createdAt: string
   event: TicketEventSummary
@@ -51,7 +54,7 @@ export interface SharedTicketView {
     'title' | 'imageUrl' | 'startsAt' | 'timezone' | 'venueName' | 'venueCity' | 'format' | 'audio' | 'roomType'
   >
   seat: TicketSeat | null
-  ticket: { code: string; status: TicketStatus }
+  ticket: { code: string; status: TicketStatus; priceType: TicketPriceType }
 }
 
 export const ticketKeys = {

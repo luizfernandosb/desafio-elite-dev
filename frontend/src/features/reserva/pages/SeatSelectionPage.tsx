@@ -9,7 +9,7 @@ import { applySeatPatch } from '../applySeatPatch'
 import { getEvent, getSeatmap, reservaKeys, type Seatmap, type SeatHold } from '../api'
 import { ConnectionBadge } from '../components/ConnectionBadge'
 import { HoldExpiredModal } from '../components/HoldExpiredModal'
-import { SelectionBar } from '../components/SelectionBar'
+import { SelectionBar, type SelectedSeatView } from '../components/SelectionBar'
 import { useHold } from '../useHold'
 import { isOwnSeatChange, useLiveAnnouncements } from '../useLiveAnnouncements'
 import { usePollingFallback } from '../usePollingFallback'
@@ -119,7 +119,7 @@ export default function SeatSelectionPage() {
   }
 
   function handleReserve() {
-    if (selection.selectedSeatIds.length > 0) createHold(selection.selectedSeatIds)
+    if (selection.selectedSeats.length > 0) createHold(selection.selectedSeats)
   }
 
   function handleExpire() {
@@ -175,9 +175,12 @@ export default function SeatSelectionPage() {
     )
   }
 
-  const selectedLabels = selection.selectedSeatIds
-    .map((seatId) => labelById.get(seatId))
-    .filter((label): label is string => Boolean(label))
+  const selectedSeatsView: SelectedSeatView[] = selection.selectedSeats
+    .map((seat) => {
+      const label = labelById.get(seat.seatId)
+      return label ? { ...seat, label } : null
+    })
+    .filter((seat): seat is SelectedSeatView => Boolean(seat))
 
   return (
     <div className={styles.page}>
@@ -217,9 +220,10 @@ export default function SeatSelectionPage() {
       </div>
 
       <SelectionBar
-        selectedLabels={selectedLabels}
+        selectedSeats={selectedSeatsView}
         effectivePriceInCents={seatmap.meta.effectivePriceInCents}
         currency={seatmap.meta.currency}
+        onChangePriceType={selection.setPriceType}
         onReserve={handleReserve}
         isReserving={isReserving}
         atMax={selection.atMax}

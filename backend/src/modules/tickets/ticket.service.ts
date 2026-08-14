@@ -1,6 +1,6 @@
 import { randomBytes } from 'node:crypto'
 import type { Logger } from 'pino'
-import { EventAudio, EventFormat, RoomType, TicketStatus } from '../../../generated/prisma/enums'
+import { EventAudio, EventFormat, RoomType, TicketPriceType, TicketStatus } from '../../../generated/prisma/enums'
 import { env } from '../../config/env'
 import { prisma } from '../../lib/prisma'
 import { computeShareExpiresAt } from '../../shared/date'
@@ -28,6 +28,7 @@ interface EventSummary {
 interface TicketRecord {
   id: string
   status: TicketStatus
+  priceType: TicketPriceType
   usedAt: Date | null
   createdAt: Date
   eventId: string
@@ -42,6 +43,7 @@ interface TicketRecord {
 export interface PublicTicket {
   id: string
   status: TicketStatus
+  priceType: TicketPriceType
   usedAt: Date | null
   createdAt: Date
   event: EventSummary
@@ -61,7 +63,7 @@ export interface SharedTicketView {
     'title' | 'imageUrl' | 'startsAt' | 'timezone' | 'venueName' | 'venueCity' | 'format' | 'audio' | 'roomType'
   >
   seat: TicketRecord['seat']
-  ticket: { code: string; status: TicketStatus }
+  ticket: { code: string; status: TicketStatus; priceType: TicketPriceType }
 }
 
 function buildShareUrl(shareToken: string): string {
@@ -83,6 +85,7 @@ function toPublicTicket(ticket: TicketRecord): PublicTicket {
   return {
     id: ticket.id,
     status: ticket.status,
+    priceType: ticket.priceType,
     usedAt: ticket.usedAt,
     createdAt: ticket.createdAt,
     event: ticket.event,
@@ -165,7 +168,7 @@ export class TicketService {
         roomType: ticket.event.roomType,
       },
       seat: ticket.seat,
-      ticket: { code, status: ticket.status },
+      ticket: { code, status: ticket.status, priceType: ticket.priceType },
     }
   }
 }

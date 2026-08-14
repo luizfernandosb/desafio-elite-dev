@@ -38,6 +38,7 @@ describe('GET /api/v1/tickets', () => {
     expect(res.status).toBe(200)
     expect(res.body.data).toHaveLength(1)
     expect(res.body.data[0].code).toBeUndefined()
+    expect(res.body.data[0].priceType).toBe('FULL')
     expect(JSON.stringify(res.body)).not.toContain('codeHash')
     expect(JSON.stringify(res.body)).not.toContain('qrJti')
   })
@@ -67,6 +68,7 @@ describe('GET /api/v1/tickets/:id', () => {
     expect(res.status).toBe(200)
     expect(typeof res.body.code).toBe('string')
     expect(verifyTicketCode(res.body.code, { ticketId: ticket.id, eventId: ticket.eventId })).toBe(true)
+    expect(res.body.priceType).toBe('FULL')
   })
 
   it('404 -- outro cliente não pode ler o ingresso (privado, não revela)', async () => {

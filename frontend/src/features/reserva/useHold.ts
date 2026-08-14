@@ -1,7 +1,7 @@
 import { useMutation } from '@tanstack/react-query'
 import { useToast } from '../../components'
 import { ApiError } from '../../lib/api'
-import { createHold, type SeatHold } from './api'
+import { createHold, type SeatHold, type SeatSelection } from './api'
 import { holdErrorMessage } from './error-messages'
 
 interface UseHoldOptions {
@@ -21,7 +21,7 @@ export function useHold({ eventId, onHoldCreated, onSeatsTaken }: UseHoldOptions
   const { showToast } = useToast()
 
   const { mutate, isPending, error } = useMutation({
-    mutationFn: (seatIds: string[]) => createHold(eventId, seatIds),
+    mutationFn: (seats: SeatSelection[]) => createHold(eventId, seats),
     onSuccess: (result) => onHoldCreated(result.data),
     onError: (err) => {
       if (err instanceof ApiError && err.code === 'SEAT_TAKEN') {

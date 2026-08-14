@@ -1,3 +1,4 @@
+import type { TicketPriceType } from '../../../generated/prisma/enums'
 import type { Db } from '../../shared/db'
 
 interface CreateTicketInput {
@@ -5,6 +6,7 @@ interface CreateTicketInput {
   orderId: string
   eventId: string
   seatId: string
+  priceType: TicketPriceType
   codeHash: string
   qrJti: string
 }

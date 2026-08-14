@@ -84,6 +84,24 @@ describe('TicketDetailPage', () => {
     expect(screen.getByText(/Este ingresso foi cancelado/)).toBeInTheDocument()
   })
 
+  it('meia-entrada -- mostra o badge e o lembrete de apresentar documento', async () => {
+    server.use(http.get(`${API}/tickets/ticket-1`, () => HttpResponse.json(makeTicketDetail({ priceType: 'HALF' }))))
+
+    renderPage()
+
+    expect(await screen.findByText('Meia-entrada')).toBeInTheDocument()
+    expect(screen.getByText(/apresente documento comprobatório/)).toBeInTheDocument()
+  })
+
+  it('ingresso inteira -- não mostra badge nem lembrete de meia-entrada', async () => {
+    server.use(http.get(`${API}/tickets/ticket-1`, () => HttpResponse.json(makeTicketDetail({ priceType: 'FULL' }))))
+
+    renderPage()
+
+    await screen.findByText('Duna: Parte Dois')
+    expect(screen.queryByText('Meia-entrada')).not.toBeInTheDocument()
+  })
+
   it('ingresso inexistente -- vazio com link de volta, nunca stack trace', async () => {
     server.use(
       http.get(`${API}/tickets/ticket-1`, () =>

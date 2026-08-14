@@ -78,6 +78,17 @@ describe('TicketListPage', () => {
     expect(screen.getByText('Usado')).toBeInTheDocument()
   })
 
+  it('meia-entrada -- card mostra o badge, ingresso inteira não mostra', async () => {
+    const half = makeTicket({ id: 'half', priceType: 'HALF' })
+    const full = makeTicket({ id: 'full', priceType: 'FULL', event: { ...half.event, title: 'Sessão inteira' } })
+    server.use(http.get(`${API}/tickets`, () => HttpResponse.json(paginated([half, full]))))
+
+    renderPage()
+
+    expect(await screen.findByText('Meia-entrada')).toBeInTheDocument()
+    expect(screen.getAllByText('Meia-entrada')).toHaveLength(1) // só o card do ingresso HALF
+  })
+
   it('sem ingressos -- vazio com CTA para o catálogo', async () => {
     server.use(http.get(`${API}/tickets`, () => HttpResponse.json(paginated([]))))
 

@@ -5,6 +5,7 @@ import { QRCodeSVG } from 'qrcode.react'
 import { Badge, Skeleton } from '../../../components'
 import { formatEventDate } from '../../../shared/date'
 import { sessionAttributeBadges } from '../../../shared/session-attributes'
+import { ticketPriceTypeLabel } from '../../../shared/ticket-price-type'
 import { getSharedTicket, ticketKeys } from '../api'
 import { publicShareErrorMessage } from '../error-messages'
 import styles from './SharedTicketPage.module.css'
@@ -82,6 +83,7 @@ export default function SharedTicketPage() {
           {event.venueName} - {event.venueCity}
         </p>
         <div className={styles.badges}>
+          {ticket.priceType === 'HALF' && <Badge variant="warning">{ticketPriceTypeLabel(ticket.priceType)}</Badge>}
           {sessionAttributeBadges(event).map((label) => (
             <Badge key={label}>{label}</Badge>
           ))}

@@ -25,6 +25,7 @@ describe('useHold', () => {
       eventId: 'evt-1',
       seatId: 'seat-1',
       userId: 'u1',
+      priceType: 'FULL',
       expiresAt: '2026-01-01T10:10:00.000Z',
     }
     server.use(
@@ -34,7 +35,7 @@ describe('useHold', () => {
     const onSeatsTaken = vi.fn()
     const { result } = renderHook(() => useHold({ eventId: 'evt-1', onHoldCreated, onSeatsTaken }), { wrapper })
 
-    result.current.hold(['seat-1'])
+    result.current.hold([{ seatId: 'seat-1', priceType: 'FULL' }])
 
     await waitFor(() => expect(onHoldCreated).toHaveBeenCalledWith([createdHold]))
     expect(onSeatsTaken).not.toHaveBeenCalled()
@@ -50,7 +51,10 @@ describe('useHold', () => {
     const onSeatsTaken = vi.fn()
     const { result } = renderHook(() => useHold({ eventId: 'evt-1', onHoldCreated, onSeatsTaken }), { wrapper })
 
-    result.current.hold(['seat-1', 'seat-2'])
+    result.current.hold([
+      { seatId: 'seat-1', priceType: 'FULL' },
+      { seatId: 'seat-2', priceType: 'FULL' },
+    ])
 
     await waitFor(() => expect(onSeatsTaken).toHaveBeenCalledWith(['seat-2']))
     expect(onHoldCreated).not.toHaveBeenCalled()
@@ -66,7 +70,7 @@ describe('useHold', () => {
     const onSeatsTaken = vi.fn()
     const { result } = renderHook(() => useHold({ eventId: 'evt-1', onHoldCreated, onSeatsTaken }), { wrapper })
 
-    result.current.hold(['seat-1'])
+    result.current.hold([{ seatId: 'seat-1', priceType: 'FULL' }])
 
     await waitFor(() => expect(result.current.error).not.toBeNull())
     expect(onSeatsTaken).not.toHaveBeenCalled()

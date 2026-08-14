@@ -88,6 +88,13 @@ enum ValidationResult {
   GATE_CLOSED
 }
 
+// Meia-entrada: 50% do preço efetivo do assento. Decidido na reserva (SeatHold),
+// copiado para o Ticket na emissão -- histórico do que foi de fato comprado.
+enum TicketPriceType {
+  FULL
+  HALF
+}
+
 model User {
   id            String   @id @default(cuid())
   email         String   @unique // trim + toLowerCase antes de salvar (§7.4)
@@ -123,39 +130,39 @@ model RefreshToken {
 }
 
 model Event {
-  id              String        @id @default(cuid())
-  organizerId     String
+  id                  String        @id @default(cuid())
+  organizerId         String
   // snapshot do catálogo -- nunca buscado on-demand no TMDb (§4.3)
-  source          CatalogSource @default(TMDB)
-  externalId      String
-  title           String
-  subtitle        String?
-  synopsis        String?
-  imageUrl        String? // exibido -- pôster do catálogo até o organizador enviar um banner próprio (etapa 12)
-  catalogImageUrl String? // snapshot imutável do pôster do catálogo -- fallback do DELETE /events/:id/image
-  customImageKey  String? // key no bucket Supabase quando imageUrl é um upload do organizador; null = usando o pôster
-  runtimeMinutes  Int?
-  genres          String[]
+  source              CatalogSource @default(TMDB)
+  externalId          String
+  title               String
+  subtitle            String?
+  synopsis            String?
+  imageUrl            String? // exibido -- pôster do catálogo até o organizador enviar um banner próprio (etapa 12)
+  catalogImageUrl     String? // snapshot imutável do pôster do catálogo -- fallback do DELETE /events/:id/image
+  customImageKey      String? // key no bucket Supabase quando imageUrl é um upload do organizador; null = usando o pôster
+  runtimeMinutes      Int?
+  genres              String[]
   // definido pelo organizador
-  venueName       String
-  venueCity       String
-  venueState      String        @db.Char(2) // UF, ex.: "SP" -- select em cascata validado contra a lista do IBGE
-  type            EventType     @default(SEATED)
-  status          EventStatus   @default(DRAFT)
-  startsAt        DateTime      @db.Timestamptz(3) // UTC
-  endsAt          DateTime?     @db.Timestamptz(3)
-  timezone        String // IANA: "America/Sao_Paulo" (§4.6.3) -- nunca offset numérico
-  priceInCents    Int
-  currency        String        @default("BRL")
-  format          EventFormat   @default(TWO_D)
-  audio           EventAudio    @default(DUBBED)
-  roomType        RoomType      @default(STANDARD)
+  venueName           String
+  venueCity           String
+  venueState          String        @db.Char(2) // UF, ex.: "SP" -- select em cascata validado contra a lista do IBGE
+  type                EventType     @default(SEATED)
+  status              EventStatus   @default(DRAFT)
+  startsAt            DateTime      @db.Timestamptz(3) // UTC
+  endsAt              DateTime?     @db.Timestamptz(3)
+  timezone            String // IANA: "America/Sao_Paulo" (§4.6.3) -- nunca offset numérico
+  priceInCents        Int
+  currency            String        @default("BRL")
+  format              EventFormat   @default(TWO_D)
+  audio               EventAudio    @default(DUBBED)
+  roomType            RoomType      @default(STANDARD)
   // só preenchido quando roomType = VIP -- percentual sobre priceInCents; o preço
   // que o cliente de fato paga (priceInCents + este adicional) nunca é recalculado
   // em cada tela, vem pronto da API como `effectivePriceInCents` (pricing.ts)
   vipSurchargePercent Int?
-  createdAt       DateTime      @default(now()) @db.Timestamptz(3)
-  updatedAt       DateTime      @updatedAt @db.Timestamptz(3)
+  createdAt           DateTime      @default(now()) @db.Timestamptz(3)
+  updatedAt           DateTime      @updatedAt @db.Timestamptz(3)
 
   organizer User        @relation("EventOrganizer", fields: [organizerId], references: [id])
   seats     Seat[]
@@ -202,14 +209,15 @@ model SeatState {
 }
 
 model SeatHold {
-  id         String    @id @default(cuid())
+  id         String          @id @default(cuid())
   eventId    String
   seatId     String
   userId     String
-  expiresAt  DateTime  @db.Timestamptz(3)
-  releasedAt DateTime? @db.Timestamptz(3)
+  priceType  TicketPriceType @default(FULL) // escolhido pelo cliente na reserva -- nunca o preço em si (§ pricing.ts)
+  expiresAt  DateTime        @db.Timestamptz(3)
+  releasedAt DateTime?       @db.Timestamptz(3)
   orderId    String? // rastreabilidade quando o hold vira Order (§4.6.2)
-  createdAt  DateTime  @default(now()) @db.Timestamptz(3)
+  createdAt  DateTime        @default(now()) @db.Timestamptz(3)
 
   seat  Seat   @relation(fields: [seatId], references: [id], onDelete: Cascade)
   user  User   @relation(fields: [userId], references: [id])
@@ -247,19 +255,20 @@ model Order {
 /// consumido pela compra. O índice parcial único em (eventId, seatId) WHERE seatId IS
 /// NOT NULL garante que não existem dois tickets ativos para o mesmo assento (§4.6.2).
 model Ticket {
-  id             String       @id @default(cuid())
+  id             String          @id @default(cuid())
   orderId        String
   eventId        String
   seatId         String? // sempre preenchido nesta versão (SEATED-only)
-  status         TicketStatus @default(ACTIVE)
-  codeHash       String       @unique // SHA-256 do código; o código em si não é armazenado (§7.6)
+  status         TicketStatus    @default(ACTIVE)
+  priceType      TicketPriceType @default(FULL) // copiado do SeatHold na emissão (§ orders.service, confirmPayment)
+  codeHash       String          @unique // SHA-256 do código; o código em si não é armazenado (§7.6)
   qrJti          String // recupera o código sob demanda (ticketId+eventId+jti+segredo) -- nunca guarda o código (etapa 08)
-  shareToken     String?      @unique // token de leitura, separado do QR (§7.7)
-  shareExpiresAt DateTime?    @db.Timestamptz(3)
-  shareRevokedAt DateTime?    @db.Timestamptz(3)
-  usedAt         DateTime?    @db.Timestamptz(3)
+  shareToken     String?         @unique // token de leitura, separado do QR (§7.7)
+  shareExpiresAt DateTime?       @db.Timestamptz(3)
+  shareRevokedAt DateTime?       @db.Timestamptz(3)
+  usedAt         DateTime?       @db.Timestamptz(3)
   validatedById  String?
-  createdAt      DateTime     @default(now()) @db.Timestamptz(3)
+  createdAt      DateTime        @default(now()) @db.Timestamptz(3)
 
   order       Order @relation(fields: [orderId], references: [id])
   event       Event @relation(fields: [eventId], references: [id])

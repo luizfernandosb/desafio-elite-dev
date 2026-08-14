@@ -2,10 +2,11 @@ import { randomUUID } from 'node:crypto'
 import type { Logger } from 'pino'
 import { EventStatus } from '../../../generated/prisma/enums'
 import { prisma } from '../../lib/prisma'
+import type { TicketPriceType } from '../../../generated/prisma/enums'
 import { AppError, ConflictError, NotFoundError } from '../../shared/errors'
 import { isUniqueViolation } from '../../shared/prisma-errors'
 import type { EventsRepository } from '../events/events.repository'
-import { MAX_SEATS_PER_HOLD } from './seat-hold.schema'
+import { MAX_SEATS_PER_HOLD, type SeatSelectionDto } from './seat-hold.schema'
 import type { SeatHoldRepository } from './seat-hold.repository'
 import type { SeatRepository } from './seat.repository'
 import type { SeatStateRepository } from './seat-state.repository'
@@ -17,6 +18,7 @@ export interface SeatHold {
   eventId: string
   seatId: string
   userId: string
+  priceType: TicketPriceType
   expiresAt: Date
 }
 
@@ -28,7 +30,9 @@ export class SeatHoldService {
     private readonly seatRepo: SeatRepository,
   ) {}
 
-  async hold(userId: string, eventId: string, seatIds: string[], log: Logger): Promise<SeatHold[]> {
+  async hold(userId: string, eventId: string, seats: SeatSelectionDto[], log: Logger): Promise<SeatHold[]> {
+    const seatIds = seats.map((s) => s.seatId)
+
     const event = await this.eventsRepo.findById(prisma, eventId)
     if (!event) throw new NotFoundError('Evento')
     if (event.status !== EventStatus.PUBLISHED) {
@@ -49,7 +53,7 @@ export class SeatHoldService {
     }
 
     try {
-      return await this.attemptHold(userId, eventId, seatIds)
+      return await this.attemptHold(userId, eventId, seats)
     } catch (err) {
       if (!isUniqueViolation(err)) throw err
 
@@ -58,7 +62,7 @@ export class SeatHoldService {
       await this.repo.releaseExpiredAmong(prisma, seatIds)
 
       try {
-        return await this.attemptHold(userId, eventId, seatIds)
+        return await this.attemptHold(userId, eventId, seats)
       } catch (retryErr) {
         if (!isUniqueViolation(retryErr)) throw retryErr
 
@@ -87,19 +91,24 @@ export class SeatHoldService {
     return this.repo.findActiveByUser(prisma, eventId, userId)
   }
 
-  private async attemptHold(userId: string, eventId: string, seatIds: string[]): Promise<SeatHold[]> {
+  private async attemptHold(userId: string, eventId: string, seats: SeatSelectionDto[]): Promise<SeatHold[]> {
     const expiresAt = new Date(Date.now() + HOLD_TTL_MS)
-    const holds: SeatHold[] = seatIds.map((seatId) => ({
+    const holds: SeatHold[] = seats.map(({ seatId, priceType }) => ({
       id: randomUUID(),
       eventId,
       seatId,
       userId,
+      priceType,
       expiresAt,
     }))
 
     return prisma.$transaction(async (tx) => {
       await this.repo.createMany(tx, holds)
-      await this.seatStateRepo.markHeld(tx, seatIds, expiresAt)
+      await this.seatStateRepo.markHeld(
+        tx,
+        holds.map((h) => h.seatId),
+        expiresAt,
+      )
       return holds
     })
   }
