@@ -150,8 +150,7 @@ export default function StyleGuidePage() {
             <EventCard
               imageUrl="https://image.tmdb.org/t/p/w500/duna-parte-dois.jpg"
               title="Duna: Parte Dois"
-              subtitle="Cine Elite - Sala 1"
-              priceLabel="R$ 32,00"
+              ageRating="14"
             />
           </div>
         </div>

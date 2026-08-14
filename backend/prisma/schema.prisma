@@ -143,6 +143,7 @@ model Event {
   customImageKey      String? // key no bucket Supabase quando imageUrl é um upload do organizador; null = usando o pôster
   runtimeMinutes      Int?
   genres              String[]
+  ageRating           String? // classificação indicativa BR ("L", "10", "12", "14", "16", "18") -- snapshot do TMDb, nunca recalculada
   // definido pelo organizador
   venueName           String
   venueCity           String

@@ -123,7 +123,7 @@ describe('CreateEventWizard', () => {
       await user.type(await screen.findByLabelText('Fileiras'), '99')
       await user.type(screen.getByLabelText('Assentos por fileira'), '10')
       await user.type(screen.getByLabelText('Preço (R$)'), '32')
-      await user.click(screen.getByRole('button', { name: 'Criar sessão' }))
+      await user.click(screen.getByRole('button', { name: 'Publicar sessão' }))
 
       expect(await screen.findByText('Máximo 26 fileiras')).toBeInTheDocument()
       expect(screen.queryByTestId('detail-page')).not.toBeInTheDocument()
@@ -150,7 +150,7 @@ describe('CreateEventWizard', () => {
       await user.type(await screen.findByLabelText('Fileiras'), '8')
       await user.type(screen.getByLabelText('Assentos por fileira'), '12')
       await user.type(screen.getByLabelText('Preço (R$)'), '32.00')
-      await user.click(screen.getByRole('button', { name: 'Criar sessão' }))
+      await user.click(screen.getByRole('button', { name: 'Publicar sessão' }))
 
       await waitFor(() => expect(receivedBody).not.toBeNull())
       expect(receivedBody).toMatchObject({
@@ -186,7 +186,7 @@ describe('CreateEventWizard', () => {
   )
 
   it(
-    'dois horários -- cria uma sessão por horário e navega para Minhas Sessões (Rascunhos)',
+    'dois horários -- cria e publica uma sessão por horário numa única submissão',
     async () => {
       const receivedBodies: Record<string, unknown>[] = []
       server.use(
@@ -205,19 +205,21 @@ describe('CreateEventWizard', () => {
       await user.type(await screen.findByLabelText('Fileiras'), '8')
       await user.type(screen.getByLabelText('Assentos por fileira'), '12')
       await user.type(screen.getByLabelText('Preço (R$)'), '32')
-      await user.click(screen.getByRole('button', { name: 'Criar 2 sessões' }))
+      await user.click(screen.getByRole('button', { name: 'Publicar 2 sessões' }))
 
       await waitFor(() => expect(receivedBodies).toHaveLength(2))
       expect(receivedBodies[0]).toMatchObject({ format: 'TWO_D', audio: 'DUBBED', roomType: 'STANDARD' })
       expect(receivedBodies[0]?.startsAt).not.toBe(receivedBodies[1]?.startsAt)
 
-      expect(await screen.findByText('2 sessões criadas como rascunho.')).toBeInTheDocument()
+      // nada de "rascunho" -- as duas sessões do lote já nascem publicadas, sem
+      // precisar abrir "Minhas sessões" pra publicar uma de cada vez
+      expect(await screen.findByText('2 sessões publicadas.')).toBeInTheDocument()
     },
     WIZARD_TEST_TIMEOUT,
   )
 
   it(
-    'dois horários, um falha -- mantém só o horário que falhou, não recria o que já deu certo',
+    'dois horários, um falha ao criar -- mantém só o horário que falhou, não recria o que já deu certo',
     async () => {
       let calls = 0
       server.use(
@@ -236,12 +238,54 @@ describe('CreateEventWizard', () => {
       await user.type(await screen.findByLabelText('Fileiras'), '8')
       await user.type(screen.getByLabelText('Assentos por fileira'), '12')
       await user.type(screen.getByLabelText('Preço (R$)'), '32')
-      await user.click(screen.getByRole('button', { name: 'Criar 2 sessões' }))
+      await user.click(screen.getByRole('button', { name: 'Publicar 2 sessões' }))
 
-      expect(await screen.findByRole('alert')).toHaveTextContent('1 de 2 sessões criadas')
+      expect(await screen.findByRole('alert')).toHaveTextContent('1 de 2 sessões publicadas')
+      expect(screen.getByRole('alert')).toHaveTextContent('1 não foi criada')
       // ainda no passo 3 (não navegou) -- e o botão agora reflete só 1 horário
-      // restante (o que falhou), prova que o rascunho foi cortado para não duplicar
-      expect(await screen.findByRole('button', { name: 'Criar sessão' })).toBeInTheDocument()
+      // restante (o que falhou ao criar), prova que o rascunho foi cortado para não
+      // duplicar a sessão que já foi criada e publicada
+      expect(await screen.findByRole('button', { name: 'Publicar sessão' })).toBeInTheDocument()
+    },
+    WIZARD_TEST_TIMEOUT,
+  )
+
+  it(
+    'horário criado mas não publicado -- nunca recria (evita sessão duplicada), vira rascunho pra publicar manualmente',
+    async () => {
+      let createCalls = 0
+      server.use(
+        http.post(`${API}/events`, async () => {
+          createCalls += 1
+          if (createCalls === 1) return HttpResponse.json({ id: 'evt-a' }, { status: 201 })
+          return HttpResponse.json({ code: 'VALIDATION_ERROR', message: 'Dados inválidos' }, { status: 400 })
+        }),
+        http.post(`${API}/events/:id/publish`, () =>
+          HttpResponse.json({ code: 'INTERNAL_ERROR', message: 'Falha ao publicar' }, { status: 500 }),
+        ),
+      )
+      const user = userEvent.setup()
+      renderWizard()
+
+      await selectMovieAndAdvance(user)
+      await fillVenueStepWithTwoSlotsAndAdvance(user)
+
+      await user.type(await screen.findByLabelText('Fileiras'), '8')
+      await user.type(screen.getByLabelText('Assentos por fileira'), '12')
+      await user.type(screen.getByLabelText('Preço (R$)'), '32')
+      await user.click(screen.getByRole('button', { name: 'Publicar 2 sessões' }))
+
+      const alert = await screen.findByRole('alert')
+      expect(alert).toHaveTextContent('Não foi possível publicar as sessões.')
+      expect(alert).toHaveTextContent('1 não foi criada')
+      expect(alert).toHaveTextContent('1 foi criada, mas não publicada')
+      expect(alert).toHaveTextContent('publique manualmente em "Minhas sessões"')
+
+      // só o horário que sequer chegou a existir no servidor continua no
+      // formulário -- o que foi criado (mas não publicado) NUNCA volta a ser
+      // tentado de novo, senão um novo clique criaria uma segunda sessão duplicada
+      // pro mesmo horário
+      expect(await screen.findByRole('button', { name: 'Publicar sessão' })).toBeInTheDocument()
     },
     WIZARD_TEST_TIMEOUT,
   )
@@ -284,7 +328,7 @@ describe('CreateEventWizard', () => {
       expect(vipInputs).toHaveLength(1)
       await user.type(vipInputs[0]!, '20')
 
-      await user.click(screen.getByRole('button', { name: 'Criar 2 sessões' }))
+      await user.click(screen.getByRole('button', { name: 'Publicar 2 sessões' }))
 
       await waitFor(() => expect(receivedBodies).toHaveLength(2))
       expect(receivedBodies[0]).toMatchObject({

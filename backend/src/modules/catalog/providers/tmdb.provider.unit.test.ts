@@ -105,7 +105,7 @@ describe('TmdbProvider.search', () => {
 })
 
 describe('TmdbProvider.getById', () => {
-  it('normaliza o detalhe com subtitle (tagline) e runtimeMinutes', async () => {
+  it('normaliza o detalhe com subtitle (tagline), runtimeMinutes e classificação BR', async () => {
     const provider = new TmdbProvider()
     const item = await provider.getById('603')
 
@@ -118,11 +118,37 @@ describe('TmdbProvider.getById', () => {
       imageUrl: 'https://image.tmdb.org/t/p/w500/matrix.jpg',
       runtimeMinutes: 136,
       genres: ['Ação', 'Ficção científica'],
+      ageRating: '14',
     })
   })
 
   it('404 do TMDb vira NotFoundError', async () => {
     const provider = new TmdbProvider()
     await expect(provider.getById('id-inexistente')).rejects.toThrow(NotFoundError)
+  })
+
+  it('sem entrada BR em release_dates -- ageRating undefined, não lança erro', async () => {
+    server.use(
+      http.get('https://api.themoviedb.org/3/movie/:id/release_dates', () =>
+        HttpResponse.json({ id: 603, results: [{ iso_3166_1: 'US', release_dates: [{ certification: 'R' }] }] }),
+      ),
+    )
+
+    const provider = new TmdbProvider()
+    const item = await provider.getById('603')
+
+    expect(item.ageRating).toBeUndefined()
+  })
+
+  it('release_dates indisponível (erro de rede) -- detalhe do filme ainda é devolvido, só sem classificação', async () => {
+    server.use(
+      http.get('https://api.themoviedb.org/3/movie/:id/release_dates', () => HttpResponse.error()),
+    )
+
+    const provider = new TmdbProvider()
+    const item = await provider.getById('603')
+
+    expect(item.ageRating).toBeUndefined()
+    expect(item.title).toBe('The Matrix')
   })
 })

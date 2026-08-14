@@ -20,6 +20,7 @@ const CATALOG_ITEM: CatalogItem = {
   imageUrl: 'https://image.tmdb.org/t/p/w500/matrix.jpg',
   runtimeMinutes: 136,
   genres: ['Ação'],
+  ageRating: '14',
 }
 
 const CREATE_DTO = {
@@ -89,6 +90,7 @@ describe('EventsService.create', () => {
         imageUrl: CATALOG_ITEM.imageUrl,
         runtimeMinutes: CATALOG_ITEM.runtimeMinutes,
         genres: CATALOG_ITEM.genres,
+        ageRating: CATALOG_ITEM.ageRating,
         status: EventStatus.DRAFT,
       }),
     )

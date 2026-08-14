@@ -21,6 +21,9 @@ export interface PublicEvent {
   imageUrl?: string
   runtimeMinutes?: number
   genres: string[]
+  // classificação indicativa BR ("L", "10", "12", "14", "16", "18") -- snapshot do
+  // TMDb feito na criação do evento, ausente quando o TMDb não tinha essa entrada
+  ageRating?: string
   venueName: string
   venueCity: string
   format: SessionFormat
@@ -53,9 +56,6 @@ export interface PublicSeatmap {
 export interface ListPublicEventsParams {
   page?: number
   limit?: number
-  q?: string
-  from?: string
-  to?: string
   externalId?: string
 }
 
@@ -70,9 +70,6 @@ export function listPublicEvents(params: ListPublicEventsParams) {
   const search = new URLSearchParams()
   search.set('page', String(params.page ?? 1))
   search.set('limit', String(params.limit ?? 20))
-  if (params.q) search.set('q', params.q)
-  if (params.from) search.set('from', params.from)
-  if (params.to) search.set('to', params.to)
   if (params.externalId) search.set('externalId', params.externalId)
   return api.get<Paginated<PublicEvent>>(`/events?${search.toString()}`)
 }

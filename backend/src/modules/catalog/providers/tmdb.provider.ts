@@ -37,6 +37,10 @@ interface TmdbSearchResponse {
   total_results: number
 }
 
+interface TmdbReleaseDatesResponse {
+  results: Array<{ iso_3166_1: string; release_dates: Array<{ certification: string }> }>
+}
+
 interface TmdbGenreListResponse {
   genres: Array<{ id: number; name: string }>
 }
@@ -63,10 +67,26 @@ export class TmdbProvider implements CatalogProvider {
   }
 
   async getById(externalId: string): Promise<CatalogItem> {
-    const movie = await this.request<TmdbMovieDetail>(
-      `/movie/${encodeURIComponent(externalId)}?language=${TMDB_LANGUAGE}`,
-    )
-    return this.normalizeDetail(movie)
+    const id = encodeURIComponent(externalId)
+    const [movie, ageRating] = await Promise.all([
+      this.request<TmdbMovieDetail>(`/movie/${id}?language=${TMDB_LANGUAGE}`),
+      this.getBrCertification(id),
+    ])
+    return this.normalizeDetail(movie, ageRating)
+  }
+
+  // classificação indicativa não vem em /movie/{id} -- só em /release_dates, por
+  // país. Auxiliar, mesmo raciocínio de `getGenreMap()`: se falhar (rede, país sem
+  // entrada BR, TMDb fora do ar), o evento ainda é criado, só sem classificação --
+  // nunca derruba a criação por causa de um dado secundário.
+  private async getBrCertification(id: string): Promise<string | undefined> {
+    try {
+      const data = await this.request<TmdbReleaseDatesResponse>(`/movie/${id}/release_dates`)
+      const brEntry = data.results.find((entry) => entry.iso_3166_1 === 'BR')
+      return brEntry?.release_dates.find((release) => release.certification)?.certification || undefined
+    } catch {
+      return undefined
+    }
   }
 
   private normalizeSummary(movie: TmdbMovieSummary, genreMap: Map<number, string>): CatalogItem {
@@ -82,7 +102,7 @@ export class TmdbProvider implements CatalogProvider {
     }
   }
 
-  private normalizeDetail(movie: TmdbMovieDetail): CatalogItem {
+  private normalizeDetail(movie: TmdbMovieDetail, ageRating?: string): CatalogItem {
     return {
       source: this.source,
       externalId: String(movie.id),
@@ -92,6 +112,7 @@ export class TmdbProvider implements CatalogProvider {
       imageUrl: toImageUrl(movie.poster_path),
       runtimeMinutes: movie.runtime ?? undefined,
       genres: movie.genres.map((genre) => genre.name),
+      ageRating,
     }
   }
 

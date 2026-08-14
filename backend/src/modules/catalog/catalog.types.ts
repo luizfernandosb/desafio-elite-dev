@@ -12,6 +12,9 @@ export interface CatalogItem {
   imageUrl?: string
   runtimeMinutes?: number
   genres: string[]
+  // classificação indicativa brasileira ("L", "10", "12", "14", "16", "18") --
+  // só vem preenchida no detalhe (getById), nunca na busca (§ tmdb.provider.ts)
+  ageRating?: string
 }
 
 // mesmo `code` pode carregar dois status diferentes: 500 quando o problema é nosso

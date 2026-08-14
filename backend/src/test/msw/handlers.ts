@@ -51,6 +51,19 @@ export const handlers = [
     return HttpResponse.json({ status_message: 'not found' }, { status: 404 })
   }),
 
+  http.get('https://api.themoviedb.org/3/movie/:id/release_dates', ({ params }) => {
+    if (params.id === String(TMDB_MOVIE.id)) {
+      return HttpResponse.json({
+        id: TMDB_MOVIE.id,
+        results: [
+          { iso_3166_1: 'US', release_dates: [{ certification: 'R' }] },
+          { iso_3166_1: 'BR', release_dates: [{ certification: '14' }] },
+        ],
+      })
+    }
+    return HttpResponse.json({ id: Number(params.id), results: [] })
+  }),
+
   http.get('https://api.themoviedb.org/3/genre/movie/list', () =>
     HttpResponse.json({ genres: TMDB_MOVIE.genres }),
   ),

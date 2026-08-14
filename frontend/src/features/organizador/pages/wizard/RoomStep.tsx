@@ -15,10 +15,10 @@ interface RoomStepProps {
   venueName: string
   venueCity: string
   venueState: string
-  // um item por horário do passo anterior -- "Criar sessão" cria uma sessão por
-  // data/hora desta lista, todas com o mesmo filme/local/sala física/preço-base (§
-  // etapa "múltiplos horários", CreateEventWizard.tsx); formato/áudio/sala variam
-  // por horário, ver `defaultValues.sessions`
+  // um item por horário do passo anterior -- "Publicar sessão" cria E publica uma
+  // sessão por data/hora desta lista, todas com o mesmo filme/local/sala física/
+  // preço-base (§ etapa "múltiplos horários", CreateEventWizard.tsx); formato/
+  // áudio/sala variam por horário, ver `defaultValues.sessions`
   startsAtUtcList: Date[]
   timezone: string
   accessibleSeats: string[]
@@ -263,7 +263,7 @@ export function RoomStep({
           Voltar
         </Button>
         <Button type="submit" loading={submitting}>
-          {sessionCount === 1 ? 'Criar sessão' : `Criar ${sessionCount} sessões`}
+          {sessionCount === 1 ? 'Publicar sessão' : `Publicar ${sessionCount} sessões`}
         </Button>
       </div>
     </form>

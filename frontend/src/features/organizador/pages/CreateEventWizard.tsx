@@ -2,7 +2,14 @@ import { useEffect, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useToast } from '../../../components'
-import { createEvent, organizadorKeys, type CatalogItem, type CreateEventInput, type OrganizerEvent } from '../api'
+import {
+  createEvent,
+  organizadorKeys,
+  publishEvent,
+  type CatalogItem,
+  type CreateEventInput,
+  type OrganizerEvent,
+} from '../api'
 import { eventErrorMessage } from '../error-messages'
 import type { RoomStepValues, SessionAttrsValues, SlotValues, VenueStepValues } from '../schemas'
 import { zonedWallTimeToUtcDate } from '../timezones'
@@ -35,6 +42,19 @@ interface WizardDraft {
   // índice = mesmo horário), não um valor só pro lote inteiro (ver RoomStep.tsx)
   sessions: SessionAttrsValues[]
 }
+
+interface SlotAttempt {
+  slot: SlotValues
+  sessionAttrs: SessionAttrsValues
+}
+
+// Resultado de um horário depois de tentar criar + publicar -- ver comentário em
+// `handleRoomSubmit` sobre por que "criado mas não publicado" nunca pode voltar a
+// ser tentado como se nada tivesse acontecido.
+type SlotOutcome =
+  | { kind: 'published'; event: OrganizerEvent }
+  | { kind: 'not-created'; attempt: SlotAttempt; reason: unknown }
+  | { kind: 'not-published'; event: OrganizerEvent; reason: unknown }
 
 const DEFAULT_SESSION_ATTRS: SessionAttrsValues = {
   format: 'TWO_D',
@@ -110,6 +130,11 @@ function buildCreateInput(
 // um por horário do passo 2 (mesmo filme/local/sala/preço), nunca um endpoint de lote:
 // o cache de catálogo (back, `catalog.service.ts`) já evita N buscas repetidas do
 // mesmo filme no TMDb, então N chamadas sequenciais ao endpoint de sempre bastam.
+//
+// Cada horário criado já é publicado em seguida (`POST /events/:id/publish`) --
+// sem isso o organizador precisaria abrir sessão por sessão em "Minhas sessões"
+// pra publicar manualmente, exatamente o comportamento "um de cada vez" que este
+// assistente existe para evitar.
 export default function CreateEventWizard() {
   const [searchParams, setSearchParams] = useSearchParams()
   const step = clampStep(searchParams.get('passo'))
@@ -178,51 +203,82 @@ export default function CreateEventWizard() {
     setIsSubmitting(true)
     setSubmitError(null)
 
-    const attemptedSlots = nextDraft.slots
-    const attemptedSessions = values.sessions
-    const results = await Promise.allSettled(
-      attemptedSlots.map((slot, index) => createEvent(buildCreateInput(nextDraft, values, slot, attemptedSessions[index]!))),
+    const attempts: SlotAttempt[] = nextDraft.slots.map((slot, index) => ({ slot, sessionAttrs: values.sessions[index]! }))
+
+    // Cada horário passa por criar + publicar como uma única unidade. Se criar
+    // falha, nada existe ainda -- seguro recriar num novo clique. Se criar teve
+    // sucesso mas publicar falhou (ex.: rede), o Event já existe de verdade no
+    // servidor -- NUNCA volta pro formulário como "pendente": recriar duplicaria a
+    // sessão. Esse caso vira um rascunho de verdade, publicável manualmente em
+    // "Minhas sessões" (mesmo caminho que já existia antes desta mudança).
+    const results: SlotOutcome[] = await Promise.all(
+      attempts.map(async (attempt): Promise<SlotOutcome> => {
+        let created: OrganizerEvent
+        try {
+          created = await createEvent(buildCreateInput(nextDraft, values, attempt.slot, attempt.sessionAttrs))
+        } catch (reason) {
+          return { kind: 'not-created', attempt, reason }
+        }
+        try {
+          const published = await publishEvent(created.id)
+          return { kind: 'published', event: published }
+        } catch (reason) {
+          return { kind: 'not-published', event: created, reason }
+        }
+      }),
     )
 
     setIsSubmitting(false)
     void queryClient.invalidateQueries({ queryKey: organizadorKeys.events() })
 
-    const succeeded = results.filter(
-      (result): result is PromiseFulfilledResult<OrganizerEvent> => result.status === 'fulfilled',
+    const published = results.filter((result): result is Extract<SlotOutcome, { kind: 'published' }> =>
+      result.kind === 'published',
     )
-    const failedIndexes = attemptedSlots
-      .map((_, index) => index)
-      .filter((index) => results[index]?.status === 'rejected')
-    const failedSlots = failedIndexes.map((index) => attemptedSlots[index]!)
-    const failedSessions = failedIndexes.map((index) => attemptedSessions[index]!)
+    const notCreated = results.filter((result): result is Extract<SlotOutcome, { kind: 'not-created' }> =>
+      result.kind === 'not-created',
+    )
+    const notPublished = results.filter((result): result is Extract<SlotOutcome, { kind: 'not-published' }> =>
+      result.kind === 'not-published',
+    )
 
-    if (failedSlots.length === 0) {
+    if (notCreated.length === 0 && notPublished.length === 0) {
       sessionStorage.removeItem(DRAFT_KEY)
-      showToast(
-        succeeded.length === 1 ? 'Sessão criada como rascunho.' : `${succeeded.length} sessões criadas como rascunho.`,
-        'success',
-      )
+      showToast(published.length === 1 ? 'Sessão publicada.' : `${published.length} sessões publicadas.`, 'success')
       navigate(
-        succeeded.length === 1 ? `/organizador/eventos/${succeeded[0]!.value.id}` : '/organizador?status=DRAFT',
+        published.length === 1 ? `/organizador/eventos/${published[0]!.event.id}` : '/organizador?status=PUBLISHED',
         { replace: true },
       )
       return
     }
 
-    // Falha parcial ou total: mantém no rascunho só os horários (e respectivos
-    // formato/áudio/sala) que NÃO foram criados -- um novo clique tenta de novo só
-    // esses, nunca recria os que já deram certo.
-    setDraft((prev) => ({ ...prev, slots: failedSlots, sessions: failedSessions }))
+    // Falha parcial ou total: mantém no rascunho só os horários que sequer chegaram
+    // a existir no servidor -- um novo clique tenta de novo só esses, nunca recria
+    // os que já deram certo (publicados ou não).
+    setDraft((prev) => ({
+      ...prev,
+      slots: notCreated.map((result) => result.attempt.slot),
+      sessions: notCreated.map((result) => result.attempt.sessionAttrs),
+    }))
 
-    const firstRejection = results.find(
-      (result): result is PromiseRejectedResult => result.status === 'rejected',
+    const messages: string[] = []
+    messages.push(
+      published.length > 0
+        ? `${published.length} de ${attempts.length} sessões publicadas.`
+        : `Não foi possível publicar ${attempts.length === 1 ? 'a sessão' : 'as sessões'}.`,
     )
-    const reason = firstRejection ? eventErrorMessage(firstRejection.reason) : 'Não foi possível criar as sessões.'
-    setSubmitError(
-      succeeded.length > 0
-        ? `${succeeded.length} de ${attemptedSlots.length} sessões criadas. ${failedSlots.length} falharam: ${reason} Corrija e tente de novo -- só os horários que falharam continuam no formulário.`
-        : `Não foi possível criar a sessão: ${reason}`,
-    )
+    if (notCreated.length > 0) {
+      const reason = eventErrorMessage(notCreated[0]!.reason)
+      messages.push(
+        `${notCreated.length} ${notCreated.length === 1 ? 'não foi criada' : 'não foram criadas'}: ${reason} Corrija e tente de novo -- só ${notCreated.length === 1 ? 'esse horário continua' : 'esses horários continuam'} no formulário.`,
+      )
+    }
+    if (notPublished.length > 0) {
+      const reason = eventErrorMessage(notPublished[0]!.reason)
+      messages.push(
+        `${notPublished.length} ${notPublished.length === 1 ? 'foi criada, mas não publicada' : 'foram criadas, mas não publicadas'} (${reason}) -- publique manualmente em "Minhas sessões".`,
+      )
+    }
+    setSubmitError(messages.join(' '))
   }
 
   function toggleAccessibleSeat(label: string) {

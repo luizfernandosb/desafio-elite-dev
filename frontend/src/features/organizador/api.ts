@@ -47,6 +47,7 @@ export interface OrganizerEvent {
   customImageKey?: string | null
   runtimeMinutes?: number
   genres: string[]
+  ageRating?: string
   venueName: string
   venueCity: string
   venueState: string

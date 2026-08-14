@@ -51,6 +51,7 @@ export class EventsService {
         catalogImageUrl: catalogItem.imageUrl, // snapshot imutável -- fallback do DELETE /events/:id/image (etapa 12)
         runtimeMinutes: catalogItem.runtimeMinutes,
         genres: catalogItem.genres,
+        ageRating: catalogItem.ageRating,
         venueName: dto.venueName,
         venueCity: dto.venueCity,
         venueState: dto.venueState,

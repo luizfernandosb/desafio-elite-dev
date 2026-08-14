@@ -1,45 +1,34 @@
-import type { ReactNode } from 'react'
+import { ageRatingColors } from '../shared/age-rating'
 import styles from './EventCard.module.css'
 
 interface EventCardProps {
   imageUrl?: string // ausente é legítimo -- nem todo item do catálogo tem pôster (§4.3)
   title: string
-  subtitle?: string
-  // segunda linha secundária, abaixo de `subtitle` (etapa 05: card precisa mostrar
-  // data E local/cidade, não só um dos dois -- `subtitle` vira a data, `meta` o local)
-  meta?: string
-  priceLabel: string // já formatado (formatMoney) -- este componente não formata dinheiro
-  badge?: ReactNode
+  // classificação indicativa BR ("L", "10", "12", "14", "16", "18") -- ausente
+  // quando o TMDb não tinha essa entrada para o filme (§ tmdb.provider.ts)
+  ageRating?: string
   // `false` (default) = `loading="lazy"` -- card fora da primeira dobra de uma grade
   // (etapa 05, critério de Lighthouse). Cards da primeira dobra passam `eager` para
   // não atrasar o LCP por causa do atributo.
   eager?: boolean
 }
 
-// Pôster como fundo, overlay escuro só na parte inferior (onde o texto entra) -- não
-// na imagem inteira: overlay total apaga o pôster, que é o que dá identidade à
-// sessão (§5.1.1). Preço em --primary, peso 700, sempre visível sem hover.
-//
-// `<img loading="lazy">` real, não `background-image` inline -- CSS background não
-// tem equivalente ao atributo `loading` do navegador (§ etapa 05, critério de
-// Lighthouse "poucas imagens grandes, loading=lazy fora da primeira dobra"). O pôster
-// fica absolutamente posicionado atrás do overlay, mesma composição visual de antes.
-export function EventCard({ imageUrl, title, subtitle, meta, priceLabel, badge, eager = false }: EventCardProps) {
+// Só pôster + selo de classificação -- de propósito (pedido do usuário: "informação
+// demais no poster"). Nada de título/data/local/preço sobrepostos. O título
+// continua no DOM como texto oculto (`sr-only`, tokens.css) -- sem isso o card (e o
+// `<Link>` que o envolve em EventCarousel) fica sem nome acessível para leitor de
+// tela, já que não sobra nenhum texto visível para computar um.
+export function EventCard({ imageUrl, title, ageRating, eager = false }: EventCardProps) {
   return (
     <article className={styles.card}>
       {/* sem imageUrl: fundo cai no `background-color` de `.card`, sem <img> quebrado */}
       {imageUrl && <img src={imageUrl} alt="" loading={eager ? 'eager' : 'lazy'} className={styles.poster} />}
-      <div className={styles.overlay}>
-        {badge && <div className={styles.badge}>{badge}</div>}
-        <p className={styles.price}>{priceLabel}</p>
-        {/* h2, não h3 (§ etapa 12, achado real via axe-core em navegador: a
-            página só tem um `<h1>`, então h3 aqui pulava um nível --
-            "heading-order") -- cada card é uma subseção direta da página, não um
-            terceiro nível */}
-        <h2 className={styles.title}>{title}</h2>
-        {subtitle && <p className={styles.subtitle}>{subtitle}</p>}
-        {meta && <p className={styles.meta}>{meta}</p>}
-      </div>
+      {ageRating && (
+        <span className={styles.ageRating} style={ageRatingColors(ageRating)}>
+          {ageRating}
+        </span>
+      )}
+      <span className="sr-only">{title}</span>
     </article>
   )
 }
