@@ -9,13 +9,14 @@ import styles from './EventCarousel.module.css'
 interface EventCarouselProps {
   title: string
   events: PublicEvent[]
+  onSeeAll?: () => void
 }
 
 const SCROLL_AMOUNT = 640
 
 // Mesmo mecanismo de scroll horizontal com setas do `ShowtimePicker` (dia da
 // sessão) -- aqui aplicado a uma fileira de `EventCard` em vez de abas de dia.
-export function EventCarousel({ title, events }: EventCarouselProps) {
+export function EventCarousel({ title, events, onSeeAll }: EventCarouselProps) {
   const scrollerRef = useRef<HTMLDivElement>(null)
 
   function scrollBy(amount: number) {
@@ -26,7 +27,14 @@ export function EventCarousel({ title, events }: EventCarouselProps) {
 
   return (
     <section className={styles.section} aria-label={title}>
-      <h2 className={styles.title}>{title}</h2>
+      <div className={styles.header}>
+        <h2 className={styles.title}>{title}</h2>
+        {onSeeAll && (
+          <button type="button" className={styles.seeAll} onClick={onSeeAll}>
+            Ver todos
+          </button>
+        )}
+      </div>
       <div className={styles.row}>
         <button
           type="button"

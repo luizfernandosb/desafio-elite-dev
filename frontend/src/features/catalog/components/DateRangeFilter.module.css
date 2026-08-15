@@ -1,0 +1,9 @@
+.row {
+  display: flex;
+  gap: var(--space-4);
+}
+
+.row > * {
+  flex: 1;
+  min-width: 140px;
+}

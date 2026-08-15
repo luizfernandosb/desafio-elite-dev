@@ -6,3 +6,23 @@
   margin: 0 auto;
   padding: var(--space-8) var(--space-4);
 }
+
+.allSessions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  /* âncora do "Ver todos" do carrossel -- não esconde o título atrás da barra fixa */
+  scroll-margin-top: var(--space-6);
+}
+
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+  align-items: flex-start;
+}
+
+.filters > * {
+  flex: 1;
+  min-width: 240px;
+}

@@ -4,8 +4,29 @@
   gap: var(--space-4);
 }
 
+.header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+
 .title {
   margin: 0;
+}
+
+.seeAll {
+  border: none;
+  background: none;
+  padding: 0;
+  color: var(--primary);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.seeAll:hover {
+  color: var(--primary-hover);
+  text-decoration: underline;
 }
 
 .row {

@@ -8,6 +8,7 @@ import { env } from './lib/env'
 import { queryClient } from './lib/query-client'
 import { server } from './test/msw/server'
 import { renderWithProviders } from './test/render'
+import { EventList } from './features/catalog/components/EventList'
 import { ValidationResultScreen } from './features/gate/components/ValidationResultScreen'
 import type { GateValidationResponse } from './features/gate/api'
 import TicketListPage from './features/tickets/pages/TicketListPage'
@@ -113,6 +114,70 @@ describe('a11y smoke -- axe-core, zero violação crítica (§ etapa 12)', () =>
     )
 
     await findByText('Duna: Parte Dois')
+    const results = await axe(container)
+    expect(criticalViolations(results)).toEqual([])
+  })
+
+  // risco nº 4 do plano: resultado de busca -- card poster+legenda lado a lado (não
+  // sobreposto) e o estado de "sem resultado com filtro", que introduz um botão
+  // dentro do EmptyState (ver EventList.tsx)
+  it('EventList -- sem resultado para o filtro, com ação de limpar', async () => {
+    server.use(
+      http.get(`${API}/events`, () =>
+        HttpResponse.json({
+          data: [],
+          meta: { page: 1, limit: 20, total: 0, totalPages: 0, hasNext: false, hasPrev: false },
+        }),
+      ),
+    )
+
+    const { container, findByText } = renderWithProviders(
+      <EventList q="inexistente" from="" to="" page={1} onPageChange={() => {}} onClearFilters={() => {}} />,
+    )
+
+    await findByText('Nenhum resultado para "inexistente"')
+    const results = await axe(container)
+    expect(criticalViolations(results)).toEqual([])
+  })
+
+  // mesmo componente, agora com resultado real -- pôster + legenda em texto normal
+  it('EventList -- com resultados', async () => {
+    server.use(
+      http.get(`${API}/events`, () =>
+        HttpResponse.json({
+          data: [
+            {
+              id: 'evt-1',
+              source: 'TMDB',
+              externalId: '693134',
+              title: 'Duna: Parte Dois',
+              genres: ['Ficção científica'],
+              imageUrl: 'https://image.tmdb.org/duna.jpg',
+              venueName: 'Cine Elite',
+              venueCity: 'São Paulo',
+              format: 'TWO_D',
+              audio: 'DUBBED',
+              roomType: 'STANDARD',
+              status: 'PUBLISHED',
+              startsAt: new Date(Date.now() + 86_400_000).toISOString(),
+              timezone: 'America/Sao_Paulo',
+              priceInCents: 3200,
+              effectivePriceInCents: 3200,
+              currency: 'BRL',
+              organizer: { id: 'org-1', name: 'Ana' },
+              _count: { tickets: 0 },
+            },
+          ],
+          meta: { page: 1, limit: 20, total: 1, totalPages: 1, hasNext: false, hasPrev: false },
+        }),
+      ),
+    )
+
+    const { container, findByRole } = renderWithProviders(
+      <EventList q="" from="" to="" page={1} onPageChange={() => {}} onClearFilters={() => {}} />,
+    )
+
+    await findByRole('heading', { level: 3, name: 'Duna: Parte Dois' })
     const results = await axe(container)
     expect(criticalViolations(results)).toEqual([])
   })
