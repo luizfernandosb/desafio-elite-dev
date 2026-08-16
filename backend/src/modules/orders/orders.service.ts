@@ -1,10 +1,10 @@
 import { randomUUID } from 'node:crypto'
 import type { Logger } from 'pino'
-import { OrderStatus } from '../../../generated/prisma/enums'
+import { OrderStatus, TicketStatus } from '../../../generated/prisma/enums'
 import { prisma } from '../../lib/prisma'
 import { ConflictError, ForbiddenError, InvalidTransitionError, NotFoundError, ValidationError } from '../../shared/errors'
 import { isUniqueViolation } from '../../shared/prisma-errors'
-import { assertTransition, ORDER_TRANSITIONS } from '../../shared/state-machines'
+import { assertTransition, ORDER_TRANSITIONS, TICKET_TRANSITIONS } from '../../shared/state-machines'
 import type { EventsRepository } from '../events/events.repository'
 import { computeEffectivePriceInCents, computeSeatPriceInCents } from '../events/pricing'
 import type { SeatHoldRepository } from '../seats/seat-hold.repository'
@@ -173,6 +173,66 @@ export class OrdersService {
     await this.repo.updateStatus(prisma, orderId, OrderStatus.FAILED)
 
     log.info({ msg: 'order failed', orderId })
+  }
+
+  // Cancelamento pelo CLIENTE, por INGRESSO (não pelo pedido inteiro -- "Meus
+  // ingressos" nunca mostra "pedido" como conceito, só ingressos individuais; um
+  // pedido com 3 assentos permite cancelar 1 sem mexer nos outros 2). `findOwnedById`
+  // já resolve posse (dono do PEDIDO, não uma coluna própria em Ticket) e devolve
+  // 404 tanto pra "não existe" quanto pra "não é seu" -- não revela qual dos dois.
+  async cancelTicket(ticketId: string, userId: string, log: Logger) {
+    const ticket = await this.ticketRepo.findOwnedById(prisma, ticketId, userId)
+    if (!ticket) throw new NotFoundError('Ingresso')
+
+    assertTransition(TICKET_TRANSITIONS, ticket.status, TicketStatus.CANCELLED)
+
+    const event = await this.eventsRepo.findById(prisma, ticket.eventId)
+    if (!event) throw new NotFoundError('Evento')
+    if (event.startsAt.getTime() <= Date.now()) {
+      throw new ConflictError('EVENT_ALREADY_STARTED', 'Não é possível cancelar depois que a sessão começou')
+    }
+
+    const order = await this.repo.findById(prisma, ticket.orderId)
+    if (!order) throw new NotFoundError('Order')
+
+    // reembolso é só do assento cancelado, nunca do pedido inteiro -- um Order com
+    // vários assentos não pode devolver o valor de todos por causa de 1 cancelamento
+    const effectivePriceInCents = computeEffectivePriceInCents(event)
+    const refundAmountInCents = computeSeatPriceInCents(effectivePriceInCents, ticket.priceType)
+
+    const remainingActive = await prisma.$transaction(async (tx) => {
+      await this.ticketRepo.updateStatus(tx, ticket.id, TicketStatus.CANCELLED)
+      await this.seatStateRepo.markFree(tx, [ticket.seatId as string])
+
+      const remaining = await this.ticketRepo.countActiveByOrderId(tx, order.id)
+      if (remaining === 0) {
+        // não existe "parcialmente reembolsado" no enum -- Order só vira REFUNDED
+        // quando não sobra nenhum ticket ACTIVE (§ decisão registrada no README)
+        assertTransition(ORDER_TRANSITIONS, order.status, OrderStatus.REFUNDED)
+        await this.repo.updateStatus(tx, order.id, OrderStatus.REFUNDED)
+      }
+      return remaining
+    })
+
+    // I/O externo FORA da transação (mesmo trade-off de createOrder, §5.5.3) -- se o
+    // Stripe falhar depois do commit, o cancelamento já está gravado; loga e segue,
+    // não reverte (mesma decisão já aceita ali).
+    if (order.stripePaymentIntentId) {
+      try {
+        await this.paymentProvider.refund(order.stripePaymentIntentId, refundAmountInCents)
+      } catch (err) {
+        log.error({ msg: 'refund falhou após cancelamento já commitado', orderId: order.id, ticketId: ticket.id, err })
+      }
+    }
+
+    log.info({
+      msg: 'ticket cancelado, assento devolvido ao estoque',
+      ticketId: ticket.id,
+      seatId: ticket.seatId,
+      orderFullyRefunded: remainingActive === 0,
+    })
+
+    return this.ticketRepo.findOwnedById(prisma, ticket.id, userId)
   }
 
   // true = primeira vez que este evento do Stripe é visto (idempotência em duas

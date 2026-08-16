@@ -1,4 +1,5 @@
 import { screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
 import { Route, Routes } from 'react-router-dom'
 import { afterEach, describe, expect, it } from 'vitest'
@@ -100,6 +101,75 @@ describe('TicketDetailPage', () => {
 
     await screen.findByText('Duna: Parte Dois')
     expect(screen.queryByText('Meia-entrada')).not.toBeInTheDocument()
+  })
+
+  it('ACTIVE + sessão futura -- mostra o botão de cancelar', async () => {
+    server.use(http.get(`${API}/tickets/ticket-1`, () => HttpResponse.json(makeTicketDetail())))
+
+    renderPage()
+
+    expect(await screen.findByRole('button', { name: 'Cancelar ingresso' })).toBeInTheDocument()
+  })
+
+  it('USED -- não mostra o botão de cancelar (já foi usado, não há o que devolver)', async () => {
+    server.use(
+      http.get(`${API}/tickets/ticket-1`, () =>
+        HttpResponse.json(makeTicketDetail({ status: 'USED', usedAt: new Date().toISOString() })),
+      ),
+    )
+
+    renderPage()
+
+    await screen.findByText('Usado')
+    expect(screen.queryByRole('button', { name: 'Cancelar ingresso' })).not.toBeInTheDocument()
+  })
+
+  it('sessão já começou -- não mostra o botão de cancelar mesmo com ticket ACTIVE', async () => {
+    server.use(
+      http.get(`${API}/tickets/ticket-1`, () =>
+        HttpResponse.json(makeTicketDetail({ event: { ...makeTicketDetail().event, startsAt: new Date(Date.now() - 3600_000).toISOString() } })),
+      ),
+    )
+
+    renderPage()
+
+    await screen.findByText('Duna: Parte Dois')
+    expect(screen.queryByRole('button', { name: 'Cancelar ingresso' })).not.toBeInTheDocument()
+  })
+
+  it('cancelar -- confirma no diálogo, mostra toast e a tela passa a exibir "Cancelado"', async () => {
+    server.use(
+      http.get(`${API}/tickets/ticket-1`, () => HttpResponse.json(makeTicketDetail())),
+      http.post(`${API}/tickets/ticket-1/cancel`, () =>
+        HttpResponse.json(makeTicketDetail({ status: 'CANCELLED' })),
+      ),
+    )
+    const user = userEvent.setup()
+    renderPage()
+
+    await user.click(await screen.findByRole('button', { name: 'Cancelar ingresso' }))
+    await user.click(await screen.findByRole('button', { name: 'Confirmar cancelamento' }))
+
+    expect(await screen.findByText('Ingresso cancelado.')).toBeInTheDocument()
+    expect(await screen.findByText('Cancelado')).toBeInTheDocument()
+    expect(screen.getByText(/Este ingresso foi cancelado/)).toBeInTheDocument()
+  })
+
+  it('erro ao cancelar -- mensagem aparece dentro do diálogo, que continua aberto', async () => {
+    server.use(
+      http.get(`${API}/tickets/ticket-1`, () => HttpResponse.json(makeTicketDetail())),
+      http.post(`${API}/tickets/ticket-1/cancel`, () =>
+        HttpResponse.json({ code: 'EVENT_ALREADY_STARTED', message: 'A sessão já começou' }, { status: 409 }),
+      ),
+    )
+    const user = userEvent.setup()
+    renderPage()
+
+    await user.click(await screen.findByRole('button', { name: 'Cancelar ingresso' }))
+    await user.click(await screen.findByRole('button', { name: 'Confirmar cancelamento' }))
+
+    expect(await screen.findByText('A sessão já começou -- não é possível cancelar.')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Confirmar cancelamento' })).toBeInTheDocument()
   })
 
   it('ingresso inexistente -- vazio com link de volta, nunca stack trace', async () => {

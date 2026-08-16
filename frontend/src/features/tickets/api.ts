@@ -83,6 +83,12 @@ export function revokeShareLink(id: string) {
   return api.delete<void>(`/tickets/${id}/share`)
 }
 
+// devolve o ticket atualizado (status CANCELLED) -- back-end libera o assento e
+// estorna o valor daquele assento (parcial, se o pedido teve mais de um)
+export function cancelTicket(id: string) {
+  return api.post<TicketDetail>(`/tickets/${id}/cancel`)
+}
+
 // rota pública, sem Authorization (back: `share.routes.ts` não tem `requireAuth`) --
 // prefixo `/share`, não `/tickets`, é o mesmo usado por `APP_PUBLIC_URL` na URL que o
 // dono recebe (`${APP_PUBLIC_URL}/share/:token`)

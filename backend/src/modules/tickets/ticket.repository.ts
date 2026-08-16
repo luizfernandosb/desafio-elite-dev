@@ -1,3 +1,4 @@
+import { TicketStatus } from '../../../generated/prisma/enums'
 import type { TicketPriceType } from '../../../generated/prisma/enums'
 import type { Db } from '../../shared/db'
 
@@ -37,6 +38,16 @@ export class TicketRepository {
 
   findByOrderId(db: Db, orderId: string) {
     return db.ticket.findMany({ where: { orderId } })
+  }
+
+  updateStatus(db: Db, id: string, status: TicketStatus) {
+    return db.ticket.update({ where: { id }, data: { status } })
+  }
+
+  // usado para decidir se a Order inteira já pode virar REFUNDED (§ cancelamento) --
+  // só quando não sobra nenhum ticket ACTIVE naquele pedido.
+  countActiveByOrderId(db: Db, orderId: string) {
+    return db.ticket.count({ where: { orderId, status: TicketStatus.ACTIVE } })
   }
 
   // dono é sempre resolvido por order.userId -- Ticket não tem coluna própria de userId

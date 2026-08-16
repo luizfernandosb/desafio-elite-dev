@@ -103,4 +103,13 @@ export const ticketsHandlers = [
   }),
 
   http.delete(`${API}/tickets/:id/share`, () => new HttpResponse(null, { status: 204 })),
+
+  http.post(`${API}/tickets/:id/cancel`, ({ params }) => {
+    const ticket = ticketsStore.get(params.id as string)
+    if (!ticket) return HttpResponse.json({ code: 'NOT_FOUND', message: 'Ingresso não encontrado' }, { status: 404 })
+    const updated: StoredTicket = { ...ticket, status: 'CANCELLED' }
+    ticketsStore.set(updated.id, updated)
+    const { eventId: _eventId, ...detail } = updated
+    return HttpResponse.json(detail)
+  }),
 ]

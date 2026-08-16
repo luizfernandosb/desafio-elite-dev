@@ -6,6 +6,7 @@ import { formatEventDate } from '../../../shared/date'
 import { sessionAttributeBadges } from '../../../shared/session-attributes'
 import { ticketPriceTypeLabel } from '../../../shared/ticket-price-type'
 import { getTicket, ticketKeys } from '../api'
+import { CancelTicketButton } from '../components/CancelTicketButton'
 import { ShareButton } from '../components/ShareButton'
 import { ticketStatusLabel, ticketStatusVariant } from '../status'
 import styles from './TicketDetailPage.module.css'
@@ -81,9 +82,7 @@ export default function TicketDetailPage() {
       )}
 
       {status === 'CANCELLED' ? (
-        <p className={styles.cancelledNotice}>
-          Este ingresso foi cancelado. Fale com o organizador da sessão sobre uma eventual devolução.
-        </p>
+        <p className={styles.cancelledNotice}>Este ingresso foi cancelado. O valor pago foi estornado.</p>
       ) : (
         <div className={styles.qrSection}>
           <div className={styles.qrWrapper}>
@@ -105,6 +104,13 @@ export default function TicketDetailPage() {
           </p>
 
           <ShareButton ticketId={ticket.id} />
+
+          {/* mesma regra do back-end (OrdersService.cancelTicket): só ACTIVE e sessão
+              ainda não começada -- replicada aqui pra não deixar o cliente clicar num
+              caminho que o servidor sempre recusaria */}
+          {status === 'ACTIVE' && new Date(event.startsAt).getTime() > Date.now() && (
+            <CancelTicketButton ticket={ticket} />
+          )}
         </div>
       )}
     </div>

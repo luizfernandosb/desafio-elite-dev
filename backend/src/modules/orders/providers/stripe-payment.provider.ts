@@ -21,7 +21,10 @@ export class StripePaymentProvider implements PaymentProvider {
     return { id: intent.id, clientSecret: intent.client_secret }
   }
 
-  async refund(intentId: string): Promise<void> {
-    await stripe.refunds.create({ payment_intent: intentId })
+  async refund(intentId: string, amountInCents?: number): Promise<void> {
+    await stripe.refunds.create({
+      payment_intent: intentId,
+      ...(amountInCents != null && { amount: amountInCents }),
+    })
   }
 }

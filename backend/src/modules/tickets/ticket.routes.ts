@@ -2,6 +2,7 @@ import { Router } from 'express'
 import { Role } from '../../../generated/prisma/enums'
 import { requireAuth, requireRole } from '../../middlewares/auth.middleware'
 import { validate } from '../../middlewares/validate.middleware'
+import { ordersService } from '../orders/orders.routes'
 import { TicketController } from './ticket.controller'
 import { TicketRepository } from './ticket.repository'
 import { listTicketsSchema, ticketIdSchema } from './ticket.schema'
@@ -10,7 +11,10 @@ import { TicketService } from './ticket.service'
 // exportado -- share.routes.ts reaproveita esta mesma instância em vez de criar um
 // segundo TicketRepository (mesmo padrão de catalogService na etapa 05)
 export const ticketService = new TicketService(new TicketRepository())
-const ticketController = new TicketController(ticketService)
+// `ordersService` (já composto com SeatStateRepository/PaymentProvider em
+// orders.routes.ts) reaproveitado para /cancel -- não compõe um segundo
+// PaymentProvider aqui, mesma razão do comentário acima sobre TicketService
+const ticketController = new TicketController(ticketService, ordersService)
 
 export const ticketRoutes = Router()
 
@@ -20,3 +24,4 @@ ticketRoutes.get('/', validate(listTicketsSchema), ticketController.listMine)
 ticketRoutes.get('/:id', validate(ticketIdSchema), ticketController.getById)
 ticketRoutes.post('/:id/share', validate(ticketIdSchema), ticketController.createShare)
 ticketRoutes.delete('/:id/share', validate(ticketIdSchema), ticketController.revokeShare)
+ticketRoutes.post('/:id/cancel', validate(ticketIdSchema), ticketController.cancel)

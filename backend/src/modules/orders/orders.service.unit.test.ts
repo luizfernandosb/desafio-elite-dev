@@ -1,7 +1,7 @@
 import type { Logger } from 'pino'
 import { describe, expect, it, vi } from 'vitest'
-import { EventStatus, OrderStatus, RoomType } from '../../../generated/prisma/enums'
-import { ForbiddenError, InvalidTransitionError, NotFoundError } from '../../shared/errors'
+import { EventStatus, OrderStatus, RoomType, TicketStatus } from '../../../generated/prisma/enums'
+import { ConflictError, ForbiddenError, InvalidTransitionError, NotFoundError } from '../../shared/errors'
 import type { EventsRepository } from '../events/events.repository'
 import type { SeatHoldRepository } from '../seats/seat-hold.repository'
 import type { SeatStateRepository } from '../seats/seat-state.repository'
@@ -26,6 +26,18 @@ function makeOrder(overrides: Partial<Record<string, unknown>> = {}) {
     amountInCents: 18000,
     currency: 'BRL',
     stripePaymentIntentId: 'pi_test_123',
+    ...overrides,
+  }
+}
+
+function makeTicket(overrides: Partial<Record<string, unknown>> = {}) {
+  return {
+    id: 'ticket-1',
+    orderId: 'order-1',
+    eventId: 'event-1',
+    seatId: 'seat-1',
+    priceType: 'FULL',
+    status: TicketStatus.ACTIVE,
     ...overrides,
   }
 }
@@ -61,11 +73,16 @@ function makeMockHoldRepo(): SeatHoldRepository {
 }
 
 function makeMockSeatStateRepo(): SeatStateRepository {
-  return { markSold: vi.fn() } as unknown as SeatStateRepository
+  return { markSold: vi.fn(), markFree: vi.fn() } as unknown as SeatStateRepository
 }
 
 function makeMockTicketRepo(): TicketRepository {
-  return { create: vi.fn() } as unknown as TicketRepository
+  return {
+    create: vi.fn(),
+    findOwnedById: vi.fn(),
+    updateStatus: vi.fn(),
+    countActiveByOrderId: vi.fn().mockResolvedValue(0),
+  } as unknown as TicketRepository
 }
 
 function makeMockWebhookEventRepo(): WebhookEventRepository {
@@ -265,6 +282,194 @@ describe('OrdersService.failPayment', () => {
 
     expect(ordersRepo.updateStatus).toHaveBeenCalledWith(expect.anything(), 'order-1', OrderStatus.FAILED)
     expect(holdRepo.consume).not.toHaveBeenCalled()
+  })
+})
+
+describe('OrdersService.cancelTicket', () => {
+  function makeEventsRepoWithStartsAt(startsAt: Date, overrides: Partial<Record<string, unknown>> = {}) {
+    return {
+      findById: vi.fn().mockResolvedValue({
+        id: 'event-1',
+        status: EventStatus.PUBLISHED,
+        priceInCents: 6000,
+        currency: 'BRL',
+        roomType: RoomType.STANDARD,
+        vipSurchargePercent: null,
+        startsAt,
+        ...overrides,
+      }),
+    } as unknown as EventsRepository
+  }
+
+  const futureEventsRepo = () => makeEventsRepoWithStartsAt(new Date(Date.now() + 24 * 60 * 60 * 1000))
+
+  it('ACTIVE + evento futuro -- cancela o ticket, libera o assento e reembolsa só o valor do assento', async () => {
+    const ticketRepo = makeMockTicketRepo()
+    vi.mocked(ticketRepo.findOwnedById).mockResolvedValue(makeTicket() as never)
+    vi.mocked(ticketRepo.countActiveByOrderId).mockResolvedValue(1) // sobra outro ticket ativo no pedido
+
+    const ordersRepo = makeMockOrdersRepo()
+    vi.mocked(ordersRepo.findById).mockResolvedValue(makeOrder({ status: OrderStatus.PAID }) as never)
+
+    const seatStateRepo = makeMockSeatStateRepo()
+    const paymentProvider = makeMockPaymentProvider()
+
+    const service = new OrdersService(
+      ordersRepo,
+      futureEventsRepo(),
+      makeMockHoldRepo(),
+      seatStateRepo,
+      ticketRepo,
+      makeMockWebhookEventRepo(),
+      paymentProvider,
+    )
+    await service.cancelTicket('ticket-1', 'user-1', log)
+
+    expect(ticketRepo.updateStatus).toHaveBeenCalledWith('fake-tx', 'ticket-1', TicketStatus.CANCELLED)
+    expect(seatStateRepo.markFree).toHaveBeenCalledWith('fake-tx', ['seat-1'])
+    expect(paymentProvider.refund).toHaveBeenCalledWith('pi_test_123', 6000) // FULL, sem Sala VIP
+    // ainda sobra 1 ticket ativo no pedido -- Order continua PAID, não vira REFUNDED
+    expect(ordersRepo.updateStatus).not.toHaveBeenCalled()
+  })
+
+  it('último ticket ativo do pedido -- Order transita para REFUNDED', async () => {
+    const ticketRepo = makeMockTicketRepo()
+    vi.mocked(ticketRepo.findOwnedById).mockResolvedValue(makeTicket() as never)
+    vi.mocked(ticketRepo.countActiveByOrderId).mockResolvedValue(0)
+
+    const ordersRepo = makeMockOrdersRepo()
+    vi.mocked(ordersRepo.findById).mockResolvedValue(makeOrder({ status: OrderStatus.PAID }) as never)
+
+    const service = new OrdersService(
+      ordersRepo,
+      futureEventsRepo(),
+      makeMockHoldRepo(),
+      makeMockSeatStateRepo(),
+      ticketRepo,
+      makeMockWebhookEventRepo(),
+      makeMockPaymentProvider(),
+    )
+    await service.cancelTicket('ticket-1', 'user-1', log)
+
+    expect(ordersRepo.updateStatus).toHaveBeenCalledWith('fake-tx', 'order-1', OrderStatus.REFUNDED)
+  })
+
+  it('meia-entrada -- reembolsa metade do preço efetivo, não o preço cheio', async () => {
+    const ticketRepo = makeMockTicketRepo()
+    vi.mocked(ticketRepo.findOwnedById).mockResolvedValue(makeTicket({ priceType: 'HALF' }) as never)
+
+    const ordersRepo = makeMockOrdersRepo()
+    vi.mocked(ordersRepo.findById).mockResolvedValue(makeOrder({ status: OrderStatus.PAID }) as never)
+    const paymentProvider = makeMockPaymentProvider()
+
+    const service = new OrdersService(
+      ordersRepo,
+      futureEventsRepo(),
+      makeMockHoldRepo(),
+      makeMockSeatStateRepo(),
+      ticketRepo,
+      makeMockWebhookEventRepo(),
+      paymentProvider,
+    )
+    await service.cancelTicket('ticket-1', 'user-1', log)
+
+    expect(paymentProvider.refund).toHaveBeenCalledWith('pi_test_123', 3000) // metade de 6000
+  })
+
+  it('ticket já USED -- lança InvalidTransitionError, não toca em nada', async () => {
+    const ticketRepo = makeMockTicketRepo()
+    vi.mocked(ticketRepo.findOwnedById).mockResolvedValue(makeTicket({ status: TicketStatus.USED }) as never)
+
+    const service = new OrdersService(
+      makeMockOrdersRepo(),
+      futureEventsRepo(),
+      makeMockHoldRepo(),
+      makeMockSeatStateRepo(),
+      ticketRepo,
+      makeMockWebhookEventRepo(),
+      makeMockPaymentProvider(),
+    )
+
+    await expect(service.cancelTicket('ticket-1', 'user-1', log)).rejects.toThrow(InvalidTransitionError)
+    expect(ticketRepo.updateStatus).not.toHaveBeenCalled()
+  })
+
+  it('ticket já CANCELLED -- lança InvalidTransitionError (não é no-op silencioso)', async () => {
+    const ticketRepo = makeMockTicketRepo()
+    vi.mocked(ticketRepo.findOwnedById).mockResolvedValue(makeTicket({ status: TicketStatus.CANCELLED }) as never)
+
+    const service = new OrdersService(
+      makeMockOrdersRepo(),
+      futureEventsRepo(),
+      makeMockHoldRepo(),
+      makeMockSeatStateRepo(),
+      ticketRepo,
+      makeMockWebhookEventRepo(),
+      makeMockPaymentProvider(),
+    )
+
+    await expect(service.cancelTicket('ticket-1', 'user-1', log)).rejects.toThrow(InvalidTransitionError)
+  })
+
+  it('evento já começou -- lança ConflictError EVENT_ALREADY_STARTED, não toca em nada', async () => {
+    const ticketRepo = makeMockTicketRepo()
+    vi.mocked(ticketRepo.findOwnedById).mockResolvedValue(makeTicket() as never)
+    const pastEventsRepo = makeEventsRepoWithStartsAt(new Date(Date.now() - 60 * 60 * 1000))
+
+    const service = new OrdersService(
+      makeMockOrdersRepo(),
+      pastEventsRepo,
+      makeMockHoldRepo(),
+      makeMockSeatStateRepo(),
+      ticketRepo,
+      makeMockWebhookEventRepo(),
+      makeMockPaymentProvider(),
+    )
+
+    const err: unknown = await service.cancelTicket('ticket-1', 'user-1', log).catch((e) => e)
+    expect(err).toBeInstanceOf(ConflictError)
+    expect((err as ConflictError).code).toBe('EVENT_ALREADY_STARTED')
+    expect(ticketRepo.updateStatus).not.toHaveBeenCalled()
+  })
+
+  it('404 -- ticket de outro usuário ou inexistente (findOwnedById devolve null, não revela qual)', async () => {
+    const ticketRepo = makeMockTicketRepo()
+    vi.mocked(ticketRepo.findOwnedById).mockResolvedValue(null as never)
+
+    const service = new OrdersService(
+      makeMockOrdersRepo(),
+      futureEventsRepo(),
+      makeMockHoldRepo(),
+      makeMockSeatStateRepo(),
+      ticketRepo,
+      makeMockWebhookEventRepo(),
+      makeMockPaymentProvider(),
+    )
+
+    await expect(service.cancelTicket('ticket-1', 'user-1', log)).rejects.toThrow(NotFoundError)
+  })
+
+  it('refund falha depois do commit -- loga o erro mas não reverte o cancelamento já gravado', async () => {
+    const ticketRepo = makeMockTicketRepo()
+    vi.mocked(ticketRepo.findOwnedById).mockResolvedValue(makeTicket() as never)
+    const ordersRepo = makeMockOrdersRepo()
+    vi.mocked(ordersRepo.findById).mockResolvedValue(makeOrder({ status: OrderStatus.PAID }) as never)
+    const paymentProvider = makeMockPaymentProvider()
+    vi.mocked(paymentProvider.refund).mockRejectedValue(new Error('Stripe fora do ar'))
+
+    const service = new OrdersService(
+      ordersRepo,
+      futureEventsRepo(),
+      makeMockHoldRepo(),
+      makeMockSeatStateRepo(),
+      ticketRepo,
+      makeMockWebhookEventRepo(),
+      paymentProvider,
+    )
+
+    await expect(service.cancelTicket('ticket-1', 'user-1', log)).resolves.toBeDefined()
+    expect(ticketRepo.updateStatus).toHaveBeenCalledWith('fake-tx', 'ticket-1', TicketStatus.CANCELLED)
+    expect(log.error).toHaveBeenCalled()
   })
 })
 

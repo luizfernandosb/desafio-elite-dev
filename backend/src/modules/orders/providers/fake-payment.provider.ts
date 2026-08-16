@@ -21,7 +21,7 @@ export class FakePaymentProvider implements PaymentProvider {
     return intent
   }
 
-  async refund(_intentId: string): Promise<void> {
+  async refund(_intentId: string, _amountInCents?: number): Promise<void> {
     // fake -- nada para reembolsar de verdade
   }
 }
