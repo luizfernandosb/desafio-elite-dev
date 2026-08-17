@@ -71,6 +71,15 @@ enum OrderStatus {
   REFUNDED
 }
 
+/// Qual PaymentProvider criou o PaymentIntent desta order -- gravado na criação,
+/// nunca muda depois. Existe pra permitir os dois provedores ativos ao mesmo tempo
+/// (flag de teste no checkout): sem isto, `simulatePayment`/refund não teriam como
+/// saber qual provedor usar pra uma order específica, só pro processo inteiro.
+enum PaymentMethod {
+  FAKE
+  STRIPE
+}
+
 enum TicketStatus {
   ACTIVE
   USED
@@ -230,17 +239,18 @@ model SeatHold {
 }
 
 model Order {
-  id                    String      @id @default(cuid())
+  id                    String        @id @default(cuid())
   userId                String
   eventId               String
-  status                OrderStatus @default(PENDING)
+  status                OrderStatus   @default(PENDING)
   amountInCents         Int
-  currency              String      @default("BRL")
-  stripePaymentIntentId String?     @unique
-  idempotencyKey        String?     @unique
-  expiresAt             DateTime    @db.Timestamptz(3) // now + 30 min (§4.6.2)
-  createdAt             DateTime    @default(now()) @db.Timestamptz(3)
-  updatedAt             DateTime    @updatedAt @db.Timestamptz(3)
+  currency              String        @default("BRL")
+  stripePaymentIntentId String?       @unique
+  idempotencyKey        String?       @unique
+  paymentMethod         PaymentMethod @default(FAKE)
+  expiresAt             DateTime      @db.Timestamptz(3) // now + 30 min (§4.6.2)
+  createdAt             DateTime      @default(now()) @db.Timestamptz(3)
+  updatedAt             DateTime      @updatedAt @db.Timestamptz(3)
 
   user    User       @relation(fields: [userId], references: [id])
   event   Event      @relation(fields: [eventId], references: [id])

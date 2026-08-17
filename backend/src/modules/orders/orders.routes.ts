@@ -1,5 +1,5 @@
 import { Router } from 'express'
-import { Role } from '../../../generated/prisma/enums'
+import { PaymentMethod, Role } from '../../../generated/prisma/enums'
 import { requireAuth, requireRole } from '../../middlewares/auth.middleware'
 import { validate } from '../../middlewares/validate.middleware'
 import { EventsRepository } from '../events/events.repository'
@@ -12,13 +12,17 @@ import { createOrderSchema, orderIdSchema, simulatePaymentSchema } from './order
 import { OrdersService } from './orders.service'
 import { FakePaymentProvider } from './providers/fake-payment.provider'
 import type { PaymentProvider } from './providers/payment-provider'
+import { StripePaymentProvider } from './providers/stripe-payment.provider'
 import { createStripeWebhookHandler } from './webhook.controller'
 import { WebhookEventRepository } from './webhook-event.repository'
 
-// FakePaymentProvider por padrão -- trocar pela StripePaymentProvider (já implementada,
-// mesma interface) é a única linha que muda quando houver uma chave de teste real do
-// Stripe configurada (§4.5, §12: "nada mais muda").
-const paymentProvider: PaymentProvider = new FakePaymentProvider()
+// Os dois provedores ativos ao mesmo tempo -- a flag de teste do checkout (front)
+// escolhe por PEDIDO qual usar (§4.5, §12), em vez de um único provedor fixo pro
+// processo inteiro. FAKE continua o default de `createOrderSchema`.
+const paymentProviders: Record<PaymentMethod, PaymentProvider> = {
+  FAKE: new FakePaymentProvider(),
+  STRIPE: new StripePaymentProvider(),
+}
 
 export const ordersService = new OrdersService(
   new OrdersRepository(),
@@ -27,7 +31,7 @@ export const ordersService = new OrdersService(
   new SeatStateRepository(),
   new TicketRepository(),
   new WebhookEventRepository(),
-  paymentProvider,
+  paymentProviders,
 )
 const ordersController = new OrdersController(ordersService)
 

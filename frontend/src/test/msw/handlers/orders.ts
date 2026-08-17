@@ -1,6 +1,6 @@
 import { http, HttpResponse } from 'msw'
 import { env } from '../../../lib/env'
-import type { Order, SimulateOutcome } from '../../../features/checkout/api'
+import type { Order, PaymentMethod, SimulateOutcome } from '../../../features/checkout/api'
 import { DEFAULT_EVENT } from './catalog'
 import { priceTypeFromHoldId, seatIdFromHoldId } from './seats'
 import { issueTicket } from './tickets'
@@ -23,9 +23,10 @@ export function resetOrdersStore(): void {
 
 export const ordersHandlers = [
   http.post(`${API}/orders`, async ({ request }) => {
-    const body = (await request.json()) as { eventId: string; holdIds: string[] }
+    const body = (await request.json()) as { eventId: string; holdIds: string[]; paymentMethod?: PaymentMethod }
     const id = `order-${ordersStore.size + 1}`
     const now = new Date()
+    const paymentMethod = body.paymentMethod ?? 'FAKE'
     const order: Order = {
       id,
       userId: 'user-cliente',
@@ -33,6 +34,7 @@ export const ordersHandlers = [
       status: 'PENDING',
       amountInCents: body.holdIds.reduce((sum, holdId) => sum + seatPriceInCents(holdId), 0),
       currency: DEFAULT_EVENT.currency,
+      paymentMethod,
       expiresAt: new Date(now.getTime() + 30 * 60 * 1000).toISOString(),
       createdAt: now.toISOString(),
       updatedAt: now.toISOString(),
@@ -44,6 +46,9 @@ export const ordersHandlers = [
       })),
     }
     ordersStore.set(id, order)
+    // clientSecret real do Stripe é um "pi_..._secret_...", mas o mock só precisa de
+    // ALGO não-vazio -- o teste da flag de teste do checkout mocka `@stripe/react-stripe-js`
+    // direto, nunca chama a Stripe de verdade com este valor.
     return HttpResponse.json({ order, clientSecret: 'pi_fake_secret' }, { status: 201 })
   }),
 

@@ -1,4 +1,4 @@
-import type { OrderStatus } from '../../../generated/prisma/enums'
+import type { OrderStatus, PaymentMethod } from '../../../generated/prisma/enums'
 import type { Db } from '../../shared/db'
 
 interface CreateOrderInput {
@@ -9,6 +9,7 @@ interface CreateOrderInput {
   stripePaymentIntentId: string
   idempotencyKey: string
   expiresAt: Date
+  paymentMethod: PaymentMethod
 }
 
 export class OrdersRepository {

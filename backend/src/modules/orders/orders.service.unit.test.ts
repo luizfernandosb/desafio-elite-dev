@@ -1,6 +1,6 @@
 import type { Logger } from 'pino'
 import { describe, expect, it, vi } from 'vitest'
-import { EventStatus, OrderStatus, RoomType, TicketStatus } from '../../../generated/prisma/enums'
+import { EventStatus, OrderStatus, PaymentMethod, RoomType, TicketStatus } from '../../../generated/prisma/enums'
 import { ConflictError, ForbiddenError, InvalidTransitionError, NotFoundError } from '../../shared/errors'
 import type { EventsRepository } from '../events/events.repository'
 import type { SeatHoldRepository } from '../seats/seat-hold.repository'
@@ -26,6 +26,7 @@ function makeOrder(overrides: Partial<Record<string, unknown>> = {}) {
     amountInCents: 18000,
     currency: 'BRL',
     stripePaymentIntentId: 'pi_test_123',
+    paymentMethod: PaymentMethod.FAKE,
     ...overrides,
   }
 }
@@ -106,7 +107,7 @@ function makeService(overrides: {
   ordersRepo?: OrdersRepository
   eventsRepo?: EventsRepository
   holdRepo?: SeatHoldRepository
-  paymentProvider?: PaymentProvider
+  paymentProviders?: Partial<Record<PaymentMethod, PaymentProvider>>
 } = {}) {
   return new OrdersService(
     overrides.ordersRepo ?? makeMockOrdersRepo(),
@@ -115,7 +116,11 @@ function makeService(overrides: {
     makeMockSeatStateRepo(),
     makeMockTicketRepo(),
     makeMockWebhookEventRepo(),
-    overrides.paymentProvider ?? makeMockPaymentProvider(),
+    {
+      FAKE: makeMockFakePaymentProvider(),
+      STRIPE: makeMockPaymentProvider(),
+      ...overrides.paymentProviders,
+    },
   )
 }
 
@@ -131,7 +136,7 @@ describe('OrdersService.createOrder', () => {
 
     const service = makeService({ ordersRepo, holdRepo })
     // dto não tem campo de valor -- não há como "forjar" nada aqui
-    await service.createOrder('user-1', { eventId: 'event-1', holdIds: ['hold-1', 'hold-2'] }, 'idem-1', log)
+    await service.createOrder('user-1', { eventId: 'event-1', holdIds: ['hold-1', 'hold-2'], paymentMethod: PaymentMethod.FAKE }, 'idem-1', log)
 
     expect(ordersRepo.create).toHaveBeenCalledWith(
       'fake-tx',
@@ -159,7 +164,7 @@ describe('OrdersService.createOrder', () => {
     } as unknown as EventsRepository
 
     const service = makeService({ ordersRepo, eventsRepo, holdRepo })
-    await service.createOrder('user-1', { eventId: 'event-1', holdIds: ['hold-1', 'hold-2'] }, 'idem-1', log)
+    await service.createOrder('user-1', { eventId: 'event-1', holdIds: ['hold-1', 'hold-2'], paymentMethod: PaymentMethod.FAKE }, 'idem-1', log)
 
     // 6000 + 20% = 7200 por assento x 2 = 14400 (não 12000, que seria o preço base)
     expect(ordersRepo.create).toHaveBeenCalledWith('fake-tx', expect.objectContaining({ amountInCents: 14400 }))
@@ -175,7 +180,7 @@ describe('OrdersService.createOrder', () => {
     vi.mocked(ordersRepo.create).mockResolvedValue(makeOrder({ amountInCents: 9000 }) as never)
 
     const service = makeService({ ordersRepo, holdRepo })
-    await service.createOrder('user-1', { eventId: 'event-1', holdIds: ['hold-1', 'hold-2'] }, 'idem-1', log)
+    await service.createOrder('user-1', { eventId: 'event-1', holdIds: ['hold-1', 'hold-2'], paymentMethod: PaymentMethod.FAKE }, 'idem-1', log)
 
     // 6000 (FULL) + 3000 (HALF, metade de 6000) = 9000 -- nunca 6000 x 2 = 12000
     expect(ordersRepo.create).toHaveBeenCalledWith('fake-tx', expect.objectContaining({ amountInCents: 9000 }))
@@ -187,8 +192,35 @@ describe('OrdersService.createOrder', () => {
 
     const service = makeService({ holdRepo })
     await expect(
-      service.createOrder('user-1', { eventId: 'event-1', holdIds: ['hold-1', 'hold-2'] }, 'idem-1', log),
+      service.createOrder('user-1', { eventId: 'event-1', holdIds: ['hold-1', 'hold-2'], paymentMethod: PaymentMethod.FAKE }, 'idem-1', log),
     ).rejects.toThrow('Um ou mais holds não estão disponíveis')
+  })
+
+  // flag de teste do checkout (front) -- paymentMethod: STRIPE usa o provedor Stripe
+  // pra criar o intent, nunca o fake, e grava esse método na order (§ resolveProvider)
+  it('paymentMethod STRIPE -- usa o provedor Stripe (não o fake) e grava paymentMethod na order', async () => {
+    const holdRepo = makeMockHoldRepo()
+    vi.mocked(holdRepo.findManyOwnedActive).mockResolvedValue([{ id: 'hold-1', seatId: 'seat-1' }] as never)
+    const ordersRepo = makeMockOrdersRepo()
+    vi.mocked(ordersRepo.create).mockResolvedValue(makeOrder({ paymentMethod: PaymentMethod.STRIPE }) as never)
+
+    const fakeProvider = makeMockFakePaymentProvider()
+    const stripeProvider = makeMockPaymentProvider()
+    const service = makeService({ ordersRepo, holdRepo, paymentProviders: { FAKE: fakeProvider, STRIPE: stripeProvider } })
+
+    await service.createOrder(
+      'user-1',
+      { eventId: 'event-1', holdIds: ['hold-1'], paymentMethod: PaymentMethod.STRIPE },
+      'idem-1',
+      log,
+    )
+
+    expect(stripeProvider.createIntent).toHaveBeenCalled()
+    expect(fakeProvider.createIntent).not.toHaveBeenCalled()
+    expect(ordersRepo.create).toHaveBeenCalledWith(
+      'fake-tx',
+      expect.objectContaining({ paymentMethod: PaymentMethod.STRIPE }),
+    )
   })
 })
 
@@ -239,7 +271,7 @@ describe('OrdersService.confirmPayment', () => {
       makeMockSeatStateRepo(),
       ticketRepo,
       makeMockWebhookEventRepo(),
-      makeMockPaymentProvider(),
+      { FAKE: makeMockPaymentProvider(), STRIPE: makeMockPaymentProvider() },
     )
     await service.confirmPayment('order-1', log)
 
@@ -263,7 +295,7 @@ describe('OrdersService.confirmPayment', () => {
       makeMockSeatStateRepo(),
       ticketRepo,
       makeMockWebhookEventRepo(),
-      makeMockPaymentProvider(),
+      { FAKE: makeMockPaymentProvider(), STRIPE: makeMockPaymentProvider() },
     )
     await service.confirmPayment('order-1', log)
 
@@ -321,7 +353,7 @@ describe('OrdersService.cancelTicket', () => {
       seatStateRepo,
       ticketRepo,
       makeMockWebhookEventRepo(),
-      paymentProvider,
+      { FAKE: paymentProvider, STRIPE: makeMockPaymentProvider() },
     )
     await service.cancelTicket('ticket-1', 'user-1', log)
 
@@ -330,6 +362,36 @@ describe('OrdersService.cancelTicket', () => {
     expect(paymentProvider.refund).toHaveBeenCalledWith('pi_test_123', 6000) // FULL, sem Sala VIP
     // ainda sobra 1 ticket ativo no pedido -- Order continua PAID, não vira REFUNDED
     expect(ordersRepo.updateStatus).not.toHaveBeenCalled()
+  })
+
+  // order criada com paymentMethod STRIPE -- reembolso tem que ir pro provedor Stripe,
+  // nunca pro fake, mesmo que o fake também esteja configurado no mapa (§ resolveProvider)
+  it('order com paymentMethod STRIPE -- reembolsa pelo provedor Stripe, não pelo fake', async () => {
+    const ticketRepo = makeMockTicketRepo()
+    vi.mocked(ticketRepo.findOwnedById).mockResolvedValue(makeTicket() as never)
+    vi.mocked(ticketRepo.countActiveByOrderId).mockResolvedValue(1)
+
+    const ordersRepo = makeMockOrdersRepo()
+    vi.mocked(ordersRepo.findById).mockResolvedValue(
+      makeOrder({ status: OrderStatus.PAID, paymentMethod: PaymentMethod.STRIPE }) as never,
+    )
+
+    const fakeProvider = makeMockPaymentProvider()
+    const stripeProvider = makeMockPaymentProvider()
+
+    const service = new OrdersService(
+      ordersRepo,
+      futureEventsRepo(),
+      makeMockHoldRepo(),
+      makeMockSeatStateRepo(),
+      ticketRepo,
+      makeMockWebhookEventRepo(),
+      { FAKE: fakeProvider, STRIPE: stripeProvider },
+    )
+    await service.cancelTicket('ticket-1', 'user-1', log)
+
+    expect(stripeProvider.refund).toHaveBeenCalledWith('pi_test_123', 6000)
+    expect(fakeProvider.refund).not.toHaveBeenCalled()
   })
 
   it('último ticket ativo do pedido -- Order transita para REFUNDED', async () => {
@@ -347,7 +409,7 @@ describe('OrdersService.cancelTicket', () => {
       makeMockSeatStateRepo(),
       ticketRepo,
       makeMockWebhookEventRepo(),
-      makeMockPaymentProvider(),
+      { FAKE: makeMockPaymentProvider(), STRIPE: makeMockPaymentProvider() },
     )
     await service.cancelTicket('ticket-1', 'user-1', log)
 
@@ -369,7 +431,7 @@ describe('OrdersService.cancelTicket', () => {
       makeMockSeatStateRepo(),
       ticketRepo,
       makeMockWebhookEventRepo(),
-      paymentProvider,
+      { FAKE: paymentProvider, STRIPE: makeMockPaymentProvider() },
     )
     await service.cancelTicket('ticket-1', 'user-1', log)
 
@@ -387,7 +449,7 @@ describe('OrdersService.cancelTicket', () => {
       makeMockSeatStateRepo(),
       ticketRepo,
       makeMockWebhookEventRepo(),
-      makeMockPaymentProvider(),
+      { FAKE: makeMockPaymentProvider(), STRIPE: makeMockPaymentProvider() },
     )
 
     await expect(service.cancelTicket('ticket-1', 'user-1', log)).rejects.toThrow(InvalidTransitionError)
@@ -405,7 +467,7 @@ describe('OrdersService.cancelTicket', () => {
       makeMockSeatStateRepo(),
       ticketRepo,
       makeMockWebhookEventRepo(),
-      makeMockPaymentProvider(),
+      { FAKE: makeMockPaymentProvider(), STRIPE: makeMockPaymentProvider() },
     )
 
     await expect(service.cancelTicket('ticket-1', 'user-1', log)).rejects.toThrow(InvalidTransitionError)
@@ -423,7 +485,7 @@ describe('OrdersService.cancelTicket', () => {
       makeMockSeatStateRepo(),
       ticketRepo,
       makeMockWebhookEventRepo(),
-      makeMockPaymentProvider(),
+      { FAKE: makeMockPaymentProvider(), STRIPE: makeMockPaymentProvider() },
     )
 
     const err: unknown = await service.cancelTicket('ticket-1', 'user-1', log).catch((e) => e)
@@ -443,7 +505,7 @@ describe('OrdersService.cancelTicket', () => {
       makeMockSeatStateRepo(),
       ticketRepo,
       makeMockWebhookEventRepo(),
-      makeMockPaymentProvider(),
+      { FAKE: makeMockPaymentProvider(), STRIPE: makeMockPaymentProvider() },
     )
 
     await expect(service.cancelTicket('ticket-1', 'user-1', log)).rejects.toThrow(NotFoundError)
@@ -464,7 +526,7 @@ describe('OrdersService.cancelTicket', () => {
       makeMockSeatStateRepo(),
       ticketRepo,
       makeMockWebhookEventRepo(),
-      paymentProvider,
+      { FAKE: paymentProvider, STRIPE: makeMockPaymentProvider() },
     )
 
     await expect(service.cancelTicket('ticket-1', 'user-1', log)).resolves.toBeDefined()
@@ -474,12 +536,17 @@ describe('OrdersService.cancelTicket', () => {
 })
 
 describe('OrdersService.simulatePayment', () => {
-  it('sem supportsSimulation (provedor tipo Stripe) -- lança ForbiddenError, não toca a order', async () => {
+  // capability check é por ORDER (paymentMethod gravado na criação), não mais pelo
+  // processo inteiro -- precisa carregar a order primeiro pra saber qual provedor ela
+  // usou, diferente de antes (quando só existia um provedor pro processo todo e dava
+  // pra rejeitar sem nem tocar o banco).
+  it('order com paymentMethod STRIPE -- lança ForbiddenError, nunca atualiza status', async () => {
     const ordersRepo = makeMockOrdersRepo()
-    const service = makeService({ ordersRepo, paymentProvider: makeMockPaymentProvider() })
+    vi.mocked(ordersRepo.findById).mockResolvedValue(makeOrder({ paymentMethod: PaymentMethod.STRIPE }) as never)
+    const service = makeService({ ordersRepo })
 
     await expect(service.simulatePayment('order-1', 'user-1', 'succeeded', log)).rejects.toThrow(ForbiddenError)
-    expect(ordersRepo.findById).not.toHaveBeenCalled()
+    expect(ordersRepo.updateStatus).not.toHaveBeenCalled()
   })
 
   it('succeeded -- delega para confirmPayment (PENDING → PAID)', async () => {
@@ -488,7 +555,7 @@ describe('OrdersService.simulatePayment', () => {
     const holdRepo = makeMockHoldRepo()
     vi.mocked(holdRepo.findByOrderId).mockResolvedValue([{ id: 'hold-1', seatId: 'seat-1' }] as never)
 
-    const service = makeService({ ordersRepo, holdRepo, paymentProvider: makeMockFakePaymentProvider() })
+    const service = makeService({ ordersRepo, holdRepo })
     await service.simulatePayment('order-1', 'user-1', 'succeeded', log)
 
     expect(ordersRepo.updateStatus).toHaveBeenCalledWith('fake-tx', 'order-1', OrderStatus.PAID)
@@ -499,7 +566,7 @@ describe('OrdersService.simulatePayment', () => {
     vi.mocked(ordersRepo.findById).mockResolvedValue(makeOrder({ status: OrderStatus.PENDING }) as never)
     const holdRepo = makeMockHoldRepo()
 
-    const service = makeService({ ordersRepo, holdRepo, paymentProvider: makeMockFakePaymentProvider() })
+    const service = makeService({ ordersRepo, holdRepo })
     await service.simulatePayment('order-1', 'user-1', 'requires_payment_method', log)
 
     expect(ordersRepo.updateStatus).toHaveBeenCalledWith(expect.anything(), 'order-1', OrderStatus.FAILED)
@@ -510,7 +577,7 @@ describe('OrdersService.simulatePayment', () => {
     const ordersRepo = makeMockOrdersRepo()
     vi.mocked(ordersRepo.findById).mockResolvedValue(makeOrder({ userId: 'user-2' }) as never)
 
-    const service = makeService({ ordersRepo, paymentProvider: makeMockFakePaymentProvider() })
+    const service = makeService({ ordersRepo })
     await expect(service.simulatePayment('order-1', 'user-1', 'succeeded', log)).rejects.toThrow(NotFoundError)
   })
 })
@@ -545,7 +612,7 @@ describe('OrdersService.recordWebhookEvent', () => {
       makeMockSeatStateRepo(),
       makeMockTicketRepo(),
       webhookEventRepo,
-      makeMockPaymentProvider(),
+      { FAKE: makeMockPaymentProvider(), STRIPE: makeMockPaymentProvider() },
     )
 
     expect(await service.recordWebhookEvent('evt_1', 'payment_intent.succeeded')).toBe(true)

@@ -23,4 +23,11 @@ export const envSchema = z.object({
     .enum(['true', 'false'])
     .default('false')
     .transform((value) => value === 'true'),
+  // flag de teste do checkout -- liga a opção de escolher Stripe Elements de verdade
+  // em vez do pagamento simulado (§ CheckoutPage.tsx). Nunca ligar em produção real:
+  // some sozinha por padrão, sem precisar remover código depois.
+  VITE_ALLOW_PAYMENT_TEST_TOGGLE: z
+    .enum(['true', 'false'])
+    .default('false')
+    .transform((value) => value === 'true'),
 })

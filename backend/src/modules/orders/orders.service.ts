@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto'
 import type { Logger } from 'pino'
-import { OrderStatus, TicketStatus } from '../../../generated/prisma/enums'
+import { OrderStatus, PaymentMethod, TicketStatus } from '../../../generated/prisma/enums'
 import { prisma } from '../../lib/prisma'
 import { ConflictError, ForbiddenError, InvalidTransitionError, NotFoundError, ValidationError } from '../../shared/errors'
 import { isUniqueViolation } from '../../shared/prisma-errors'
@@ -26,8 +26,15 @@ export class OrdersService {
     private readonly seatStateRepo: SeatStateRepository,
     private readonly ticketRepo: TicketRepository,
     private readonly webhookEventRepo: WebhookEventRepository,
-    private readonly paymentProvider: PaymentProvider,
+    // um provedor por PaymentMethod -- flag de teste do checkout permite escolher o
+    // Stripe de verdade por PEDIDO específico, não mais um único provedor fixo pro
+    // processo inteiro (§ orders.routes.ts, composição).
+    private readonly paymentProviders: Record<PaymentMethod, PaymentProvider>,
   ) {}
+
+  private resolveProvider(method: PaymentMethod): PaymentProvider {
+    return this.paymentProviders[method]
+  }
 
   async createOrder(userId: string, dto: CreateOrderDto, idempotencyKey: string, log: Logger) {
     const event = await this.eventsRepo.findById(prisma, dto.eventId)
@@ -53,7 +60,8 @@ export class OrdersService {
     // I/O externo FORA da transação (§5.5.3) -- chamada HTTP dentro de tx aumenta o
     // tempo de lock e o risco de deadlock. Idempotente pela idempotencyKey: em retry,
     // o Stripe (e o FakePaymentProvider) devolvem o mesmo intent, nunca cobram 2x.
-    const intent = await this.paymentProvider.createIntent({
+    const provider = this.resolveProvider(dto.paymentMethod)
+    const intent = await provider.createIntent({
       amountInCents,
       currency: event.currency,
       metadata: { eventId: event.id, userId },
@@ -70,6 +78,7 @@ export class OrdersService {
           stripePaymentIntentId: intent.id,
           idempotencyKey,
           expiresAt: new Date(Date.now() + ORDER_TTL_MS),
+          paymentMethod: dto.paymentMethod,
         })
         await this.holdRepo.linkToOrder(tx, holds.map((h) => h.id), created.id)
         return created
@@ -110,12 +119,15 @@ export class OrdersService {
     outcome: SimulatePaymentDto['outcome'],
     log: Logger,
   ): Promise<void> {
-    if (!this.paymentProvider.supportsSimulation) {
-      throw new ForbiddenError('Simulação de pagamento não está disponível com o provedor de pagamento atual')
-    }
-
     const order = await this.repo.findById(prisma, orderId)
     if (!order || order.userId !== userId) throw new NotFoundError('Order') // privado -- não revela
+
+    // capability check é por ORDER agora, não pelo processo inteiro -- uma order
+    // criada com paymentMethod STRIPE nunca pode ser simulada, mesmo que o
+    // FakePaymentProvider também esteja ativo pra outras orders (§ orders.routes.ts).
+    if (!this.resolveProvider(order.paymentMethod).supportsSimulation) {
+      throw new ForbiddenError('Simulação de pagamento não está disponível com o provedor de pagamento atual')
+    }
 
     if (outcome === 'succeeded') {
       await this.confirmPayment(orderId, log)
@@ -219,7 +231,7 @@ export class OrdersService {
     // não reverte (mesma decisão já aceita ali).
     if (order.stripePaymentIntentId) {
       try {
-        await this.paymentProvider.refund(order.stripePaymentIntentId, refundAmountInCents)
+        await this.resolveProvider(order.paymentMethod).refund(order.stripePaymentIntentId, refundAmountInCents)
       } catch (err) {
         log.error({ msg: 'refund falhou após cancelamento já commitado', orderId: order.id, ticketId: ticket.id, err })
       }

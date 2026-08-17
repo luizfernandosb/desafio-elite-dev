@@ -1,10 +1,12 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { Link, Navigate, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { ErrorBoundary } from '../../../app/ErrorBoundary'
 import { Button, EmptyState, ErrorState, Select, Skeleton, useToast } from '../../../components'
+import { env } from '../../../lib/env'
 import { formatMoney } from '../../../shared/money'
-import { checkoutKeys, createOrder, getOrder, simulatePayment, type SimulateOutcome } from '../api'
+import { checkoutKeys, createOrder, getOrder, simulatePayment, type PaymentMethod, type SimulateOutcome } from '../api'
+import { StripeCardForm } from '../components/StripeCardForm'
 import { TestCardsPanel } from '../components/TestCardsPanel'
 import { checkoutErrorMessage, isHoldExpired } from '../error-messages'
 import { useIdempotencyKey } from '../useIdempotencyKey'
@@ -31,6 +33,13 @@ export default function CheckoutPage() {
   const state = (location.state ?? {}) as CheckoutLocationState
   const canCreate = isNewOrder && Boolean(state.eventId) && Boolean(state.holdIds?.length)
 
+  // Flag de teste do checkout (invisível em produção normal) -- deixa escolher, por
+  // pedido, entre o fluxo fake e o Stripe Elements de verdade. Com a flag desligada,
+  // `methodConfirmed` já nasce `true` e o comportamento fica idêntico ao de sempre:
+  // a order já nasce confirmada como FAKE e cria sozinha ao montar.
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('FAKE')
+  const [methodConfirmed, setMethodConfirmed] = useState(!env.VITE_ALLOW_PAYMENT_TEST_TOGGLE)
+
   // Criação automática ao entrar vindo do mapa (§ etapa 08) -- não é um botão que o
   // cliente aperta. `useQuery` (não `useMutation`) de propósito: a chave de cache é
   // a própria `Idempotency-Key`, estável por sessão de checkout (`useIdempotencyKey`)
@@ -45,8 +54,8 @@ export default function CheckoutPage() {
     refetch: refetchCreateOrder,
   } = useQuery({
     queryKey: checkoutKeys.createOrder(idempotencyKey),
-    queryFn: () => createOrder(state.eventId as string, state.holdIds as string[], idempotencyKey),
-    enabled: canCreate,
+    queryFn: () => createOrder(state.eventId as string, state.holdIds as string[], idempotencyKey, paymentMethod),
+    enabled: canCreate && methodConfirmed,
   })
 
   useEffect(() => {
@@ -99,6 +108,27 @@ export default function CheckoutPage() {
     )
   }
 
+  // Só existe atrás da flag de teste (`methodConfirmed` já nasce `true` sem ela) --
+  // escolhido antes da order ser criada, porque `paymentMethod` vai no corpo do
+  // `POST /orders` (não dá pra trocar de método depois que o pedido já existe).
+  if (isNewOrder && canCreate && !methodConfirmed) {
+    return (
+      <div className={styles.page}>
+        <h1>Pagamento</h1>
+        <Select
+          label="Método de pagamento (teste)"
+          options={[
+            { value: 'FAKE', label: 'Simulado (atual)' },
+            { value: 'STRIPE', label: 'Stripe (cartão de teste)' },
+          ]}
+          value={paymentMethod}
+          onValueChange={(value) => setPaymentMethod(value as PaymentMethod)}
+        />
+        <Button onClick={() => setMethodConfirmed(true)}>Continuar</Button>
+      </div>
+    )
+  }
+
   if (isNewOrder && (isCreating || createdResult)) {
     return (
       <div className={styles.page}>
@@ -145,41 +175,72 @@ export default function CheckoutPage() {
     return <Navigate to={`/checkout/${order.id}/retorno`} replace />
   }
 
+  // `order.paymentMethod` (servidor) decide qual UI tentar, não o estado local --
+  // um F5 de verdade reseta `paymentMethod`/`createdResult` (useState, cache do
+  // TanStack Query em memória), mas a order já criada continua sendo Stripe.
+  const usingStripe = order.paymentMethod === 'STRIPE'
+
+  let paymentSection: ReactNode
+  if (usingStripe && createdResult?.clientSecret) {
+    paymentSection = (
+      <StripeCardForm
+        clientSecret={createdResult.clientSecret}
+        orderId={order.id}
+        onSuccess={() => navigate(`/checkout/${order.id}/retorno`)}
+      />
+    )
+  } else if (usingStripe) {
+    // F5 no meio do pagamento Stripe -- o clientSecret só existe na resposta do
+    // POST /orders, nunca é regravado nem re-buscado depois (limitação aceita:
+    // este caminho só existe atrás da flag de teste do checkout).
+    paymentSection = (
+      <EmptyState
+        title="Não foi possível retomar o pagamento Stripe"
+        description="Isso acontece quando a página é recarregada no meio do pagamento. Volte e tente de novo."
+        action={<Link to={`/eventos/${order.eventId}/assentos`}>Voltar para o mapa de assentos</Link>}
+      />
+    )
+  } else {
+    paymentSection = (
+      <div className={styles.form}>
+        <Select
+          label="Resultado do pagamento (simulação)"
+          options={[
+            { value: 'succeeded', label: 'Aprovar pagamento' },
+            { value: 'requires_payment_method', label: 'Recusar pagamento' },
+          ]}
+          value={outcome}
+          onValueChange={(value) => setOutcome(value as SimulateOutcome)}
+        />
+
+        {submitError && (
+          <p role="alert" className={styles.formError}>
+            {checkoutErrorMessage(submitError)}
+          </p>
+        )}
+
+        <Button onClick={() => submitPayment()} loading={isSubmitting}>
+          Pagar {formatMoney(order.amountInCents, order.currency)}
+        </Button>
+      </div>
+    )
+  }
+
   return (
     <div className={styles.page}>
       <h1>Pagamento</h1>
       <p className={styles.amount}>Total: {formatMoney(order.amountInCents, order.currency)}</p>
-      <p className={styles.notice}>Ambiente de simulação - nenhum cartão de verdade é processado aqui.</p>
+      {!usingStripe && (
+        <p className={styles.notice}>Ambiente de simulação - nenhum cartão de verdade é processado aqui.</p>
+      )}
 
       <TestCardsPanel />
 
-      {/* Boundary por seção (§ etapa 11) -- fase fake hoje, mas é o ponto exato onde
-          o Stripe Elements real entra no Dia 3 (iframe de terceiro, historicamente o
-          tipo de coisa que quebra em runtime). Um erro aqui não deveria levar nem o
-          total já mostrado acima nem o header/nav do resto da aplicação. */}
-      <ErrorBoundary>
-        <div className={styles.form}>
-          <Select
-            label="Resultado do pagamento (simulação)"
-            options={[
-              { value: 'succeeded', label: 'Aprovar pagamento' },
-              { value: 'requires_payment_method', label: 'Recusar pagamento' },
-            ]}
-            value={outcome}
-            onValueChange={(value) => setOutcome(value as SimulateOutcome)}
-          />
-
-          {submitError && (
-            <p role="alert" className={styles.formError}>
-              {checkoutErrorMessage(submitError)}
-            </p>
-          )}
-
-          <Button onClick={() => submitPayment()} loading={isSubmitting}>
-            Pagar {formatMoney(order.amountInCents, order.currency)}
-          </Button>
-        </div>
-      </ErrorBoundary>
+      {/* Boundary por seção (§ etapa 11) -- Stripe Elements é um iframe de terceiro,
+          historicamente o tipo de coisa que quebra em runtime. Um erro aqui não
+          deveria levar nem o total já mostrado acima nem o header/nav do resto da
+          aplicação. */}
+      <ErrorBoundary>{paymentSection}</ErrorBoundary>
     </div>
   )
 }

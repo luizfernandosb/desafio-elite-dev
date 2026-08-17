@@ -2,6 +2,7 @@ import { api } from '../../lib/api'
 
 export type OrderStatus = 'PENDING' | 'PAID' | 'FAILED' | 'EXPIRED' | 'FULFILLED' | 'REFUNDED'
 export type SimulateOutcome = 'succeeded' | 'requires_payment_method'
+export type PaymentMethod = 'FAKE' | 'STRIPE'
 
 export interface OrderSeatHold {
   id: string
@@ -17,6 +18,9 @@ export interface Order {
   status: OrderStatus
   amountInCents: number
   currency: string
+  // flag de teste do checkout -- decide se esta order específica pode ser resolvida
+  // via /simulate-payment (FAKE) ou precisa do Stripe Elements de verdade (STRIPE)
+  paymentMethod: PaymentMethod
   expiresAt: string
   createdAt: string
   updatedAt: string
@@ -42,10 +46,15 @@ export const checkoutKeys = {
   createOrder: (idempotencyKey: string) => [...checkoutKeys.all, 'create-order', idempotencyKey] as const,
 }
 
-export function createOrder(eventId: string, holdIds: string[], idempotencyKey: string) {
+export function createOrder(
+  eventId: string,
+  holdIds: string[],
+  idempotencyKey: string,
+  paymentMethod: PaymentMethod = 'FAKE',
+) {
   return api.post<CreateOrderResult>(
     '/orders',
-    { eventId, holdIds },
+    { eventId, holdIds, paymentMethod },
     { headers: { 'Idempotency-Key': idempotencyKey } },
   )
 }
