@@ -209,6 +209,7 @@ export default function SeatSelectionPage() {
           rows={mapRows}
           onSeatClick={handleSeatClick}
           legend
+          showScreen
           ariaLabel={`Mapa de assentos - ${event.venueName}`}
         />
       </ErrorBoundary>

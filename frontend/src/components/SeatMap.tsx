@@ -30,6 +30,10 @@ interface SeatMapProps {
   onSeatClick?: (label: string) => void
   legend?: boolean
   ariaLabel?: string
+  // etapa de compra: orienta o cliente sobre qual lado da sala é a frente --
+  // sem isso, "assento A1" não diz nada sobre proximidade da tela. Fora do modo
+  // projeto/gestão, que já mostram a sala numa perspectiva neutra (§ RoomStep).
+  showScreen?: boolean
 }
 
 function seatStatusLabel(status: SeatMapSeatStatus): string {
@@ -54,7 +58,13 @@ function seatAriaLabel(seat: SeatMapSeat, isDesignMode: boolean): string {
 // navegação por teclado *através* de assentos vendidos/reservados -- quem usa teclado
 // precisa conseguir "passar por cima" de um assento indisponível para continuar
 // explorando a fileira, só não pode *selecioná-lo*.
-export function SeatMap({ rows, onSeatClick, legend = false, ariaLabel = 'Mapa de assentos' }: SeatMapProps) {
+export function SeatMap({
+  rows,
+  onSeatClick,
+  legend = false,
+  ariaLabel = 'Mapa de assentos',
+  showScreen = false,
+}: SeatMapProps) {
   const seatRefs = useRef(new Map<string, HTMLDivElement>())
 
   function focusSeat(label: string) {
@@ -78,6 +88,7 @@ export function SeatMap({ rows, onSeatClick, legend = false, ariaLabel = 'Mapa d
 
   return (
     <div className={styles.wrapper}>
+      {showScreen && <div className={styles.screen}>Tela</div>}
       <div className={styles.grid} role="grid" aria-label={ariaLabel} aria-rowcount={rows.length}>
         {rows.map((row, rowIndex) => (
           <div className={styles.row} role="row" aria-rowindex={rowIndex + 1} key={row.row}>

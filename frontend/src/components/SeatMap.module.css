@@ -5,6 +5,19 @@
   overflow-x: auto;
 }
 
+.screen {
+  align-self: center;
+  width: min(100%, 320px);
+  padding: var(--space-1) var(--space-4);
+  border-radius: var(--radius-sm) var(--radius-sm) 50% 50% / var(--radius-sm) var(--radius-sm) 100% 100%;
+  background: var(--surface-1);
+  color: var(--text-secondary);
+  text-align: center;
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
 .grid {
   display: flex;
   flex-direction: column;
