@@ -8,6 +8,10 @@ import styles from './SearchResultCard.module.css'
 
 interface SearchResultCardProps {
   event: PublicEvent
+  // total de sessões deste MESMO filme (§ groupByMovie.ts) -- `event` aqui é só a
+  // mais próxima delas. > 1 mostra "+N horários" em vez de fingir que só existe
+  // esta sessão; a lista completa (dia/formato/sala) mora em `EventDetailPage`.
+  sessionCount?: number
   eager?: boolean
 }
 
@@ -16,8 +20,9 @@ interface SearchResultCardProps {
 // descartado ali) e a legenda AO LADO, nunca sobreposta. Data, local e preço, que o
 // desafio pede na navegação/busca, moram nesta faixa de texto normal, não num
 // gradiente por cima da imagem.
-export function SearchResultCard({ event, eager = false }: SearchResultCardProps) {
+export function SearchResultCard({ event, sessionCount = 1, eager = false }: SearchResultCardProps) {
   const badges = [event.genres[0], ...sessionAttributeBadges(event)].filter(Boolean) as string[]
+  const hasMoreSessions = sessionCount > 1
 
   return (
     <Link to={`/eventos/${event.id}`} className={styles.card}>
@@ -30,7 +35,10 @@ export function SearchResultCard({ event, eager = false }: SearchResultCardProps
       </div>
       <div className={styles.info}>
         <h3 className={styles.title}>{event.title}</h3>
-        <p className={styles.date}>{formatEventDate(event.startsAt, event.timezone)}</p>
+        <p className={styles.date}>
+          {hasMoreSessions ? 'Próxima sessão: ' : ''}
+          {formatEventDate(event.startsAt, event.timezone)}
+        </p>
         <p className={styles.venue}>
           {event.venueName} · {event.venueCity}
         </p>
@@ -41,7 +49,12 @@ export function SearchResultCard({ event, eager = false }: SearchResultCardProps
             ))}
           </div>
         )}
-        <p className={styles.price}>{formatMoney(event.effectivePriceInCents, event.currency)}</p>
+        <div className={styles.footer}>
+          <p className={styles.price}>{formatMoney(event.effectivePriceInCents, event.currency)}</p>
+          {hasMoreSessions && (
+            <p className={styles.moreSessions}>+{sessionCount - 1} horário{sessionCount > 2 ? 's' : ''}</p>
+          )}
+        </div>
       </div>
     </Link>
   )

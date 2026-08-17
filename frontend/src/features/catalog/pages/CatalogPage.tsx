@@ -7,6 +7,7 @@ import { EventList } from '../components/EventList'
 import { HeroCarousel } from '../components/HeroCarousel'
 import { SearchBar } from '../components/SearchBar'
 import { catalogKeys, listPublicEvents } from '../api'
+import { groupEventsByMovie } from '../groupByMovie'
 import styles from './CatalogPage.module.css'
 
 // "Em cartaz" (hero + carrossel) continua sendo só a primeira página da listagem
@@ -84,6 +85,11 @@ export default function CatalogPage() {
     document.getElementById(ALL_SESSIONS_ID)?.scrollIntoView({ behavior: 'smooth' })
   }
 
+  // Um filme com várias sessões (horário/sala/formato diferentes) aparece UMA vez
+  // aqui, nunca um card/pôster repetido por sessão -- diferenças entre sessões
+  // continuam visíveis ao entrar no filme (`EventDetailPage`).
+  const movies = events ? groupEventsByMovie(events.data).map((group) => group.primary) : []
+
   return (
     <div className={styles.page}>
       {/* página precisa de um h1 (§ etapa 12, heading-order) -- visualmente oculto
@@ -110,8 +116,8 @@ export default function CatalogPage() {
           />
         ) : (
           <>
-            <HeroCarousel events={events.data.slice(0, HERO_SLIDE_COUNT)} />
-            <EventCarousel title="Em cartaz" events={events.data} onSeeAll={scrollToAllSessions} />
+            <HeroCarousel events={movies.slice(0, HERO_SLIDE_COUNT)} />
+            <EventCarousel title="Em cartaz" events={movies} onSeeAll={scrollToAllSessions} />
           </>
         ))}
 

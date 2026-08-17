@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { Button, EmptyState, ErrorState, Pagination, Skeleton } from '../../../components'
 import { catalogKeys, listPublicEvents } from '../api'
+import { groupEventsByMovie } from '../groupByMovie'
 import { SearchResultCard } from './SearchResultCard'
 import styles from './EventList.module.css'
 
@@ -66,11 +67,22 @@ export function EventList({ q, from, to, page, onPageChange, onClearFilters }: E
     )
   }
 
+  // Um filme com várias sessões nesta página (horário/sala/formato diferentes)
+  // aparece UMA vez, nunca um card repetido por sessão -- as diferenças continuam
+  // visíveis ao entrar no filme (`EventDetailPage`), e o card aqui sinaliza quantas
+  // sessões existem (`sessionCount`) quando há mais de uma.
+  const movies = groupEventsByMovie(data.data)
+
   return (
     <>
       <div className={styles.grid}>
-        {data.data.map((event, index) => (
-          <SearchResultCard key={event.id} event={event} eager={index < EAGER_CARD_COUNT} />
+        {movies.map((group, index) => (
+          <SearchResultCard
+            key={group.key}
+            event={group.primary}
+            sessionCount={group.sessionCount}
+            eager={index < EAGER_CARD_COUNT}
+          />
         ))}
       </div>
       <Pagination
