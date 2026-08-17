@@ -1,6 +1,7 @@
 import type { Logger } from 'pino'
 import { CatalogSource, EventStatus, EventType, RoomType } from '../../../generated/prisma/enums'
 import { prisma } from '../../lib/prisma'
+import { isFutureEventStart } from '../../shared/date'
 import { ConflictError, ForbiddenError, NotFoundError, ValidationError } from '../../shared/errors'
 import { paginate, type PaginatedResponse } from '../../shared/pagination'
 import { assertTransition, EVENT_TRANSITIONS } from '../../shared/state-machines'
@@ -132,8 +133,8 @@ export class EventsService {
 
     const nextStartsAt = dto.startsAt ?? event.startsAt
     const nextEndsAt = dto.endsAt ?? event.endsAt
-    if (dto.startsAt && dto.startsAt.getTime() <= Date.now()) {
-      throw new ValidationError('startsAt deve ser no futuro')
+    if (dto.startsAt && !isFutureEventStart(dto.startsAt)) {
+      throw new ValidationError('startsAt deve ser pelo menos 1h à frente do horário atual')
     }
     if (nextEndsAt && nextEndsAt <= nextStartsAt) {
       throw new ValidationError('endsAt deve ser depois de startsAt')

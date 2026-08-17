@@ -1,6 +1,7 @@
 import { z } from 'zod'
 import { CatalogSource, EventAudio, EventFormat, EventStatus, RoomType } from '../../../generated/prisma/enums'
 import { BRAZIL_UF_CODES } from '../../shared/brazil-states'
+import { isFutureEventStart } from '../../shared/date'
 import { paginationSchema } from '../../shared/pagination'
 import { isValidSeatLabel, MAX_ROWS, MAX_SEATS_PER_ROW } from './seatmap.service'
 
@@ -48,8 +49,8 @@ export const createEventSchema = {
       vipSurchargePercent: z.coerce.number().int().min(1).max(300).optional(),
       // nenhum campo `organizerId`, `type` ou `status` aqui -- vêm do servidor (§7.5)
     })
-    .refine((data) => data.startsAt.getTime() > Date.now(), {
-      message: 'startsAt deve ser no futuro',
+    .refine((data) => isFutureEventStart(data.startsAt), {
+      message: 'startsAt deve ser pelo menos 1h à frente do horário atual',
       path: ['startsAt'],
     })
     .refine((data) => !data.endsAt || data.endsAt > data.startsAt, {

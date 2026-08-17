@@ -8,6 +8,10 @@ import { zonedWallTimeToUtcDate } from './timezones'
 // criando centenas de sessões de uma vez
 export const MAX_SLOTS = 20
 
+// espelha MIN_EVENT_LEAD_MS (backend/src/shared/date.ts) -- sessão pode ser hoje
+// mesmo, desde que pelo menos 1h à frente do agora
+const MIN_EVENT_LEAD_MS = 60 * 60 * 1000
+
 const sessionFormatSchema = z.enum(['TWO_D', 'THREE_D'])
 const sessionAudioSchema = z.enum(['DUBBED', 'SUBTITLED'])
 const sessionRoomTypeSchema = z.enum(['STANDARD', 'VIP'])
@@ -55,16 +59,16 @@ export const venueStepSchema = z
   // pro array inteiro -- cada horário é validado e reportado com seu próprio índice.
   .superRefine((data, ctx) => {
     data.slots.forEach((slot, index) => {
-      let isFuture = false
+      let hasMinLead = false
       try {
-        isFuture = zonedWallTimeToUtcDate(slot.date, slot.time, data.timezone).getTime() > Date.now()
+        hasMinLead = zonedWallTimeToUtcDate(slot.date, slot.time, data.timezone).getTime() - Date.now() >= MIN_EVENT_LEAD_MS
       } catch {
-        isFuture = false
+        hasMinLead = false
       }
-      if (!isFuture) {
+      if (!hasMinLead) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
-          message: 'Data e hora devem ser no futuro',
+          message: 'Data e hora devem ser pelo menos 1h à frente do horário atual',
           path: ['slots', index, 'date'],
         })
       }

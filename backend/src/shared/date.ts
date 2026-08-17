@@ -5,6 +5,16 @@ interface ValidatableEvent {
   endsAt: Date | null
 }
 
+// Antecedência mínima para criar/reagendar uma sessão: pelo menos 1h à frente do
+// agora, mesmo no dia atual -- dá tempo de preparar a sala/venda antes do
+// horário marcado. Antes disto, qualquer instante estritamente futuro (mesmo 1
+// segundo à frente) já passava na validação.
+export const MIN_EVENT_LEAD_MS = 60 * 60 * 1000
+
+export function isFutureEventStart(startsAt: Date, now: Date = new Date()): boolean {
+  return startsAt.getTime() - now.getTime() >= MIN_EVENT_LEAD_MS
+}
+
 // fim da janela de portaria: o próprio `endsAt`, ou 6h após o início se o evento não
 // tiver `endsAt` (§4.6.3) -- extraído para ser reaproveitado pelo link de
 // compartilhamento (etapa 09), que não sobrevive além desse ponto
