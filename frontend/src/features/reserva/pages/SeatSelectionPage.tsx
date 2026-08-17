@@ -52,8 +52,6 @@ export default function SeatSelectionPage() {
     enabled: Boolean(eventId),
   })
 
-  // rótulo ("F12") <-> id real do assento (o que o back exige em `seatIds`) -- o
-  // SeatMap (componente compartilhado) só conhece rótulos, nunca ids (§ etapa 04).
   const { idByLabel, labelById } = useMemo(() => {
     const idByLabelMap = new Map<string, string>()
     const labelByIdMap = new Map<string, string>()
@@ -67,17 +65,13 @@ export default function SeatSelectionPage() {
     return { idByLabel: idByLabelMap, labelById: labelByIdMap }
   }, [seatmap])
 
-  // Leitura, nunca decisão (§ etapa 07, "o princípio que não pode ser violado"): só
-  // aplica o patch no snapshot local e, se não for um assento do PRÓPRIO usuário,
-  // anuncia. O botão de reservar continua dependendo só do retorno de `POST /holds`
-  // (`useHold`, etapa 06) -- nunca do que chega por aqui.
   const connectionStatus = useSeatRealtime(eventId, (patch) => {
     queryClient.setQueryData(reservaKeys.seatmap(eventId), (old: Seatmap | undefined) =>
       old ? applySeatPatch(old, patch) : old,
     )
 
     const ownSeatIds = [...selection.selectedSeatIds, ...(hold?.map((h) => h.seatId) ?? [])]
-    if (isOwnSeatChange(patch.seatId, ownSeatIds)) return // já anunciado pelo próprio clique
+    if (isOwnSeatChange(patch.seatId, ownSeatIds)) return
 
     const label = labelById.get(patch.seatId)
     if (label) announce({ seatId: patch.seatId, label, status: patch.status })
@@ -101,10 +95,7 @@ export default function SeatSelectionPage() {
     eventId,
     onHoldCreated: (createdHold) => {
       setHold(createdHold)
-      selection.clear() // seleção "consumida" -- o hold confirmado é a nova fonte de verdade
-      // sem isto, o grid continua mostrando os assentos recém-reservados como
-      // "livre" (dado velho da última leitura do snapshot) até a próxima ação
-      // disparar um refetch -- confuso bastando um olhar rápido para a tela
+      selection.clear()
       void queryClient.invalidateQueries({ queryKey: reservaKeys.seatmap(eventId) })
     },
     onSeatsTaken: (takenSeatIds) => {
@@ -200,10 +191,6 @@ export default function SeatSelectionPage() {
         <ConnectionBadge status={connectionStatus} />
       </div>
 
-      {/* Boundary por seção (§ etapa 11) -- um erro de render no mapa (a parte mais
-          densa desta tela: grade dinâmica, patches de realtime) some só com o mapa,
-          nunca com o header/nav do resto da aplicação (não há `errorElement` de
-          rota entre esta página e a raiz). */}
       <ErrorBoundary>
         <SeatMap
           rows={mapRows}
@@ -214,8 +201,6 @@ export default function SeatSelectionPage() {
         />
       </ErrorBoundary>
 
-      {/* preparada na etapa 06, alimentada aqui: só mudanças de OUTROS assentos,
-          nunca a própria seleção (já anunciada pelo clique em si) */}
       <div role="status" aria-live="polite" aria-atomic="false" className="sr-only">
         {announcement}
       </div>

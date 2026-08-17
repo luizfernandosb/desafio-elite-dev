@@ -18,15 +18,10 @@ export interface Order {
   status: OrderStatus
   amountInCents: number
   currency: string
-  // flag de teste do checkout -- decide se esta order específica pode ser resolvida
-  // via /simulate-payment (FAKE) ou precisa do Stripe Elements de verdade (STRIPE)
   paymentMethod: PaymentMethod
   expiresAt: string
   createdAt: string
   updatedAt: string
-  // incluído pelo back (`orders.repository.ts`) especificamente pra "tentar outro
-  // cartão" (§ etapa 08) achar os mesmos assentos sem precisar de estado de
-  // navegação -- só os holds ainda ATIVOS (`releasedAt: null`) são reaproveitáveis.
   holds: OrderSeatHold[]
 }
 
@@ -38,11 +33,6 @@ export interface CreateOrderResult {
 export const checkoutKeys = {
   all: ['checkout'] as const,
   order: (id: string) => [...checkoutKeys.all, 'order', id] as const,
-  // a criação do pedido também vive numa `useQuery` (não `useMutation`) -- é
-  // idempotente pela `idempotencyKey` (header obrigatório), e usar a MESMA key de
-  // cache dá de graça a dedupe que "duplo clique não cria dois pedidos" pede (§
-  // etapa 08): duas montagens/renders concorrentes com a mesma key compartilham a
-  // mesma promise em vez de disparar duas requisições.
   createOrder: (idempotencyKey: string) => [...checkoutKeys.all, 'create-order', idempotencyKey] as const,
 }
 

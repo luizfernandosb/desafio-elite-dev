@@ -12,8 +12,6 @@ export interface AuthContextValue {
   logout: () => Promise<void>
 }
 
-// Separado de AuthProvider.tsx -- um arquivo que só exporta componente mantém o Fast
-// Refresh funcionando (mesmo raciocínio de components/toast-context.ts, etapa 02).
 export const AuthContext = createContext<AuthContextValue | null>(null)
 
 export function useAuth(): AuthContextValue {

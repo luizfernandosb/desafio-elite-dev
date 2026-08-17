@@ -10,9 +10,6 @@ interface SidebarLinkProps {
   to: string
   icon: ReactNode
   children: ReactNode
-  // só o Catálogo ("/") precisa disto -- sem `end`, `/` fica "ativo" em qualquer
-  // rota (prefixo de tudo); os demais links não têm esse problema (não são prefixo
-  // de outra rota).
   end?: boolean
 }
 
@@ -29,11 +26,6 @@ function SidebarLink({ to, icon, children, end }: SidebarLinkProps) {
   )
 }
 
-// Navegação por papel (§ etapa 03): cliente vê "Meus ingressos", organizador vê
-// "Painel", portaria vê só "Portaria" -- o operador não navega no catálogo durante
-// o evento. `status === 'loading'` não mostra nenhum link de sessão (nem "Entrar"
-// nem "Sair") para não piscar um estado incorreto enquanto o boot do AuthProvider
-// ainda não respondeu.
 function RoleLink() {
   const { user, status } = useAuth()
   if (status !== 'authenticated' || !user) return null

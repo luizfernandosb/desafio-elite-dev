@@ -27,9 +27,6 @@ export async function seedEventWithSeats(
       venueName: 'Casa de Shows',
       venueCity: 'São Paulo',
       venueState: 'SP',
-      // 24h no futuro por padrão -- fora da janela de portaria de propósito (2h antes
-      // até 6h depois, §4.6.3). Testes de portaria (etapa 10) passam um `startsAt`
-      // dentro da janela explicitamente.
       startsAt: opts.startsAt ?? new Date(Date.now() + 86_400_000),
       endsAt: opts.endsAt,
       timezone: 'America/Sao_Paulo',
@@ -51,9 +48,6 @@ export async function seedEventWithSeats(
   return { organizer, event, seats }
 }
 
-// Assina um webhook do Stripe do mesmo jeito que o Stripe de verdade assinaria --
-// reaproveitado por qualquer teste que precise simular `payment_intent.succeeded`
-// (ou outro evento) chegando em `POST /stripe/webhook` (etapa 07).
 export function signWebhook(type: string, paymentIntentId: string) {
   const payload = JSON.stringify({
     id: `evt_${randomUUID()}`,
@@ -65,12 +59,6 @@ export function signWebhook(type: string, paymentIntentId: string) {
   return { payload, signature }
 }
 
-// Compõe seedEventWithSeats -> seedUser -> o fluxo real de compra (hold -> POST
-// /orders -> webhook do Stripe assinado) até existir um Ticket ACTIVE de verdade --
-// nunca um insert direto de Ticket no banco, que pularia a emissão real do QR (etapa
-// 08) e a transição PENDING -> PAID do pedido (etapa 07). Qualquer teste de
-// integração que precise de "um ingresso já pago" reaproveita esta factory em vez de
-// duplicar o fluxo (era o caso de gate/ticket/share antes desta etapa).
 export async function seedPaidTicket(opts: { seatCount?: number; startsAt?: Date; endsAt?: Date | null } = {}) {
   const seatCount = opts.seatCount ?? 1
   const { organizer, event, seats } = await seedEventWithSeats({

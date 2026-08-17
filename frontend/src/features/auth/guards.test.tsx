@@ -29,11 +29,6 @@ describe('RequireAuth', () => {
   it('loading não redireciona -- mostra a tela de verificação de sessão', () => {
     renderWithAuth(makeAuth({ status: 'loading' }), '/protegida')
 
-    // `getByRole('status')` sozinho bateria também no viewport do Toast (sempre
-    // presente via `renderWithProviders`) -- `role="status"` não computa nome a
-    // partir do conteúdo (não está na lista de roles "name from content" do
-    // accname), então filtrar por `name` não desempata; o texto do Spinner
-    // (`sr-only`) desempata sem ambiguidade.
     expect(screen.getByText('Verificando sessão')).toBeInTheDocument()
     expect(screen.queryByText(/tela de login/)).not.toBeInTheDocument()
     expect(screen.queryByText('Conteúdo protegido')).not.toBeInTheDocument()

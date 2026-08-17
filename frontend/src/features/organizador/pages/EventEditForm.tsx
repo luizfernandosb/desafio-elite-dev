@@ -16,9 +16,6 @@ interface EventEditFormProps {
   event: OrganizerEvent
 }
 
-// yyyy-mm-dd / HH:mm no fuso do EVENTO, não no fuso do navegador (§4.6.3) --
-// `Intl.DateTimeFormat` com partes separadas, nunca `toISOString` (sempre UTC) nem
-// `getHours()`/`getDate()` (sempre o fuso da MÁQUINA que roda o código).
 function toDateInputValue(iso: string, timezone: string): string {
   const parts = new Intl.DateTimeFormat('en-CA', {
     timeZone: timezone,
@@ -41,9 +38,6 @@ function toTimeInputValue(iso: string, timezone: string): string {
   return `${map.hour}:${map.minute}`
 }
 
-// Campos bloqueados após a primeira venda (SALE_LOCKED_FIELDS no back,
-// events.service.ts) -- `venueName` e `synopsis` ficam de fora de propósito: não
-// alteram o contrato de compra, continuam editáveis mesmo com ingressos vendidos.
 export function EventEditForm({ event }: EventEditFormProps) {
   const hasSales = event._count.tickets > 0
   const queryClient = useQueryClient()
@@ -88,9 +82,6 @@ export function EventEditForm({ event }: EventEditFormProps) {
   })
 
   async function onSubmit(values: EditEventValues) {
-    // a UI só desabilita os campos bloqueados -- não confia só nisso: o payload
-    // enviado nem inclui esses campos quando `hasSales`, então um 409 do servidor
-    // (defesa em profundidade) nunca chega a acontecer no caminho feliz
     const input: UpdateEventInput = {
       venueName: values.venueName,
       synopsis: values.synopsis,

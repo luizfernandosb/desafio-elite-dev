@@ -16,7 +16,6 @@ export interface RefreshTokenPayload {
   jti: string
 }
 
-// exportado para os testes assinarem tokens sem passar pelo fluxo de login (§7.10.5)
 export function signAccessToken(payload: { sub: string; role: Role }): string {
   return jwt.sign({ sub: payload.sub, role: payload.role, jti: randomUUID() }, env.JWT_ACCESS_SECRET, {
     algorithm: 'HS256',
@@ -26,7 +25,6 @@ export function signAccessToken(payload: { sub: string; role: Role }): string {
 
 export function verifyAccessToken(token: string): AccessTokenPayload {
   try {
-    // algorithms explícito -- nunca confiar no `alg` do header (`alg: none`)
     return jwt.verify(token, env.JWT_ACCESS_SECRET, { algorithms: ['HS256'] }) as AccessTokenPayload
   } catch {
     throw new UnauthorizedError('Token inválido ou expirado')

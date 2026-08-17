@@ -21,9 +21,6 @@ export class GateRepository {
     return db.ticket.findUnique({ where: { codeHash }, include: GATE_TICKET_INCLUDE })
   }
 
-  // UPDATE atômico condicional -- sem SELECT antes. `updateMany` com WHERE não-único
-  // compila para uma única instrução UPDATE ... WHERE, a mesma garantia da instrução
-  // SQL crua do plano, só que parametrizada pelo query builder do Prisma (§7.6).
   async markUsed(db: Db, ticketId: string, gateUserId: string): Promise<boolean> {
     const result = await db.ticket.updateMany({
       where: { id: ticketId, usedAt: null },

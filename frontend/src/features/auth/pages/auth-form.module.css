@@ -16,8 +16,6 @@
   margin: 0;
   padding: var(--space-2) var(--space-3);
   border-radius: var(--radius-sm);
-  /* deriva de --danger em vez de duplicar o valor em rgba -- mesmo raciocínio do
-     tint do primary em tokens.css, sem precisar de um segundo token fixo */
   background: color-mix(in srgb, var(--danger) 12%, transparent);
   color: var(--danger);
   font-size: 0.875rem;

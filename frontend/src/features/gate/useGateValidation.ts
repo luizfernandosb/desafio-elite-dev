@@ -4,13 +4,6 @@ import { useToast } from '../../components'
 import { gateKeys, validateTicket, type GateValidationResponse } from './api'
 import { gateValidationErrorMessage } from './error-messages'
 
-// Um único `busy` cobre as duas exigências do plano de uma vez: nenhuma segunda
-// validação dispara enquanto a primeira está em voo (`isPending`) OU enquanto o
-// resultado da anterior ainda ocupa a tela cheia (`result !== null`) -- ambos a
-// câmera (debounce de frame repetido) e a digitação manual (botão desabilitado)
-// checam o mesmo flag. `result` só volta a `null` via `dismiss`, chamado sozinho
-// pelo `ValidationResultScreen` depois de ~2s (a pausa pós-leitura do plano nasce
-// daí, sem precisar de um segundo temporizador independente).
 export function useGateValidation(eventId: string | null) {
   const queryClient = useQueryClient()
   const { showToast } = useToast()

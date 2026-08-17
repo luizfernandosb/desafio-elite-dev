@@ -3,8 +3,6 @@ export class AppError extends Error {
     public readonly code: string,
     message: string,
     public readonly statusHint: number = 400,
-    // campos extra na resposta -- ex.: `{ takenSeatIds }` em SEAT_TAKEN (etapa 06).
-    // Continua { code, message } na maioria dos erros; isto é opt-in.
     public readonly details?: Record<string, unknown>,
   ) {
     super(message)

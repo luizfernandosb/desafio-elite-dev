@@ -38,8 +38,6 @@ export default function TicketDetailPage() {
     )
   }
 
-  // `ErrorState` distingue NOT_FOUND (ingresso de outro dono ou id inexistente,
-  // sem retry) de erro de infraestrutura (com retry) -- § etapa 11.
   if (isError || !ticket) {
     return (
       <div className={styles.page}>
@@ -105,9 +103,6 @@ export default function TicketDetailPage() {
 
           <ShareButton ticketId={ticket.id} />
 
-          {/* mesma regra do back-end (OrdersService.cancelTicket): só ACTIVE e sessão
-              ainda não começada -- replicada aqui pra não deixar o cliente clicar num
-              caminho que o servidor sempre recusaria */}
           {status === 'ACTIVE' && new Date(event.startsAt).getTime() > Date.now() && (
             <CancelTicketButton ticket={ticket} />
           )}

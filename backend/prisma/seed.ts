@@ -1,8 +1,3 @@
-// Orquestra o cenário de demonstração (etapa 13, §6). Roda via `npm run seed`
-// (`prisma db seed`) ou `npm run seed:reset` (reset local + seed). `import 'dotenv/config'`
-// aqui é defensivo: o Prisma CLI já carrega o .env em `prisma.config.ts` e herda esse
-// `process.env` para este subprocesso, mas o corpo do seed (`./seed/run.ts`) também
-// roda direto via `tsx` no teste de integração, que não passa por aquele config.
 import 'dotenv/config'
 import { prisma } from '../src/lib/prisma'
 import { readDemoSummary } from './seed/demo-summary'

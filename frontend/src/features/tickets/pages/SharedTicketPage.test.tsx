@@ -47,7 +47,6 @@ describe('SharedTicketPage', () => {
     expect(await screen.findByText('Duna: Parte Dois')).toBeInTheDocument()
     expect(screen.getByText('Fileira A, assento 12')).toBeInTheDocument()
     expect(container.querySelector('svg')).toBeInTheDocument()
-    // nunca mostra nada de quem comprou -- o back já não envia, mas a tela também não presume
     expect(screen.queryByText(/@/)).not.toBeInTheDocument()
   })
 

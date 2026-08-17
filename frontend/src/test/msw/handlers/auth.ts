@@ -4,10 +4,6 @@ import type { PublicUser } from '../../../features/auth/api'
 
 const API = env.VITE_API_URL
 
-// Usuários fixos que qualquer teste pode logar de verdade via POST /auth/login,
-// sem precisar declarar o próprio handler -- principalmente para os fluxos ponta
-// a ponta (§ etapa 13), que trocam de sessão (cliente compra, portaria valida) no
-// mesmo teste. Senha única e óbvia: nenhum destes é segredo de verdade.
 export const TEST_PASSWORD = 'senha-teste-123'
 
 export const TEST_USERS: Record<string, PublicUser> = {
@@ -22,8 +18,6 @@ export const TEST_USERS: Record<string, PublicUser> = {
 }
 
 export const authHandlers = [
-  // Visitante por padrão -- sem cookie de sessão, o back real responde 401 (§ etapa
-  // 01). Testes que precisam restaurar uma sessão no boot sobrescrevem com `server.use`.
   http.post(`${API}/auth/refresh`, () =>
     HttpResponse.json({ code: 'UNAUTHORIZED', message: 'Sessão ausente' }, { status: 401 }),
   ),

@@ -8,12 +8,7 @@ import { TicketRepository } from './ticket.repository'
 import { listTicketsSchema, ticketIdSchema } from './ticket.schema'
 import { TicketService } from './ticket.service'
 
-// exportado -- share.routes.ts reaproveita esta mesma instância em vez de criar um
-// segundo TicketRepository (mesmo padrão de catalogService na etapa 05)
 export const ticketService = new TicketService(new TicketRepository())
-// `ordersService` (já composto com SeatStateRepository/PaymentProvider em
-// orders.routes.ts) reaproveitado para /cancel -- não compõe um segundo
-// PaymentProvider aqui, mesma razão do comentário acima sobre TicketService
 const ticketController = new TicketController(ticketService, ordersService)
 
 export const ticketRoutes = Router()

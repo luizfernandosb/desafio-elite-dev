@@ -17,7 +17,7 @@ describe('LoginPage', () => {
     renderLoginPage(makeAuth({ login }))
 
     await user.type(screen.getByLabelText('E-mail'), 'nao-e-email')
-    await user.tab() // onBlur -- validação não é a cada tecla (§ etapa 03)
+    await user.tab()
     await user.click(screen.getByRole('button', { name: 'Entrar' }))
 
     expect(await screen.findByText('E-mail inválido')).toBeInTheDocument()
@@ -52,7 +52,7 @@ describe('LoginPage', () => {
 
     const button = screen.getByRole('button', { name: 'Entrar' })
     await user.click(button)
-    await user.click(button) // segundo clique enquanto a primeira chamada ainda está pendente
+    await user.click(button)
 
     expect(login).toHaveBeenCalledTimes(1)
     resolveLogin()

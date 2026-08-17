@@ -3,8 +3,8 @@ import { SeatKind, SeatStatus, type RoomType } from '../../../generated/prisma/e
 import { AppError } from '../../shared/errors'
 import { computeEffectivePriceInCents } from './pricing'
 
-export const MAX_ROWS = 26 // fileira é letra -- A..Z
-export const MAX_SEATS_PER_ROW = 40 // teto de 1.040 assentos por evento
+export const MAX_ROWS = 26
+export const MAX_SEATS_PER_ROW = 40
 
 export interface SeatLayout {
   rows: number
@@ -20,11 +20,9 @@ export interface GeneratedSeat {
 }
 
 function rowLetter(index: number): string {
-  return String.fromCharCode(65 + index) // 0 -> 'A', 25 -> 'Z'
+  return String.fromCharCode(65 + index)
 }
 
-// gera todo assento do layout, já com id -- Prisma `createMany` não devolve as linhas
-// criadas, e o SeatState precisa do mesmo id na mesma transação (etapa 05)
 export function generateSeats(layout: SeatLayout): GeneratedSeat[] {
   if (layout.rows < 1 || layout.rows > MAX_ROWS) {
     throw new AppError('INVALID_LAYOUT', `rows deve estar entre 1 e ${MAX_ROWS}`)
@@ -87,10 +85,6 @@ interface SeatWithState {
   state: { status: SeatStatus; expiresAt: Date | null } | null
 }
 
-// snapshot que o front consome (§4.4.2) -- também o fallback de polling quando o
-// Realtime cai (§4.4.5). Trata `expiresAt` vencido como FREE mesmo que a linha ainda
-// diga HELD: a granularidade do pg_cron é de 1 min, a leitura não pode herdar esse
-// atraso (§4.4.3). Nunca inclui userId -- SeatState não tem essa coluna (§4.4.2).
 export function buildSeatmap(
   event: {
     id: string

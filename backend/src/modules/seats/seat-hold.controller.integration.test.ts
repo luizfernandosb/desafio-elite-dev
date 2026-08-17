@@ -11,9 +11,6 @@ async function tokenForNewUser(role: Role) {
   return { user, token: signAccessToken({ sub: user.id, role }) }
 }
 
-// corpo de `POST .../holds` mudou de `{ seatIds: string[] }` para `{ seats:
-// [{ seatId, priceType }] }` (meia-entrada) -- todo assento aqui é FULL por
-// padrão, já que nenhum destes testes exercita o cálculo de preço em si.
 function toSeats(seatIds: string[]) {
   return seatIds.map((seatId) => ({ seatId, priceType: 'FULL' as const }))
 }

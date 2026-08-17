@@ -29,7 +29,6 @@ eventsRoutes.post(
   eventsController.create,
 )
 
-// visibilidade mista -- PUBLISHED é público, DRAFT/CANCELLED só para o próprio dono
 eventsRoutes.get('/', optionalAuth, validate(listEventsSchema), eventsController.list)
 eventsRoutes.get('/:id', optionalAuth, validate(eventIdSchema), eventsController.getById)
 eventsRoutes.get('/:id/seatmap', optionalAuth, validate(eventIdSchema), eventsController.seatmap)
@@ -63,8 +62,6 @@ eventsRoutes.post(
   eventsController.cancel,
 )
 
-// params antes do multipart -- barato (checa formato do id) antes de caro (parseia o
-// corpo multipart inteiro), mesmo raciocínio de ordem da etapa 10 (portaria)
 eventsRoutes.post(
   '/:id/image',
   requireAuth,

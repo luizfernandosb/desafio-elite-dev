@@ -12,8 +12,6 @@ import { GateService } from './gate.service'
 const gateService = new GateService(new GateRepository())
 const gateController = new GateController(gateService)
 
-// agressivo por operador -- a assinatura já torna varredura de código inútil, mas o
-// limite evita o custo de CPU de tentar mesmo assim (§7.8, § etapa 10)
 const validateLimiter = rateLimit({
   windowMs: 60 * 1000,
   limit: 60,

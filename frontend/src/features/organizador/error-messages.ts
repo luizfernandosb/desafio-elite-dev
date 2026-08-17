@@ -1,9 +1,5 @@
 import { ApiError } from '../../lib/api'
 
-// Tratado por `code`, nunca por status (§5.5.4) -- mesmo raciocínio de
-// features/auth/error-messages.ts. CATALOG_UNAVAILABLE e CATALOG_RATE_LIMITED levam
-// a mesma mensagem: o plano não pede diferenciar (§ etapa 04, passo 1), e nenhum dos
-// dois tem ação diferente para o organizador além de tentar de novo mais tarde.
 export function catalogErrorMessage(err: unknown): string {
   if (err instanceof ApiError) {
     if (err.code === 'CATALOG_UNAVAILABLE' || err.code === 'CATALOG_RATE_LIMITED') {

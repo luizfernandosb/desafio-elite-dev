@@ -5,7 +5,7 @@ import { CatalogUnavailableError, type CatalogItem } from './catalog.types'
 import type { CatalogRepository } from './catalog.repository'
 import type { CatalogProvider, CatalogSearchResult } from './providers/catalog-provider'
 
-const SEARCH_PAGE_SIZE = 20 // fixo pelo TMDb -- não é configurável pelo cliente
+const SEARCH_PAGE_SIZE = 20
 const SEARCH_TTL_MS = 10 * 60 * 1000
 const DETAIL_TTL_MS = 60 * 60 * 1000
 
@@ -22,9 +22,6 @@ export class CatalogService {
   ) {}
 
   async search(query: string, page: number, log: Logger): Promise<CatalogSearchResponse> {
-    // sufixo de idioma na chave -- o provider passou a pedir pt-BR ao TMDb; sem isto,
-    // uma linha de cache gravada em en-US (antes desta mudança) seria servida como
-    // "fresca" e a busca voltaria a mostrar sinopse em inglês até o TTL vencer
     const cacheKey = `search:${query.trim().toLowerCase()}:${page}:pt-BR`
 
     const fresh = await this.repo.findFresh(prisma, this.provider.source, cacheKey)
@@ -55,7 +52,7 @@ export class CatalogService {
   }
 
   async getById(externalId: string, log: Logger): Promise<CatalogDetailResponse> {
-    const cacheKey = `movie:${externalId}:pt-BR` // mesmo raciocínio do cacheKey de search()
+    const cacheKey = `movie:${externalId}:pt-BR`
 
     const fresh = await this.repo.findFresh(prisma, this.provider.source, cacheKey)
     if (fresh) {
@@ -87,8 +84,6 @@ export class CatalogService {
     return paginate(result.items, result.total, { page, limit: SEARCH_PAGE_SIZE })
   }
 
-  // 401/403 do provedor é chave errada, problema nosso -- merece `error`, não o `warn`
-  // genérico que o errorHandler dá a todo AppError de negócio (§4.3, §5.5.7)
   private logIfMisconfigured(err: unknown, log: Logger): void {
     if (err instanceof CatalogUnavailableError && err.statusHint === 500) {
       log.error({ msg: 'catalog provider misconfigured -- check API credentials', err })

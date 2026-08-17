@@ -10,10 +10,6 @@ import { ValidationResultScreen } from '../components/ValidationResultScreen'
 import { useGateValidation } from '../useGateValidation'
 import styles from './PortariaPage.module.css'
 
-// Tela cheia, sem <Layout> (§ etapa 10, decisão de rota em app/router.tsx) -- a
-// única saída desta tela é "Sair" (logout): a portaria de fato não navega para
-// outro lugar durante o turno, mas o operador ainda precisa de uma forma de encerrar
-// a sessão no fim do plantão.
 export default function PortariaPage() {
   const { logout } = useAuth()
   const [eventId, setEventId] = useState<string | null>(null)
@@ -40,10 +36,6 @@ export default function PortariaPage() {
         <div className={styles.body}>
           <GateStatsPanel eventId={eventId} />
 
-          {/* Boundary por seção (§ etapa 11) -- câmera é a parte mais instável desta
-              tela (device API, lib de terceiro); um erro de render aqui nunca deve
-              tirar a digitação manual do ar -- "a portaria nunca para por causa da
-              câmera" (§ etapa 10) vale para erro de render, não só HTTPS/permissão. */}
           <ErrorBoundary>
             <GateScanner paused={busy} onScan={submit} />
           </ErrorBoundary>

@@ -71,7 +71,7 @@ describe('TmdbProvider.search', () => {
     const promise = provider.search('qualquer', 1)
     await expect(promise).rejects.toThrow(CatalogUnavailableError)
     await expect(promise).rejects.toMatchObject({ statusHint: 503 })
-    expect(calls).toBe(2) // 1 tentativa + 1 retry
+    expect(calls).toBe(2)
   })
 
   it('401/403 do TMDb vira CatalogUnavailableError 500 -- é chave errada, problema nosso', async () => {

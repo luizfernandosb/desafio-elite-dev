@@ -43,8 +43,6 @@ function makeMockSeatRepo(count = 2): SeatRepository {
 
 const log = { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() } as unknown as Logger
 
-// isUniqueViolation checa `instanceof Prisma.PrismaClientKnownRequestError` -- simula
-// isso sem precisar do construtor real (que exige argumentos internos do engine)
 function p2002() {
   const err = new Error('unique violation') as Error & { code: string }
   err.code = 'P2002'
@@ -75,7 +73,7 @@ describe('SeatHoldService.hold', () => {
       makeMockHoldRepo(),
       makeMockSeatStateRepo(),
       makeMockEventsRepo(),
-      makeMockSeatRepo(1), // só 1 de 2 pertence
+      makeMockSeatRepo(1),
     )
 
     await expect(service.hold('user-1', 'event-1', seats, log)).rejects.toThrow(AppError)
@@ -126,7 +124,7 @@ describe('SeatHoldService.hold', () => {
     expect(error).toBeInstanceOf(ConflictError)
     expect(error.code).toBe('SEAT_TAKEN')
     expect(error.details).toEqual({ takenSeatIds: ['seat-1'] })
-    expect(holdRepo.releaseExpiredAmong).toHaveBeenCalled() // tentou a liberação preguiçosa
+    expect(holdRepo.releaseExpiredAmong).toHaveBeenCalled()
   })
 
   it('liberação preguiçosa: se a segunda tentativa funciona, devolve sucesso sem propagar o erro', async () => {

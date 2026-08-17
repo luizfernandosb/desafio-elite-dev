@@ -16,19 +16,13 @@ export class ImageService {
     if (!event) throw new NotFoundError('Evento')
     if (event.organizerId !== userId) throw new ForbiddenError()
 
-    // magic bytes, não a extensão do nome nem o Content-Type do multipart -- os dois
-    // são controlados por quem envia (§5.3.4). Rejeição não detalha o motivo.
     const mime = await detectImageMime(buffer)
     if (!mime) throw new AppError('INVALID_IMAGE', 'Arquivo de imagem inválido', 400)
 
     const { url, key } = await this.storage.upload({ buffer, mimeType: mime, folder: `events/${eventId}` })
 
-    // I/O externo (upload) já terminou antes de tocar o banco -- transação curta,
-    // só a escrita local (§5.5.3)
     const updated = await this.repo.update(prisma, eventId, { imageUrl: url, customImageKey: key })
 
-    // imagem anterior removida DEPOIS do commit -- órfão em bucket é desperdício,
-    // referência quebrada (removendo antes e a escrita no banco falhando) é bug visível
     if (event.customImageKey) {
       this.storage
         .remove(event.customImageKey)
@@ -44,9 +38,8 @@ export class ImageService {
     if (!event) throw new NotFoundError('Evento')
     if (event.organizerId !== userId) throw new ForbiddenError()
 
-    if (!event.customImageKey) return event // idempotente -- já está no pôster do catálogo
+    if (!event.customImageKey) return event
 
-    // nunca deixa o evento sem imagem -- volta para o snapshot do catálogo (§5.3.4)
     const updated = await this.repo.update(prisma, eventId, {
       imageUrl: event.catalogImageUrl,
       customImageKey: null,

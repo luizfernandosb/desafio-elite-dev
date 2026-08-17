@@ -73,8 +73,6 @@
   border-radius: var(--radius-sm);
 }
 
-/* QR nunca some quando usado -- só esmaece, o selo por cima é que comunica o estado
-   (§ etapa 09: esconder passaria a impressão de erro, não de "já usado") */
 .qrDimmed {
   opacity: 0.25;
 }

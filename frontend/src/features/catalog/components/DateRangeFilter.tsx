@@ -7,9 +7,6 @@ interface DateRangeFilterProps {
   onChange: (range: { from: string; to: string }) => void
 }
 
-// Só intervalo de data -- sem filtro de gênero/preço nesta versão (o volume de
-// sessões do desafio não justifica). Decisão registrada aqui, não um esquecimento:
-// se o catálogo crescer, é o próximo filtro óbvio a adicionar.
 export function DateRangeFilter({ from, to, onChange }: DateRangeFilterProps) {
   return (
     <div className={styles.row}>

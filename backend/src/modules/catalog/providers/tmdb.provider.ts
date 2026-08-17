@@ -9,9 +9,6 @@ const IMAGE_BASE_URL = 'https://image.tmdb.org/t/p/w500'
 const REQUEST_TIMEOUT_MS = 5000
 const RETRY_BACKOFF_MS = 300
 const GENRE_CACHE_TTL_MS = 24 * 60 * 60 * 1000
-// título/sinopse/gêneros localizados quando o TMDb tiver tradução para o filme --
-// sem isto, a API devolve en-US (default) mesmo pra quem só lê PT-BR na tela.
-// TMDb cai de volta pro idioma original quando não existe tradução, nunca erro.
 const TMDB_LANGUAGE = 'pt-BR'
 
 interface TmdbMovieSummary {
@@ -75,10 +72,6 @@ export class TmdbProvider implements CatalogProvider {
     return this.normalizeDetail(movie, ageRating)
   }
 
-  // classificação indicativa não vem em /movie/{id} -- só em /release_dates, por
-  // país. Auxiliar, mesmo raciocínio de `getGenreMap()`: se falhar (rede, país sem
-  // entrada BR, TMDb fora do ar), o evento ainda é criado, só sem classificação --
-  // nunca derruba a criação por causa de um dado secundário.
   private async getBrCertification(id: string): Promise<string | undefined> {
     try {
       const data = await this.request<TmdbReleaseDatesResponse>(`/movie/${id}/release_dates`)
@@ -116,9 +109,6 @@ export class TmdbProvider implements CatalogProvider {
     }
   }
 
-  // genre_ids só vem na busca -- nomes exigem /genre/movie/list, cacheado em memória
-  // por 24h (não na tabela CatalogCache: é auxiliar de normalização, não um item de
-  // catálogo, e não pode exigir banco para o provider ser testável em isolamento)
   private async getGenreMap(): Promise<Map<number, string>> {
     if (this.genreCache && this.genreCache.expiresAt > Date.now()) {
       return this.genreCache.map
@@ -130,7 +120,6 @@ export class TmdbProvider implements CatalogProvider {
       this.genreCache = { map, expiresAt: Date.now() + GENRE_CACHE_TTL_MS }
       return map
     } catch {
-      // lista de gêneros é auxiliar -- a busca não falha por causa dela
       return this.genreCache?.map ?? new Map()
     }
   }
@@ -143,23 +132,18 @@ export class TmdbProvider implements CatalogProvider {
         signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
       })
     } catch {
-      // erro de rede ou timeout -- 1 retry com backoff, nunca mais que isso
       if (attempt === 0) return this.retryAfterBackoff<T>(path, attempt)
       throw new CatalogUnavailableError('Catálogo indisponível', 503)
     }
 
     if (response.ok) return (await response.json()) as T
 
-    // 4xx nunca tenta de novo
     if (response.status === 404) throw new NotFoundError('Filme')
     if (response.status === 429) throw new CatalogRateLimitedError()
     if (response.status === 401 || response.status === 403) {
-      // chave errada é problema nosso, não do usuário -- log.error fica a cargo do
-      // Service, que tem o logger com requestId (§5.5.7)
       throw new CatalogUnavailableError('Catálogo indisponível', 500)
     }
 
-    // 5xx do TMDb -- 1 retry com backoff
     if (response.status >= 500 && attempt === 0) {
       return this.retryAfterBackoff<T>(path, attempt)
     }

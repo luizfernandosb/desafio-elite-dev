@@ -39,11 +39,6 @@
   color: var(--text-secondary);
 }
 
-/* Alvo visual de 28px, menor que --tap-target (§5.1.1) de propósito -- exceção
-   documentada na própria etapa 06: uma sala de 26x40 não cabe na tela com alvo de
-   44px reais, e o gesto aqui é apontar/clicar, não tocar um alvo isolado em
-   movimento. A área de TOQUE ainda chega perto de 44px via `padding` (abaixo) sem
-   distorcer o desenho da sala -- só o miolo visual (bordas, cor) fica em 28px. */
 .seat {
   position: relative;
   display: flex;
@@ -51,7 +46,7 @@
   justify-content: center;
   width: 28px;
   height: 28px;
-  padding: 8px; /* infla a área de toque em telas por ponteiro grosso sem crescer o desenho */
+  padding: 8px;
   background-clip: content-box;
   box-sizing: content-box;
   flex-shrink: 0;
@@ -76,10 +71,6 @@
   cursor: not-allowed;
 }
 
-/* Held/selecionado/vendido nunca dependem só da cor (§5.1.2, daltonismo) -- cada um
-   soma um estilo de borda E um glifo (`::after`) que sobrevive a uma simulação de
-   protanopia/deuteranopia; o número do assento continua visível (identificação
-   precisa por quem enxerga bem), o glifo é o reforço redundante no canto. */
 .held {
   background-color: var(--primary-tint);
   border-style: dashed;
@@ -127,8 +118,6 @@
   color: var(--text-secondary);
 }
 
-/* acessível é um FATO do layout da sala, ortogonal a status/seleção -- marcador
-   próprio (canto oposto ao glifo de estado) pra nunca se sobrepor visualmente */
 .accessible::before {
   content: '';
   position: absolute;

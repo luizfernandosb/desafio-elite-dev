@@ -9,17 +9,12 @@ export async function verifyPassword(hash: string, password: string): Promise<bo
   return argon2.verify(hash, password)
 }
 
-// hash de custo real, mas de senha nenhuma -- só para gastar o mesmo tempo de CPU
-// quando não há hash de usuário contra o qual comparar (§7.1).
 let dummyHashPromise: Promise<string> | undefined
 function getDummyHash(): Promise<string> {
   dummyHashPromise ??= hashPassword(randomBytes(32).toString('hex'))
   return dummyHashPromise
 }
 
-// Custo constante: "e-mail não existe" e "senha errada" precisam do mesmo tempo de
-// resposta, senão o timing vira o oráculo que a mensagem idêntica escondeu. `hash` é
-// `null` tanto para e-mail inexistente quanto para conta só-Google (sem senha).
 export async function verifyPasswordConstantTime(
   hash: string | null,
   password: string,

@@ -4,12 +4,6 @@ import type { CatalogSearchResult, OrganizerEvent } from '../../../features/orga
 
 const API = env.VITE_API_URL
 
-// Lado ORGANIZADOR (criação/edição/publicação, § etapa 04) -- as leituras
-// públicas (`GET /events`, `GET /events/:id`, `GET /events/:id/seatmap`) já têm
-// default em `catalog.ts`; registrar os dois aqui de novo colidiria na mesma rota
-// (MSW usa o primeiro handler que casa). Cada teste de organizador que hoje já
-// sobrescreve `POST /events`/`PATCH /events/:id` continua funcionando igual --
-// `server.use` sempre tem prioridade sobre estes defaults.
 function makeOrganizerEvent(overrides: Partial<OrganizerEvent> = {}): OrganizerEvent {
   return {
     id: 'evt-organizador-1',

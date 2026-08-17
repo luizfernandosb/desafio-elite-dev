@@ -55,8 +55,6 @@ export interface ShareLink {
   expiresAt: Date
 }
 
-// payload minimo viável (§7.7) -- de propósito, sem ticketId, userId, orderId, nome,
-// e-mail ou qualquer outro dado de quem comprou
 export interface SharedTicketView {
   event: Pick<
     EventSummary,
@@ -79,8 +77,6 @@ function hasLiveShareLink(ticket: TicketRecord): boolean {
   )
 }
 
-// nunca inclui codeHash nem qrJti -- são detalhe de implementação, não dado do
-// cliente. `code` (o QR em claro) só existe no retorno de getById, nunca na listagem.
 function toPublicTicket(ticket: TicketRecord): PublicTicket {
   return {
     id: ticket.id,
@@ -103,14 +99,12 @@ export class TicketService {
 
   async getById(id: string, userId: string): Promise<PublicTicket & { code: string }> {
     const ticket = (await this.repo.findOwnedById(prisma, id, userId)) as TicketRecord | null
-    if (!ticket) throw new NotFoundError('Ingresso') // privado -- 403 confirmaria que existe (§7.6)
+    if (!ticket) throw new NotFoundError('Ingresso')
 
     const code = deriveTicketCode({ ticketId: ticket.id, eventId: ticket.eventId, jti: ticket.qrJti })
     return { ...toPublicTicket(ticket), code }
   }
 
-  // idempotente enquanto o token vigente existir (§ etapa 09) -- chamar de novo
-  // devolve o mesmo link, nunca gera um segundo token vivo
   async createShareLink(id: string, userId: string, log: Logger): Promise<ShareLink> {
     const ticket = (await this.repo.findOwnedById(prisma, id, userId)) as TicketRecord | null
     if (!ticket) throw new NotFoundError('Ingresso')
@@ -131,7 +125,6 @@ export class TicketService {
     return { url: buildShareUrl(shareToken), expiresAt: shareExpiresAt }
   }
 
-  // idempotente: revogar um link já revogado (ou nunca criado) não é erro
   async revokeShareLink(id: string, userId: string, log: Logger): Promise<void> {
     const ticket = (await this.repo.findOwnedById(prisma, id, userId)) as TicketRecord | null
     if (!ticket) throw new NotFoundError('Ingresso')

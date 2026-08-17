@@ -35,15 +35,12 @@ describe('Dialog', () => {
     await user.click(screen.getByRole('button', { name: 'Abrir' }))
 
     const dialog = screen.getByRole('dialog')
-    // Radix move o foco para dentro do conteúdo ao abrir
     expect(dialog).toContainElement(document.activeElement as HTMLElement)
 
     await user.tab()
     await user.tab()
     await user.tab()
 
-    // depois de qualquer número de Tabs, o foco continua dentro do dialog -- nunca
-    // escapa para o resto da página atrás dele
     expect(dialog).toContainElement(document.activeElement as HTMLElement)
   })
 })

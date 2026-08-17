@@ -34,9 +34,6 @@ const GENRE_OPTIONS = [
   { value: 'comedia', label: 'Comédia' },
 ]
 
-// Conferência visual dos tokens e dos 12 componentes base -- substitui Storybook
-// (§ etapa 02, custo alto para o prazo). Só em desenvolvimento: excluída do bundle
-// de produção via `import.meta.env.DEV` em router.tsx, ninguém navega pra cá.
 export default function StyleGuidePage() {
   const [loading, setLoading] = useState(false)
   const { showToast } = useToast()

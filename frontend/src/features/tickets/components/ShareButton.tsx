@@ -5,9 +5,6 @@ import { createShareLink, revokeShareLink, type ShareLink } from '../api'
 import { shareErrorMessage } from '../error-messages'
 import styles from './ShareButton.module.css'
 
-// Só o dia/hora de expiração importa aqui, sem o fuso do evento (§ etapa 09) --
-// diferente de `formatEventDate`, que existe para mostrar a hora da SESSÃO no fuso
-// dela; a validade do link é relevante no fuso de quem está lendo a tela.
 function formatExpiry(iso: string): string {
   return new Intl.DateTimeFormat('pt-BR', { dateStyle: 'long', timeStyle: 'short' }).format(new Date(iso))
 }
@@ -49,9 +46,6 @@ interface ShareButtonProps {
   ticketId: string
 }
 
-// Explica a semântica ANTES do clique, não depois (§ etapa 09, "omissão que parece
-// descuido numa avaliação de UX") -- o aviso aparece nos dois estados (antes e
-// depois de gerar o link), não só quando já existe um link para mostrar.
 export function ShareButton({ ticketId }: ShareButtonProps) {
   const { showToast } = useToast()
   const [shareLink, setShareLink] = useState<ShareLink | null>(null)
@@ -65,8 +59,6 @@ export function ShareButton({ ticketId }: ShareButtonProps) {
     onSuccess: setShareLink,
   })
 
-  // `navigator.share` não existe em todo navegador (desktop, majoritariamente) --
-  // cai para copiar a área de transferência, nunca falha silenciosamente
   async function handleShareOrCopy() {
     if (!shareLink) return
     if (typeof navigator.share === 'function') {
@@ -74,7 +66,6 @@ export function ShareButton({ ticketId }: ShareButtonProps) {
         await navigator.share({ title: 'Ingresso', url: shareLink.url })
         return
       } catch {
-        // usuário cancelou o share nativo -- não é erro, só não faz nada
         return
       }
     }

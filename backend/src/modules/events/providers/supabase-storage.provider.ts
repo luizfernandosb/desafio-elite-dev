@@ -3,19 +3,8 @@ import { env } from '../../../config/env'
 import { buildStorageKey, type AllowedImageMime } from './image-mime'
 import type { StorageProvider } from './storage-provider'
 
-// Banner de evento é conteúdo público -- URL pública evita renovar signed URL a cada
-// item da listagem (§5.3.4). Bucket criado manualmente no painel do Supabase.
 const BUCKET = 'event-images'
 
-// `@supabase/storage-js` isolado, não o `@supabase/supabase-js` completo: só usamos
-// Storage aqui, e o cliente completo inicializa Realtime/Auth/Functions de bootstrap
-// (Realtime exige WebSocket nativo, só disponível a partir do Node 22 -- este processo
-// não precisa de nenhum dos dois). Documentado pelo próprio pacote como o caminho para
-// "bundle-sensitive environments".
-//
-// service_role key só existe aqui, no back-end -- ela ignora RLS e equivale a acesso
-// total ao banco (§5.3.5). Upload direto do browser exigiria expor esta chave ou emitir
-// URL assinada; nenhuma das duas se paga para um banner público.
 const client = new StorageClient(`${env.SUPABASE_URL}/storage/v1`, {
   apikey: env.SUPABASE_SERVICE_ROLE,
   Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE}`,

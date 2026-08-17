@@ -11,7 +11,6 @@ import type { EventsRepository } from './events.repository'
 import { computeEffectivePriceInCents } from './pricing'
 import { buildSeatmap, generateSeats, type Seatmap } from './seatmap.service'
 
-// campos que alteram o contrato de compra -- bloqueados por PATCH depois da primeira venda
 const SALE_LOCKED_FIELDS = [
   'startsAt',
   'endsAt',
@@ -49,7 +48,7 @@ export class EventsService {
         subtitle: catalogItem.subtitle,
         synopsis: catalogItem.synopsis,
         imageUrl: catalogItem.imageUrl,
-        catalogImageUrl: catalogItem.imageUrl, // snapshot imutável -- fallback do DELETE /events/:id/image (etapa 12)
+        catalogImageUrl: catalogItem.imageUrl,
         runtimeMinutes: catalogItem.runtimeMinutes,
         genres: catalogItem.genres,
         ageRating: catalogItem.ageRating,
@@ -99,7 +98,6 @@ export class EventsService {
     }
 
     if (query.status !== EventStatus.PUBLISHED) {
-      // rascunho/cancelado só é visível para o próprio organizador -- nunca vaza para outro
       if (requester?.role !== 'ORGANIZER') throw new ForbiddenError()
       where.organizerId = requester.id
     }
@@ -142,8 +140,6 @@ export class EventsService {
 
     const nextRoomType = dto.roomType ?? event.roomType
     if (dto.roomType !== undefined && dto.roomType !== RoomType.VIP && dto.vipSurchargePercent === undefined) {
-      // só zera quando ESTE patch de fato tira a sala de VIP -- um PATCH que não
-      // toca roomType (ex.: só `synopsis`) não pode ganhar um campo de bônus
       dto.vipSurchargePercent = null
     }
     if (nextRoomType === RoomType.VIP && (dto.vipSurchargePercent ?? event.vipSurchargePercent) == null) {
@@ -205,8 +201,6 @@ export class EventsService {
     return buildSeatmap(event, seats)
   }
 
-  // rascunho e cancelado só existem para o próprio organizador -- para qualquer outro
-  // requisitante (inclusive anônimo) é como se o evento não existisse (§7.5)
   private isVisibleTo(event: { status: EventStatus; organizerId: string }, requester?: Requester): boolean {
     if (event.status === EventStatus.PUBLISHED) return true
     return requester?.id === event.organizerId
@@ -216,8 +210,6 @@ export class EventsService {
     if (event.organizerId !== userId) throw new ForbiddenError()
   }
 
-  // preço de verdade (base + adicional de VIP, se houver) anexado à resposta -- o
-  // cliente da API nunca reimplementa essa conta (pricing.ts)
   private withEffectivePrice<
     T extends { priceInCents: number; roomType: RoomType; vipSurchargePercent: number | null },
   >(event: T): T & { effectivePriceInCents: number } {

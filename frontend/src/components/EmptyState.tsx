@@ -8,8 +8,6 @@ interface EmptyStateProps {
   action?: ReactNode
 }
 
-// `role="status"` -- útil quando o vazio aparece depois de uma ação (filtro sem
-// resultado, lista que zerou), para o leitor de tela anunciar a mudança sem alarme.
 export function EmptyState({ icon, title, description, action }: EmptyStateProps) {
   return (
     <div className={styles.container} role="status">

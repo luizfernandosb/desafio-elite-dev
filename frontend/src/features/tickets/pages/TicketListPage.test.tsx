@@ -86,7 +86,7 @@ describe('TicketListPage', () => {
     renderPage()
 
     expect(await screen.findByText('Meia-entrada')).toBeInTheDocument()
-    expect(screen.getAllByText('Meia-entrada')).toHaveLength(1) // só o card do ingresso HALF
+    expect(screen.getAllByText('Meia-entrada')).toHaveLength(1)
   })
 
   it('sem ingressos -- vazio com CTA para o catálogo', async () => {
@@ -107,7 +107,6 @@ describe('TicketListPage', () => {
 
     renderPage()
 
-    // 500 aciona 1 retry (query-client.ts) antes do erro aparecer
     expect(await screen.findByText('Erro interno', {}, { timeout: 3000 })).toBeInTheDocument()
   })
 

@@ -10,10 +10,6 @@ import { server } from '../../../test/msw/server'
 import { renderWithProviders } from '../../../test/render'
 import CheckoutPage from './CheckoutPage'
 
-// Sem isto, StripeCardForm (importado estaticamente por CheckoutPage, mesmo quando
-// o caminho Stripe nunca é exercitado) tentaria carregar o script real da Stripe em
-// jsdom. `mockConfirmPayment` -- prefixo `mock` de propósito: é a exceção que o
-// Vitest permite referenciar dentro de uma factory de `vi.mock`, apesar do hoisting.
 const mockConfirmPayment = vi.fn().mockResolvedValue({})
 vi.mock('@stripe/stripe-js', () => ({ loadStripe: () => Promise.resolve(null) }))
 vi.mock('@stripe/react-stripe-js', () => ({
@@ -175,7 +171,6 @@ describe('CheckoutPage -- flag de teste do checkout (VITE_ALLOW_PAYMENT_TEST_TOG
 
     renderAt({ pathname: '/checkout/novo', state: { eventId: 'evt-1', holdIds: ['hold-1', 'hold-2'] } })
 
-    // telinha de escolha aparece ANTES da order existir -- nenhuma chamada ainda
     expect(await screen.findByText('Método de pagamento (teste)')).toBeInTheDocument()
     expect(receivedBody).toBeNull()
 
@@ -185,7 +180,6 @@ describe('CheckoutPage -- flag de teste do checkout (VITE_ALLOW_PAYMENT_TEST_TOG
 
     expect(await screen.findByTestId('payment-element')).toBeInTheDocument()
     expect(receivedBody).toMatchObject({ paymentMethod: 'STRIPE' })
-    // form fake (Select de aprovar/recusar) não aparece junto do form da Stripe
     expect(screen.queryByLabelText('Resultado do pagamento (simulação)')).not.toBeInTheDocument()
   })
 

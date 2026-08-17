@@ -9,11 +9,6 @@ import { server } from '../../../test/msw/server'
 import { renderWithProviders } from '../../../test/render'
 import SeatSelectionPage from './SeatSelectionPage'
 
-// Mock do cliente Supabase -- os testes desta página não devem depender de rede de
-// verdade (§ etapa 07); `useSeatRealtime`/`usePollingFallback` são testados a fundo
-// em isolamento nos próprios arquivos. Aqui só garantimos que a página monta o canal,
-// mostra "ao vivo" quando conecta, e aplica um patch recebido sem quebrar o resto do
-// fluxo -- `postgresChangesCallback` guardado para os testes disparem um patch à mão.
 let postgresChangesCallback: ((payload: { new: Record<string, unknown> }) => void) | undefined
 vi.mock('../../../lib/supabase', () => ({
   supabase: {
@@ -151,8 +146,6 @@ describe('SeatSelectionPage', () => {
 
     expect(await screen.findByText(/Alguém reservou/)).toBeInTheDocument()
     expect(call).toBe(1)
-    // A1 continua selecionado (não fazia parte de takenSeatIds); a barra ainda mostra
-    // o rótulo e o preço de 1 assento só -- A2 saiu da seleção
     expect(await screen.findByText('A1')).toBeInTheDocument()
     expect(screen.queryByText('A1, A2')).not.toBeInTheDocument()
   })
@@ -190,8 +183,6 @@ describe('SeatSelectionPage', () => {
     }
     await user.click(await screen.findByLabelText('Assento A7, disponível'))
 
-    // aparece duas vezes -- na barra (hint de "atMax") e no toast de aviso; ambos
-    // são o sinal de "sua última ação não teve efeito" (§ etapa 06)
     await vi.waitFor(() => expect(screen.getAllByText('Máximo de 6 assentos por reserva.')).toHaveLength(2))
     expect(holdCalls).toBe(0)
     expect(screen.queryByLabelText('Assento A7, disponível, selecionado')).not.toBeInTheDocument()

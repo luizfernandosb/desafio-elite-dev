@@ -1,9 +1,6 @@
 import { randomUUID } from 'node:crypto'
 import type { CreateIntentInput, PaymentIntentResult, PaymentProvider } from './payment-provider'
 
-// Plano B documentado (§4.5, §12.1) e dublê nos testes -- fluxo ponta a ponta não
-// depende de rede nem de credenciais reais do Stripe. Idempotente do mesmo jeito que o
-// Stripe real: a mesma `idempotencyKey` sempre devolve o mesmo intent.
 export class FakePaymentProvider implements PaymentProvider {
   readonly supportsSimulation = true as const
 
@@ -21,7 +18,5 @@ export class FakePaymentProvider implements PaymentProvider {
     return intent
   }
 
-  async refund(_intentId: string, _amountInCents?: number): Promise<void> {
-    // fake -- nada para reembolsar de verdade
-  }
+  async refund(_intentId: string, _amountInCents?: number): Promise<void> {}
 }

@@ -11,8 +11,6 @@ import CheckoutReturnPage from './CheckoutReturnPage'
 
 const API = env.VITE_API_URL
 
-// Polling é de 1s x até 3 tentativas -- os testes que dependem disso precisam de
-// mais tempo que o default do Vitest/findBy*.
 const POLLING_TEST_TIMEOUT = 8000
 
 function makeOrder(overrides: Record<string, unknown> = {}) {

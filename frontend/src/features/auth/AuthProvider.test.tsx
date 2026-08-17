@@ -24,10 +24,6 @@ function Probe() {
   )
 }
 
-// `renderWithProviders` já envolve numa sessão stub (AuthContext.Provider,
-// anônima) -- o AuthProvider REAL renderizado aqui dentro é o provider mais
-// PRÓXIMO, então seu valor de verdade sobrepõe o stub para `<Probe>` sem precisar
-// de um modo especial no helper de teste.
 function renderAuthProvider() {
   return renderWithProviders(
     <AuthProvider>

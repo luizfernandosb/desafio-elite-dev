@@ -42,8 +42,6 @@
   font-weight: 600;
   letter-spacing: -0.015em;
   line-height: 1.35;
-  /* nome longo de sessão não empurra o layout -- trunca em 2 linhas, o resto
-     continua acessível no `aria-label` do link (título completo via texto do nó) */
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;

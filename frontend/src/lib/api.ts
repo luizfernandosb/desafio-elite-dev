@@ -1,6 +1,5 @@
 import { env } from './env'
 
-// Contrato de listagem do back-end (§5.6.2) -- nenhuma tela desembrulha `meta` à mão.
 export interface Paginated<T> {
   data: T[]
   meta: {
@@ -13,23 +12,12 @@ export interface Paginated<T> {
   }
 }
 
-// Toda resposta de erro do back é `{ code, message }` (§5.5.4). A UI trata por `code`,
-// nunca por `status` nem pelo texto de `message` -- renomear uma mensagem no back-end
-// não pode quebrar um `if` no front.
 export class ApiError extends Error {
   readonly code: string
   readonly status: number
   readonly requestId?: string
-  // campos extra que alguns erros carregam, espalhados no corpo (não aninhados sob
-  // `details`) -- espelha `AppError.details` do back (`shared/errors.ts`), que o
-  // `errorHandler` serializa como `{ code, message, ...err.details }`. Ex.:
-  // `takenSeatIds` em `SEAT_TAKEN` (etapa 06). `code`/`message`/`requestId` nunca
-  // aparecem aqui, já viraram campos próprios da classe.
   readonly details?: Record<string, unknown>
 
-  // sem parameter properties (`public readonly code: string` no construtor) --
-  // `erasableSyntaxOnly` do tsconfig proíbe qualquer sintaxe de classe que precise
-  // gerar código além de apagar tipos, e parameter properties geram `this.code = code`
   constructor(
     code: string,
     message: string,
@@ -47,8 +35,6 @@ export class ApiError extends Error {
 
 const TIMEOUT_MS = 15_000
 
-// Access token em memória, nunca em localStorage (etapa 03 do plano de front) --
-// XSS que rouba localStorage rouba a sessão inteira; em memória, sobrevive só à aba.
 let accessToken: string | null = null
 
 export function setAccessToken(token: string | null): void {
@@ -62,9 +48,6 @@ export function getAccessToken(): string | null {
 type SessionExpiredListener = () => void
 let sessionExpiredListeners: SessionExpiredListener[] = []
 
-// api.ts não conhece o router -- quem quiser redirecionar para /entrar quando a
-// sessão cair (dois 401 seguidos) se inscreve aqui. Mantém o cliente HTTP livre de
-// qualquer dependência de UI.
 export function onSessionExpired(listener: SessionExpiredListener): () => void {
   sessionExpiredListeners.push(listener)
   return () => {
@@ -77,12 +60,6 @@ function notifySessionExpired(): void {
   for (const listener of sessionExpiredListeners) listener()
 }
 
-// Fila de refresh: sem isto, N requisições simultâneas com token expirado disparam N
-// chamadas a /auth/refresh -- e a rotação de refresh token do back-end (etapa 03)
-// invalida a família inteira no segundo uso, deslogando o usuário por causa do próprio
-// mecanismo de segurança. `??=` garante que só a primeira chamada de fato dispara a
-// requisição; as demais recebem a mesma promise em andamento (§ etapa 01, "bug mais
-// provável desta etapa").
 let refreshPromise: Promise<string | null> | null = null
 
 async function refreshAccessToken(): Promise<string | null> {
@@ -90,7 +67,7 @@ async function refreshAccessToken(): Promise<string | null> {
     try {
       const res = await fetch(`${env.VITE_API_URL}/auth/refresh`, {
         method: 'POST',
-        credentials: 'include', // o refresh é cookie httpOnly, não Authorization
+        credentials: 'include',
         signal: AbortSignal.timeout(TIMEOUT_MS),
       })
       if (!res.ok) return null
@@ -110,8 +87,6 @@ async function refreshAccessToken(): Promise<string | null> {
 
 interface RequestOptions extends Omit<RequestInit, 'body'> {
   body?: unknown
-  // rotas de auth (login, register, google, refresh) não carregam Authorization e um
-  // 401 delas é credencial errada, não sessão expirada -- não tentam refresh
   skipAuth?: boolean
 }
 
@@ -146,9 +121,6 @@ async function parseErrorBody(res: Response): Promise<ParsedError> {
 
 async function rawFetch(path: string, options: RequestOptions): Promise<Response> {
   const headers = new Headers(options.headers)
-  // FormData (upload de imagem, etapa 04) não passa por JSON.stringify nem ganha
-  // Content-Type manual -- o browser define `multipart/form-data; boundary=...`
-  // sozinho; sobrescrever aqui quebraria o parsing do multer no back-end.
   const isFormData = options.body instanceof FormData
   if (options.body !== undefined && !isFormData) headers.set('Content-Type', 'application/json')
   if (!options.skipAuth && accessToken) headers.set('Authorization', `Bearer ${accessToken}`)
@@ -162,12 +134,6 @@ async function rawFetch(path: string, options: RequestOptions): Promise<Response
   })
 }
 
-// `fetch()` em si (rede fora do ar, DNS, CORS) rejeita com `TypeError`; o timeout de
-// 15s (`AbortSignal.timeout`) rejeita com `DOMException` nomeada `TimeoutError` --
-// nenhum dos dois é o `{ code, message }` do back, então nenhum vira `ApiError`
-// sozinho. Sem isto, toda tela teria que checar `instanceof ApiError` E os dois
-// casos crus separadamente (§ etapa 11, "sem resposta -> Sem conexão"). `status: 0`
-// marca os dois como "sem resposta HTTP de verdade", nunca confundível com um 4xx/5xx.
 export function classifyFetchFailure(err: unknown): ApiError {
   if (err instanceof DOMException && err.name === 'TimeoutError') {
     return new ApiError('TIMEOUT', 'A operação demorou mais que o esperado.', 0)
@@ -188,8 +154,6 @@ async function apiFetch<T>(path: string, options: RequestOptions, isRetry = fals
       const newToken = await refreshAccessToken()
       if (newToken) return apiFetch<T>(path, options, true)
     }
-    // segundo 401 seguido (ou refresh que não devolveu token novo): a sessão de fato
-    // acabou, não é mais um problema de token momentaneamente velho
     notifySessionExpired()
     const error = await parseErrorBody(res)
     throw new ApiError(error.code, error.message, res.status, error.requestId, error.details)

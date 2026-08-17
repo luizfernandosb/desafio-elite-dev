@@ -9,8 +9,6 @@ interface PaginationProps {
   onPageChange: (page: number) => void
 }
 
-// Só anterior/próxima -- o contrato `{ data, meta }` (§5.6.2) já resolve `hasNext`/
-// `hasPrev` no servidor; nenhuma tela recalcula isso a partir de `total`/`limit`.
 export function Pagination({ page, totalPages, hasPrev, hasNext, onPageChange }: PaginationProps) {
   if (totalPages <= 1) return null
 

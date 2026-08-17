@@ -1,5 +1,3 @@
-// Dinheiro é sempre um inteiro em centavos -- nunca float. §4.6.1
-
 export function isValidCents(value: number): boolean {
   return Number.isInteger(value) && value >= 0
 }

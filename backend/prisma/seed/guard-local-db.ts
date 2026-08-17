@@ -1,6 +1,3 @@
-// Guard de cinco linhas (etapa 13): `prisma migrate reset` derruba os schemas
-// gerenciados do Supabase (`auth`, `storage`, `realtime`) -- só é seguro contra o
-// Postgres local. Roda antes do reset em `npm run seed:reset`.
 import 'dotenv/config'
 
 const url = process.env.DIRECT_URL ?? process.env.DATABASE_URL ?? ''

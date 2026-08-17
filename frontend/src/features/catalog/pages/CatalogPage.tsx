@@ -10,19 +10,10 @@ import { catalogKeys, listPublicEvents } from '../api'
 import { groupEventsByMovie } from '../groupByMovie'
 import styles from './CatalogPage.module.css'
 
-// "Em cartaz" (hero + carrossel) continua sendo só a primeira página da listagem
-// pública sem filtro algum, sempre a mesma para qualquer visitante -- 100 é o teto
-// de `limit` que o back aceita (shared/pagination.ts). Abaixo dela mora "Todas as
-// sessões": busca + filtro de data + grade paginada, únicos consumidores de `q`/
-// `from`/`to` (o back já validava esses parâmetros; só a UI tinha sido removida).
 const EVENTS_LIMIT = 100
 const HERO_SLIDE_COUNT = 5
 const ALL_SESSIONS_ID = 'todas-sessoes'
 
-// Estado de busca/filtro inteiro na URL (não só `?q=`) -- um link colado ou um F5
-// reproduz exatamente a mesma tela. Filtrar usa `replace: true` -- não deveria
-// empilhar uma entrada de histórico por tecla/clique; paginar usa o push normal,
-// então o botão "voltar" do navegador desfolha página a página, não filtro a filtro.
 export default function CatalogPage() {
   const [searchParams, setSearchParams] = useSearchParams()
   const q = searchParams.get('q') ?? ''
@@ -47,7 +38,7 @@ export default function CatalogPage() {
         const params = new URLSearchParams(prev)
         if (value) params.set('q', value)
         else params.delete('q')
-        params.delete('page') // busca nova -- volta para a primeira página
+        params.delete('page')
         return params
       },
       { replace: true },
@@ -85,16 +76,10 @@ export default function CatalogPage() {
     document.getElementById(ALL_SESSIONS_ID)?.scrollIntoView({ behavior: 'smooth' })
   }
 
-  // Um filme com várias sessões (horário/sala/formato diferentes) aparece UMA vez
-  // aqui, nunca um card/pôster repetido por sessão -- diferenças entre sessões
-  // continuam visíveis ao entrar no filme (`EventDetailPage`).
   const movies = events ? groupEventsByMovie(events.data).map((group) => group.primary) : []
 
   return (
     <div className={styles.page}>
-      {/* página precisa de um h1 (§ etapa 12, heading-order) -- visualmente oculto
-          porque o hero abaixo já cumpre o papel de "abertura" da tela; o texto
-          continua no DOM para leitor de tela e outras tecnologias assistivas. */}
       <h1 className="sr-only">Catálogo</h1>
 
       {isLoading && (

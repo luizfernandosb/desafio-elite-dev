@@ -11,10 +11,6 @@ interface DialogProps {
   onOpenChange?: (open: boolean) => void
 }
 
-// Foco preso, Esc fecha, foco volta ao gatilho ao fechar -- comportamento do Radix,
-// não reimplementado aqui (§ etapa 02, "Radix apenas como primitiva sem estilo").
-// A aparência (overlay, cartão, transição) é toda nossa, sobre os tokens do resto do
-// sistema; --transition-slow (250ms) é usado só aqui, não no resto dos componentes.
 export function Dialog({ trigger, title, description, children, open, onOpenChange }: DialogProps) {
   return (
     <RadixDialog.Root open={open} onOpenChange={onOpenChange}>

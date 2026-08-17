@@ -21,7 +21,7 @@ describe('LocationsService.getStates', () => {
     const service = new LocationsService()
     await service.getStates()
 
-    server.resetHandlers() // sem handler == qualquer chamada nova quebra sob 'error'
+    server.resetHandlers()
     await expect(service.getStates()).resolves.toEqual(
       IBGE_STATES.map((state) => ({ id: state.id, sigla: state.sigla, nome: state.nome })),
     )
@@ -40,7 +40,7 @@ describe('LocationsService.getStates', () => {
     const promise = service.getStates()
     await expect(promise).rejects.toThrow(LocationsUnavailableError)
     await expect(promise).rejects.toMatchObject({ statusHint: 503, code: 'LOCATIONS_UNAVAILABLE' })
-    expect(calls).toBe(2) // 1 tentativa + 1 retry
+    expect(calls).toBe(2)
   })
 
   it('cache existente é servido mesmo se a chamada seguinte falhar', async () => {
@@ -51,7 +51,6 @@ describe('LocationsService.getStates', () => {
       http.get('https://servicodados.ibge.gov.br/api/v1/localidades/estados', () => HttpResponse.error()),
     )
 
-    // cache ainda "fresco" (TTL de 24h) -- nem chega a tentar a rede de novo
     await expect(service.getStates()).resolves.toEqual(
       IBGE_STATES.map((state) => ({ id: state.id, sigla: state.sigla, nome: state.nome })),
     )
@@ -84,8 +83,8 @@ describe('LocationsService.getCities', () => {
 
     const service = new LocationsService()
     await service.getCities('MG')
-    await service.getCities('MG') // cache -- não soma chamada
-    await service.getCities('SP') // UF diferente -- soma chamada
+    await service.getCities('MG')
+    await service.getCities('SP')
 
     expect(calls).toBe(2)
   })

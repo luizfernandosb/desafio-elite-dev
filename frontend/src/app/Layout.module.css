@@ -1,10 +1,3 @@
-/* Empilhado (sidebar como bloco no topo, largura cheia) até o breakpoint de
-   tablet/desktop, onde vira coluna fixa à esquerda -- a sidebar nunca sai do DOM
-   nem recebe `display: none` em nenhuma largura (só reflui via flex-direction):
-   testes de acessibilidade e os e2e (§ etapa 13) buscam os links de navegação por
-   role/nome, e jsdom não avalia `@media (min-width)` de forma confiável -- esconder
-   a sidebar por media query deixaria esses elementos fora da árvore de
-   acessibilidade nos testes mesmo em telas largas. */
 .shell {
   display: flex;
   flex-direction: column;

@@ -50,9 +50,9 @@ describe('usePollingFallback', () => {
     expect(spy).toHaveBeenCalledTimes(1)
 
     rerender({ status: 'SUBSCRIBED' })
-    expect(spy).toHaveBeenCalledTimes(2) // revalidação completa ao reconectar
+    expect(spy).toHaveBeenCalledTimes(2)
 
     vi.advanceTimersByTime(20000)
-    expect(spy).toHaveBeenCalledTimes(2) // não volta a fazer polling depois de estável
+    expect(spy).toHaveBeenCalledTimes(2)
   })
 })

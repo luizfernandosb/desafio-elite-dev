@@ -7,8 +7,6 @@ interface TextareaProps extends ComponentProps<'textarea'> {
   hint?: string
 }
 
-// `ref` explícito -- mesmo motivo do Input.tsx (React Hook Form precisa do elemento
-// real por trás do componente).
 export function Textarea({ label, error, hint, id, className, ref, ...rest }: TextareaProps) {
   const generatedId = useId()
   const textareaId = id ?? generatedId

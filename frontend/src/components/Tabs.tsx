@@ -11,7 +11,7 @@ interface TabItem {
 interface TabsProps {
   items: TabItem[]
   defaultValue?: string
-  label: string // aria-label da lista de abas -- não visível, identifica o grupo
+  label: string
 }
 
 export function Tabs({ items, defaultValue, label }: TabsProps) {

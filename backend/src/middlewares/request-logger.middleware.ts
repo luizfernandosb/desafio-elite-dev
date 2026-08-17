@@ -4,7 +4,6 @@ import type { Logger } from 'pino'
 import { logger } from '../lib/logger'
 
 declare global {
-  // augmentação de tipos do Express exige `namespace` -- não há alternativa em ES modules
   // eslint-disable-next-line @typescript-eslint/no-namespace
   namespace Express {
     interface Request {
@@ -14,9 +13,6 @@ declare global {
   }
 }
 
-// o path da rota pública de compartilhamento inclui o próprio shareToken
-// (/api/v1/share/<token>) -- `url: req.url` sem isso vazaria a credencial em toda
-// linha de log da requisição, mesmo com `*.shareToken` no redact (etapa 09)
 const SHARE_PATH_RE = /^(\/api\/v1\/share\/)[^/?]+/
 
 export function maskUrl(url: string): string {

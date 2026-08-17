@@ -18,9 +18,6 @@ interface SelectProps {
   disabled?: boolean
 }
 
-// Radix entra sem estilo -- o comportamento (listbox por teclado, foco preso,
-// posicionamento) é dele; a aparência é nossa, sobre os mesmos tokens do Input
-// (§ etapa 02, "Radix apenas como primitiva sem estilo").
 export function Select({
   label,
   options,

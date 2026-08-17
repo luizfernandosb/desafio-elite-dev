@@ -73,7 +73,7 @@ describe('GateService.validate -- ordem de checagem produz o result certo', () =
 
     const result = await service.validate('gate-1', { code: validCode(), eventId: EVENT_ID }, log)
     expect(result.result).toBe(ValidationResult.WRONG_EVENT)
-    expect(result.ticket).toBeNull() // só presente em VALID/ALREADY_USED
+    expect(result.ticket).toBeNull()
     expect(repo.markUsed).not.toHaveBeenCalled()
   })
 

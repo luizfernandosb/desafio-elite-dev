@@ -10,8 +10,6 @@ interface StatePickerProps {
   disabled?: boolean
 }
 
-// Estados do IBGE não mudam durante uma sessão de uso -- `staleTime: Infinity` evita
-// refetch a cada montagem (VenueStep e EventEditForm montam o picker separadamente).
 export function StatePicker({ value, onChange, error, disabled }: StatePickerProps) {
   const { showToast } = useToast()
   const { data, isError } = useQuery({

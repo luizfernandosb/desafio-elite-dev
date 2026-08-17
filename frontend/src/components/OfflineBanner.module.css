@@ -6,9 +6,6 @@
   z-index: 200;
   padding: var(--space-2) var(--space-4);
   background: var(--warning);
-  /* texto escuro fixo, não `--text-primary` -- em dark mode esse token vira quase
-     branco, que sobre --warning (laranja) cai pra ~1.8:1 de contraste (falha WCAG).
-     Preto fixo mede >8:1 nos dois temas. */
   color: #14161a;
   text-align: center;
   font-weight: 500;

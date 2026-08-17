@@ -3,7 +3,7 @@ import type { PublicEvent } from './api'
 import { buildShowtimesByDay, defaultDayTabKey } from './showtimes'
 
 const TIMEZONE = 'America/Sao_Paulo'
-const NOW = new Date('2026-08-13T15:00:00Z') // 12:00 em São Paulo (UTC-3)
+const NOW = new Date('2026-08-13T15:00:00Z')
 
 function makeSession(overrides: Partial<PublicEvent> = {}): PublicEvent {
   return {
@@ -18,7 +18,7 @@ function makeSession(overrides: Partial<PublicEvent> = {}): PublicEvent {
     audio: 'DUBBED',
     roomType: 'STANDARD',
     status: 'PUBLISHED',
-    startsAt: '2026-08-14T21:00:00Z', // 18:00 em São Paulo, dia 14 (amanhã)
+    startsAt: '2026-08-14T21:00:00Z',
     timezone: TIMEZONE,
     priceInCents: 3200,
     effectivePriceInCents: 3200,
@@ -38,7 +38,7 @@ describe('buildShowtimesByDay', () => {
   })
 
   it('sessão passada nunca aparece em nenhuma aba', () => {
-    const past = makeSession({ id: 'evt-past', startsAt: '2026-08-13T10:00:00Z' }) // já passou (12:00 é "agora")
+    const past = makeSession({ id: 'evt-past', startsAt: '2026-08-13T10:00:00Z' })
     const { dayTabs, groupsByDay } = buildShowtimesByDay([past], TIMEZONE, NOW)
 
     expect(dayTabs.map((tab) => tab.key)).toEqual(['2026-08-13'])
@@ -79,7 +79,6 @@ describe('buildShowtimesByDay', () => {
   it('dia sem nenhuma sessão só aparece quando é HOJE -- outro dia vazio nem vira aba', () => {
     const { dayTabs } = buildShowtimesByDay([makeSession({ startsAt: '2026-08-20T21:00:00Z' })], TIMEZONE, NOW)
 
-    // só HOJE e o dia com sessão (20/08) -- nada nos dias vazios no meio
     expect(dayTabs.map((tab) => tab.key)).toEqual(['2026-08-13', '2026-08-20'])
   })
 })

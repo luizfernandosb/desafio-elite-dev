@@ -105,7 +105,7 @@ describe('EventsService.create', () => {
     expect(repo.createSeats).toHaveBeenCalledWith('fake-tx', expect.any(Array))
     expect(repo.createSeatStates).toHaveBeenCalledWith('fake-tx', expect.any(Array))
     const seatsArg = vi.mocked(repo.createSeats).mock.calls[0]?.[1] as unknown[]
-    expect(seatsArg).toHaveLength(96) // 8 x 12
+    expect(seatsArg).toHaveLength(96)
   })
 })
 

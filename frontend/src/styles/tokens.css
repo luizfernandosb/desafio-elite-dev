@@ -1,57 +1,29 @@
-/* Design system TicketDev (etapa 02, §5.1.1). Cada token existe para ser usado --
-   nenhuma tela depois desta etapa inventa cor, espaçamento ou raio; ela referencia
-   uma destas variáveis. Os quatro blocos de cor da portaria (etapa 10) são a única
-   exceção documentada -- vivem no próprio módulo da portaria, não aqui. */
-
 :root {
-  /* ---- Paleta (§5.1.1) ---- */
-  --primary: #0097ff; /* CTA, links, destaque, preço em evidência */
-  --primary-hover: #024ddf; /* hover/active, sombra de foco */
-  --primary-light: #33aaff; /* acento em hover de card, ícone secundário */
-  --primary-dark: #001f6b; /* âncora escura: rodapé, nav em dark mode */
-  /* superfície tintada: badge de gênero, input focado -- valor real definido mais
-     abaixo (aponta pra --primary-tint-dark, já que escuro é o padrão) */
+  --primary: #0097ff;
+  --primary-hover: #024ddf;
+  --primary-light: #33aaff;
+  --primary-dark: #001f6b;
 
-  --success: #1db954; /* válido, pagamento aprovado, ingresso ativo */
-  --danger: #ff3b30; /* inválido, pagamento recusado, assento indisponível */
-  --warning: #ff9500; /* já utilizado, estoque baixo */
-  --neutral-gate: #8e8e93; /* evento errado -- neutro, não é erro do usuário */
+  --success: #1db954;
+  --danger: #ff3b30;
+  --warning: #ff9500;
+  --neutral-gate: #8e8e93;
 
-  /* Par de TEXTO para --success/--warning/--danger sobre o próprio tint (badge de
-     status, etapa 09; pontos do feed da portaria, etapa 10) -- medido na auditoria
-     da etapa 12: o token vívido usado como texto sobre um tint claro de si mesmo
-     mede ~1.9-3:1 (falha WCAG AA de sobra). Mesmo raciocínio de `--primary-hover`
-     sobre `--primary-tint`: tom mais escuro para texto, o vívido continua livre
-     para ícone/fundo/acento. Só o tema claro precisa do tom escurecido -- no
-     escuro (o padrão agora), o token vívido já mede >4.5:1 sobre o próprio tint
-     (fundo escuro atrás dele), então a base aponta pro vívido de novo, não pra uma
-     terceira cor; `[data-theme='light']` mais abaixo é quem ganha o tom escurecido.
-     `contrast.test.ts` mede os dois tons nos dois temas. Exceção: --danger vívido
-     mede só 4.18:1 sobre o tint em cima de --surface-1 escuro (Card) -- abaixo do
-     mínimo, então o escuro ganha um vermelho mais claro só para texto (a marca
-     --danger em si não muda). */
   --success-text: var(--success);
   --warning-text: var(--warning);
   --danger-text: #ff6b60;
   --neutral-gate-text: var(--neutral-gate);
 
-  /* ---- Superfícies e texto (escuro é o padrão do produto -- não é mais "segue o
-     SO", é a identidade visual escolhida; claro vira opt-out explícito via
-     data-theme="light" logo abaixo) ---- */
-  --surface-0: #14161a; /* fundo da página */
-  --surface-1: #1c1f24; /* card, input, assento vendido */
-  --surface-2: #262a31; /* hover de superfície, divisor forte */
+  --surface-0: #14161a;
+  --surface-1: #1c1f24;
+  --surface-2: #262a31;
   --text-primary: #e8eaed;
   --text-secondary: #9aa1ac;
-  --border: #666d7a; /* mesma régua do claro -- 3:1 medido contra --surface-0 escuro */
+  --border: #666d7a;
 
-  /* par escuro do tint -- em dark mode, --primary-tint sólido vira um bloco branco
-     no meio do mapa de assentos (§5.1.1); este é o par usado sob o padrão escuro e
-     sob data-theme="dark" */
   --primary-tint-dark: rgba(0, 151, 255, 0.14);
   --primary-tint: var(--primary-tint-dark);
 
-  /* ---- Espaçamento -- escala de base 4, nenhum valor fora dela ---- */
   --space-1: 4px;
   --space-2: 8px;
   --space-3: 12px;
@@ -61,31 +33,19 @@
   --space-12: 48px;
   --space-16: 64px;
 
-  /* ---- Raio -- um por família de componente ---- */
-  --radius-sm: 6px; /* input, badge, item de lista */
-  --radius-md: 10px; /* card, dialog, botão */
-  --radius-full: 999px; /* pill, avatar, spinner */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-full: 999px;
 
-  /* ---- Sombra -- duas, discretas. O CTA primário não usa nenhuma (§5.1.1). ---- */
   --shadow-sm: 0 1px 2px rgba(20, 22, 26, 0.06);
   --shadow-md: 0 4px 16px rgba(20, 22, 26, 0.1);
 
-  /* ---- Movimento ---- */
   --transition: 150ms ease;
-  --transition-slow: 250ms ease; /* só Dialog (abrir/fechar, overlay) */
+  --transition-slow: 250ms ease;
 
-  /* alvo de toque mínimo (§5.1.1) -- exceção documentada: células do mapa de
-     assentos têm regra própria, decidida na etapa 06 */
   --tap-target: 44px;
 }
 
-/* Alternância manual (claro/escuro/sistema) via `data-theme` no `<html>`, aplicada
-   antes da primeira pintura por um script inline (index.html) -- ver lib/theme.ts.
-   "Sistema" (sem `data-theme`) cai na base acima, que já é escura -- não segue mais
-   `prefers-color-scheme` (produto é dark-first por decisão, não "imita o SO"); quem
-   quer claro escolhe explicitamente `[data-theme='light']` abaixo. `[data-theme='dark']`
-   fica idêntico à base só para a opção "Escuro" do seletor ter um valor próprio,
-   não sombra do SO. */
 :root[data-theme='dark'] {
   --surface-0: #14161a;
   --surface-1: #1c1f24;
@@ -131,9 +91,6 @@ body {
   transition: background var(--transition), color var(--transition);
 }
 
-/* Foco visível em tudo (§5.1.1) -- nunca `outline: none` sem substituto. Definido uma
-   vez, no elemento; componentes que precisam de um raio diferente sobrescrevem
-   `outline-offset`, nunca removem o outline. */
 :focus-visible {
   outline: 2px solid var(--primary-hover);
   outline-offset: 2px;

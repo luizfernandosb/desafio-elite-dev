@@ -28,9 +28,6 @@ export default function EventDetailPage() {
     enabled: Boolean(eventId),
   })
 
-  // Todas as sessões deste MESMO filme (mesmo `source`+`externalId`, § back
-  // `@@index([source, externalId])`) -- é essa lista, não só a sessão que o cliente
-  // abriu, que vira a tela "escolher dia e horário" (ShowtimePicker).
   const listParams = { externalId: event?.externalId, limit: 100 }
   const { data: siblings, isLoading: isLoadingSiblings } = useQuery({
     queryKey: catalogKeys.list(listParams),
@@ -43,21 +40,11 @@ export default function EventDetailPage() {
     : { dayTabs: [], groupsByDay: new Map<string, ShowtimeGroup[]>() }
 
   useEffect(() => {
-    // espera as sessões-irmãs terminarem de carregar antes de escolher a aba padrão
-    // -- calcular antes disso (só com `event`, sem `siblings` ainda) sempre dá
-    // "Hoje" (única aba possível sem sessão nenhuma carregada), e como "Hoje" nunca
-    // deixa de ser uma aba válida (ver `buildShowtimesByDay`), a guarda de "aba
-    // atual ainda existe" abaixo travaria nela pra sempre, mesmo depois de
-    // `siblings` chegar com o dia certo
     if (!event || isLoadingSiblings || dayTabs.length === 0) return
     setSelectedDayKey((prev) => {
       if (prev && dayTabs.some((tab) => tab.key === prev)) return prev
       return defaultDayTabKey(dayTabs, groupsByDay, toEventDateKey(event.startsAt, event.timezone))
     })
-    // `dayTabs`/`groupsByDay` são recalculados a cada render (derivados de `siblings`,
-    // não memoizados) -- comparar por identidade os deixaria fora das deps sem
-    // problema, mas incluir causaria loop; a condição de guarda acima (`prev` já
-    // válido) já evita reprocessar sem necessidade.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [event, isLoadingSiblings, siblings])
 
@@ -71,10 +58,6 @@ export default function EventDetailPage() {
     )
   }
 
-  // `ErrorState` distingue sozinho NOT_FOUND (sem retry, mensagem do back) de um
-  // erro de infraestrutura (rede/500/timeout, com retry) -- §5.5.4/§ etapa 11, em
-  // vez de um `EmptyState` com título fixo "Sessão não encontrada" independente da
-  // causa real.
   if (isError || !event) {
     return (
       <div className={styles.page}>
@@ -84,9 +67,6 @@ export default function EventDetailPage() {
     )
   }
 
-  // sessões upcoming/PUBLISHED já agrupadas (mesmo filtro do ShowtimePicker) -- "a
-  // partir de" reflete o menor preço entre TODOS os horários disponíveis, não só o
-  // da sessão que o link original apontava
   const upcomingSessions = Array.from(groupsByDay.values()).flatMap((groups) =>
     groups.flatMap((group) => group.sessions),
   )
@@ -100,8 +80,6 @@ export default function EventDetailPage() {
 
   function hrefForSession(sessionId: string): string {
     const seatsPath = `/eventos/${sessionId}/assentos`
-    // conta com login só na hora de reservar, nunca para só ver o evento (§ etapa
-    // 05, "decidir aqui, não improvisar")
     return authStatus === 'authenticated' ? seatsPath : `/entrar?redirect=${encodeURIComponent(seatsPath)}`
   }
 

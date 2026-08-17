@@ -66,8 +66,6 @@ describe('EventEditForm', () => {
     await user.click(stateTrigger)
     await user.click(await screen.findByRole('option', { name: 'Rio de Janeiro' }))
 
-    // trocar de estado limpa a cidade e refaz a busca de municípios pela UF nova --
-    // espera o picker sair do estado "buscando" (desabilitado) antes de abrir
     await waitFor(() => expect(screen.getByLabelText('Cidade')).toBeEnabled())
     await user.click(screen.getByLabelText('Cidade'))
     await user.click(await screen.findByRole('option', { name: 'Rio de Janeiro' }))

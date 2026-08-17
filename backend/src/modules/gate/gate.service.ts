@@ -16,7 +16,7 @@ interface GateTicketView {
 
 export interface GateValidationResponse {
   result: ValidationResult
-  ticket: GateTicketView | null // só presente em VALID e ALREADY_USED
+  ticket: GateTicketView | null
   usedAt: Date | null
   validatedBy: string | null
   message: string
@@ -63,15 +63,12 @@ export class GateService {
   async validate(gateUserId: string, dto: ValidateDto, log: Logger): Promise<GateValidationResponse> {
     const codePrefix = dto.code.slice(0, CODE_PREFIX_LENGTH)
 
-    // 1. formato + assinatura (CPU, sem tocar o banco) -- rejeita código forjado sem
-    // gastar uma query (§7.6)
     const decoded = parseAndVerifyTicketCode(dto.code)
     if (!decoded) {
       await this.audit(dto.eventId, null, gateUserId, ValidationResult.INVALID_SIGNATURE, codePrefix, log)
       return this.negativeResult(ValidationResult.INVALID_SIGNATURE)
     }
 
-    // 2. busca por codeHash -- nunca pelo ticketId do payload
     const codeHash = hashTicketCode(dto.code)
     const ticket = await this.repo.findByCodeHash(prisma, codeHash)
     if (!ticket) {
@@ -79,32 +76,24 @@ export class GateService {
       return this.negativeResult(ValidationResult.NOT_FOUND)
     }
 
-    // 3. "evento errado" (FE-6) -- vem do vínculo posto↔evento, não de confiança no
-    // que o cliente enviou: o eventId comparado é o do ticket já achado por codeHash
     if (ticket.eventId !== dto.eventId) {
       await this.audit(dto.eventId, ticket.id, gateUserId, ValidationResult.WRONG_EVENT, codePrefix, log)
       return this.negativeResult(ValidationResult.WRONG_EVENT)
     }
 
-    // 4. cancelado
     if (ticket.status === TicketStatus.CANCELLED) {
       await this.audit(dto.eventId, ticket.id, gateUserId, ValidationResult.CANCELLED_TICKET, codePrefix, log)
       return this.negativeResult(ValidationResult.CANCELLED_TICKET)
     }
 
-    // 5. janela de tempo do evento (§4.6.3)
     const windowFailure = this.checkWindow(ticket.event)
     if (windowFailure) {
       await this.audit(dto.eventId, ticket.id, gateUserId, windowFailure, codePrefix, log)
       return this.negativeResult(windowFailure)
     }
 
-    // 6. único passo que escreve -- UPDATE atômico condicional, sem SELECT antes
-    // decidir o resultado dele (§7.6)
     const used = await this.repo.markUsed(prisma, ticket.id, gateUserId)
     if (!used) {
-      // corrida: outro leitor validou entre o findByCodeHash acima e este UPDATE --
-      // relê para ter usedAt/validatedBy atuais, não os do momento do SELECT
       const current = (await this.repo.findByCodeHash(prisma, codeHash)) ?? ticket
       await this.audit(dto.eventId, ticket.id, gateUserId, ValidationResult.ALREADY_USED, codePrefix, log)
       return {
@@ -149,9 +138,6 @@ export class GateService {
     return { result, ticket: null, usedAt: null, validatedBy: null, message: MESSAGES[result] }
   }
 
-  // fora da transação do UPDATE -- uma falha de log nunca derruba a validação
-  // (portaria com fila não pode parar porque a auditoria falhou). §warn para tudo que
-  // não é VALID: sequência de INVALID_SIGNATURE do mesmo operador é sinal de varredura.
   private async audit(
     eventId: string,
     ticketId: string | null,

@@ -7,9 +7,6 @@ import { isUniqueViolation } from '../../shared/prisma-errors'
 import { SeatHoldRepository } from './seat-hold.repository'
 import { SeatStateRepository } from './seat-state.repository'
 
-// SeatHold.userId tem FK real para User -- diferente do exemplo do spec (§7.10.4), que
-// usa `user-${i}` sem criar a linha. Sem isso todo INSERT falha com FK, não com P2002
-// (mesma lição da etapa 05, ver docs/bugs.md #6).
 async function seedUsers(count: number) {
   const users = await Promise.all(Array.from({ length: count }, () => seedUser()))
   return users.map((u) => u.id)
@@ -88,7 +85,6 @@ describe('anti-double-booking -- assento marcado (§7.10.4, teste nº 1)', () =>
     const [seatA, seatB, seatC] = seats as [typeof seats[0], typeof seats[0], typeof seats[0]]
     const [otherUserId, attemptUserId] = await seedUsers(2)
 
-    // seatB já está tomado por outro usuário
     await prisma.seatHold.create({
       data: {
         eventId: event.id,
@@ -108,7 +104,6 @@ describe('anti-double-booking -- assento marcado (§7.10.4, teste nº 1)', () =>
       ),
     ).rejects.toSatisfy(isUniqueViolation)
 
-    // nenhum hold do attemptUserId foi criado -- nem para seatA nem para seatC, que estavam livres
     const holdsFromAttempt = await prisma.seatHold.count({ where: { userId: attemptUserId! } })
     expect(holdsFromAttempt).toBe(0)
   })
@@ -124,12 +119,10 @@ describe('anti-double-booking -- assento marcado (§7.10.4, teste nº 1)', () =>
         eventId: event.id,
         seatId: seat.id,
         userId: oldUserId!,
-        expiresAt: new Date(Date.now() - 60_000), // já venceu, mas releasedAt ainda é null
+        expiresAt: new Date(Date.now() - 60_000),
       },
     })
 
-    // insert direto falharia (índice não sabe que está vencido) -- é o próprio Service
-    // (não o repository puro) que faz a liberação preguiçosa antes de tentar de novo
     const releasedCount = await repo.releaseExpiredAmong(prisma, [seat.id])
     expect(releasedCount).toBe(1)
 
@@ -173,10 +166,6 @@ describe('seat_state -- escrita dupla é transacional (etapa 11, §4.4.2)', () =
     const seatStateRepo = new SeatStateRepository()
     const [ownerId, attemptId] = await seedUsers(2)
 
-    // assento já tem hold ativo de outro usuário -- a 2ª tentativa colide no índice
-    // parcial único e reverte a transação inteira, inclusive o markHeld que rodou
-    // ANTES da falha (ordem invertida de propósito, para provar a atomicidade e não
-    // só o caminho feliz do Service)
     await prisma.seatHold.create({
       data: { eventId: event.id, seatId: seat.id, userId: ownerId!, expiresAt: new Date(Date.now() + 600_000) },
     })
@@ -198,6 +187,6 @@ describe('seat_state -- escrita dupla é transacional (etapa 11, §4.4.2)', () =
     ).rejects.toSatisfy(isUniqueViolation)
 
     const state = await prisma.seatState.findUniqueOrThrow({ where: { seatId: seat.id } })
-    expect(state.status).toBe('FREE') // markHeld rodou, mas a transação nunca comitou
+    expect(state.status).toBe('FREE')
   })
 })

@@ -12,7 +12,7 @@ interface MovieSearchProps {
 }
 
 const MIN_QUERY_LENGTH = 2
-const DEBOUNCE_MS = 400 // TMDb tem rate limit e o back cacheia por 10 min (§4.3)
+const DEBOUNCE_MS = 400
 
 export function MovieSearch({ selected, onSelect }: MovieSearchProps) {
   const [query, setQuery] = useState('')
@@ -39,8 +39,6 @@ export function MovieSearch({ selected, onSelect }: MovieSearchProps) {
             <div>
               <h3 className={styles.selectedTitle}>{selected.title}</h3>
               {selected.subtitle && <p className={styles.subtitle}>{selected.subtitle}</p>}
-              {/* o back grava snapshot da sessão (§4.3) -- a UI diz isso em uma linha,
-                  não deixa o organizador supor que trocar o filme no TMDb depois muda algo aqui */}
               <p className={styles.note}>Os dados do filme são copiados para a sessão e não mudam depois.</p>
             </div>
           </div>

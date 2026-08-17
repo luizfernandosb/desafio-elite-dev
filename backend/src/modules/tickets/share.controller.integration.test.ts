@@ -7,9 +7,6 @@ import { signAccessToken } from '../auth/token.service'
 import { cleanDatabase } from '../../test/setup'
 import { seedPaidTicket, seedUser } from '../../test/factories'
 
-// alias local -- as chamadas abaixo já dependiam do nome `issueTicket`, e o formato
-// que `seedPaidTicket` devolve ({ event, seat, ticket, token, ... }) já é o que este
-// arquivo sempre esperou
 const issueTicket = seedPaidTicket
 
 describe('POST /api/v1/tickets/:id/share', () => {
@@ -121,8 +118,4 @@ describe('GET /api/v1/share/:shareToken -- página pública', () => {
     expect(res.body.code).toBe('SHARE_NOT_FOUND')
   })
 
-  // a prova de que o shareToken não aparece em log de verdade é unitária, contra a
-  // config real do logger (ver logger.unit.test.ts) -- uma captura de stdout aqui
-  // passaria de forma vazia: resposta 200 loga em nível `info`, filtrado pelo
-  // LOG_LEVEL=warn do .env.test (mesma armadilha de docs/bugs.md).
 })

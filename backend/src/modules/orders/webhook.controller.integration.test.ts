@@ -10,9 +10,6 @@ import { signAccessToken } from '../auth/token.service'
 import { cleanDatabase } from '../../test/setup'
 import { seedEventWithSeats, seedUser } from '../../test/factories'
 
-// `stripe.webhooks.generateTestHeaderString` assina localmente com o mesmo segredo que
-// o servidor valida (STRIPE_WEBHOOK_SECRET) -- testa a verificação de assinatura de
-// verdade, sem precisar de rede nem de credenciais reais do Stripe.
 function buildSignedWebhookRequest(type: string, paymentIntentId: string, eventId = `evt_${randomUUID()}`) {
   const payload = JSON.stringify({
     id: eventId,
@@ -41,8 +38,6 @@ async function createPendingOrder() {
   const hold = await prisma.seatHold.create({
     data: { eventId: event.id, seatId: seats[0]!.id, userId: customer.id, expiresAt: holdExpiresAt },
   })
-  // o endpoint real (POST /holds) marca o SeatState como HELD na mesma transação --
-  // aqui o hold é criado direto no banco, então replica-se o mesmo efeito colateral
   await prisma.seatState.update({
     where: { seatId: seats[0]!.id },
     data: { status: 'HELD', expiresAt: holdExpiresAt },
@@ -103,7 +98,6 @@ describe('POST /api/v1/stripe/webhook', () => {
     const failed = await prisma.order.findUniqueOrThrow({ where: { id: order.id } })
     expect(failed.status).toBe('FAILED')
 
-    // política registrada no README (Anexo B #3): hold continua vivo, assento não volta a FREE
     const hold = await prisma.seatHold.findFirstOrThrow({ where: { seatId: seat.id } })
     expect(hold.releasedAt).toBeNull()
 
@@ -116,7 +110,7 @@ describe('POST /api/v1/stripe/webhook', () => {
     const { payload, signature } = buildSignedWebhookRequest('payment_intent.succeeded', order.stripePaymentIntentId)
 
     const first = await postWebhook(payload, signature)
-    const second = await postWebhook(payload, signature) // mesmo event.id -- entrega duplicada real do Stripe
+    const second = await postWebhook(payload, signature)
 
     expect(first.status).toBe(200)
     expect(second.status).toBe(200)

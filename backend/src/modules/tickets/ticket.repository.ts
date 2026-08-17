@@ -44,13 +44,10 @@ export class TicketRepository {
     return db.ticket.update({ where: { id }, data: { status } })
   }
 
-  // usado para decidir se a Order inteira já pode virar REFUNDED (§ cancelamento) --
-  // só quando não sobra nenhum ticket ACTIVE naquele pedido.
   countActiveByOrderId(db: Db, orderId: string) {
     return db.ticket.count({ where: { orderId, status: TicketStatus.ACTIVE } })
   }
 
-  // dono é sempre resolvido por order.userId -- Ticket não tem coluna própria de userId
   async findManyByUser(db: Db, userId: string, page: number, limit: number) {
     const where = { order: { userId } }
     const [data, total] = await Promise.all([
@@ -81,8 +78,6 @@ export class TicketRepository {
     return db.ticket.update({ where: { id }, data: { shareRevokedAt: new Date() } })
   }
 
-  // rota pública -- só o que a página de compartilhamento precisa (§7.7). Nunca
-  // inclui order/userId: quem comprou não é dado desta rota.
   findByShareToken(db: Db, shareToken: string) {
     return db.ticket.findUnique({ where: { shareToken }, include: TICKET_INCLUDE })
   }

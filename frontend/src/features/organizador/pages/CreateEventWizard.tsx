@@ -18,9 +18,6 @@ import { RoomStep } from './wizard/RoomStep'
 import { VenueStep } from './wizard/VenueStep'
 import styles from './CreateEventWizard.module.css'
 
-// Chave única de rascunho -- um organizador só cria sessões de um lote de cada vez
-// (não há suporte a múltiplos rascunhos concorrentes, e o plano só pede sobreviver a
-// um F5 acidental, não abas paralelas).
 const DRAFT_KEY = 'organizador:novo-evento:rascunho'
 
 interface WizardDraft {
@@ -28,18 +25,12 @@ interface WizardDraft {
   venueName: string
   venueCity: string
   venueState: string
-  // um item por sessão a criar -- mesmo filme/local/sala física/preço-base, horários
-  // diferentes
   slots: SlotValues[]
   timezone: string
-  // '' até o passo 3 ser preenchido pela primeira vez -- os inputs usam
-  // `valueAsNumber` (RoomStep.tsx), então um valor de verdade já chega como number.
   rows: number | ''
   seatsPerRow: number | ''
   priceInReais: number | ''
   accessibleSeats: string[]
-  // formato/áudio/sala variam por horário -- um item por posição de `slots` (mesmo
-  // índice = mesmo horário), não um valor só pro lote inteiro (ver RoomStep.tsx)
   sessions: SessionAttrsValues[]
 }
 
@@ -48,9 +39,6 @@ interface SlotAttempt {
   sessionAttrs: SessionAttrsValues
 }
 
-// Resultado de um horário depois de tentar criar + publicar -- ver comentário em
-// `handleRoomSubmit` sobre por que "criado mas não publicado" nunca pode voltar a
-// ser tentado como se nada tivesse acontecido.
 type SlotOutcome =
   | { kind: 'published'; event: OrganizerEvent }
   | { kind: 'not-created'; attempt: SlotAttempt; reason: unknown }
@@ -123,18 +111,6 @@ function buildCreateInput(
   }
 }
 
-// Assistente de criação em três passos (§ etapa 04): um formulário único com todos
-// os campos é onde o organizador desiste. Estado na URL (`?passo=`) -- voltar no
-// navegador funciona, recarregar não perde o passo; rascunho em sessionStorage (não é
-// dado sensível) sobrevive a um F5 acidental. Só o passo 3 dispara `POST /events` --
-// um por horário do passo 2 (mesmo filme/local/sala/preço), nunca um endpoint de lote:
-// o cache de catálogo (back, `catalog.service.ts`) já evita N buscas repetidas do
-// mesmo filme no TMDb, então N chamadas sequenciais ao endpoint de sempre bastam.
-//
-// Cada horário criado já é publicado em seguida (`POST /events/:id/publish`) --
-// sem isso o organizador precisaria abrir sessão por sessão em "Minhas sessões"
-// pra publicar manualmente, exatamente o comportamento "um de cada vez" que este
-// assistente existe para evitar.
 export default function CreateEventWizard() {
   const [searchParams, setSearchParams] = useSearchParams()
   const step = clampStep(searchParams.get('passo'))
@@ -149,8 +125,6 @@ export default function CreateEventWizard() {
     sessionStorage.setItem(DRAFT_KEY, JSON.stringify(draft))
   }, [draft])
 
-  // acesso direto a ?passo=2/3 sem filme escolhido (ex.: link colado, sessão sem
-  // rascunho) volta ao passo 1 -- o modelo exige `source` + `externalId` (§4.3)
   useEffect(() => {
     if (step > 1 && !draft.movie) {
       setSearchParams((prev) => {
@@ -177,9 +151,6 @@ export default function CreateEventWizard() {
     setDraft((prev) => ({
       ...prev,
       ...values,
-      // horário adicionado/removido no passo 2 -- sincroniza `sessions` pro mesmo
-      // tamanho de `slots` (mesmo índice = mesmo horário), preservando o que o
-      // organizador já tinha ajustado pros horários que continuam na lista
       sessions: values.slots.map((_, index) => prev.sessions[index] ?? DEFAULT_SESSION_ATTRS),
     }))
     goToStep(3)
@@ -205,12 +176,6 @@ export default function CreateEventWizard() {
 
     const attempts: SlotAttempt[] = nextDraft.slots.map((slot, index) => ({ slot, sessionAttrs: values.sessions[index]! }))
 
-    // Cada horário passa por criar + publicar como uma única unidade. Se criar
-    // falha, nada existe ainda -- seguro recriar num novo clique. Se criar teve
-    // sucesso mas publicar falhou (ex.: rede), o Event já existe de verdade no
-    // servidor -- NUNCA volta pro formulário como "pendente": recriar duplicaria a
-    // sessão. Esse caso vira um rascunho de verdade, publicável manualmente em
-    // "Minhas sessões" (mesmo caminho que já existia antes desta mudança).
     const results: SlotOutcome[] = await Promise.all(
       attempts.map(async (attempt): Promise<SlotOutcome> => {
         let created: OrganizerEvent
@@ -251,9 +216,6 @@ export default function CreateEventWizard() {
       return
     }
 
-    // Falha parcial ou total: mantém no rascunho só os horários que sequer chegaram
-    // a existir no servidor -- um novo clique tenta de novo só esses, nunca recria
-    // os que já deram certo (publicados ou não).
     setDraft((prev) => ({
       ...prev,
       slots: notCreated.map((result) => result.attempt.slot),

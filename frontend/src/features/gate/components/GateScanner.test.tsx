@@ -8,9 +8,6 @@ const { decodeFromConstraintsMock, stopSpy } = vi.hoisted(() => ({
   stopSpy: vi.fn(),
 }))
 
-// função nomeada, não arrow function -- `new BrowserQRCodeReader()` no componente
-// exige um construtor de verdade; um mock cuja implementação é arrow function faz
-// `new` lançar "is not a constructor" (arrow function nunca é construível).
 vi.mock('@zxing/browser', () => ({
   BrowserQRCodeReader: vi.fn().mockImplementation(function FakeBrowserQRCodeReader() {
     return { decodeFromConstraints: decodeFromConstraintsMock }
@@ -23,10 +20,6 @@ function setSecureContext(value: boolean) {
   Object.defineProperty(window, 'isSecureContext', { value, configurable: true })
 }
 
-// jsdom não trata a URL de teste como contexto seguro por padrão (`isSecureContext`
-// nasce `false`) -- um `beforeEach` (não só resetar no `afterEach`) garante que cada
-// teste começa em contexto seguro independente da ordem/filtro de execução; o teste
-// "sem HTTPS" sobrescreve para `false` só dentro do próprio corpo.
 beforeEach(() => {
   decodeFromConstraintsMock.mockReset()
   stopSpy.mockReset()

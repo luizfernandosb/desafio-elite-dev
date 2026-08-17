@@ -6,14 +6,7 @@ import { holdErrorMessage } from './error-messages'
 
 interface UseHoldOptions {
   eventId: string
-  // 201 -- quem chama decide o que fazer com os holds (mostrar o cronômetro,
-  // navegar ao clicar "Ir para pagamento"...). O hook não navega sozinho: a
-  // confirmação otimista já pintou o assento como selecionado no clique (§ etapa 06),
-  // a navegação de verdade é decisão de fluxo de quem usa o hook, não deste hook.
   onHoldCreated: (holds: SeatHold[]) => void
-  // 409 SEAT_TAKEN -- quem chama ajusta a seleção usando os assentos que o SERVIDOR
-  // indicou como já tomados, nunca um "algo deu errado" genérico (§ etapa 06, "é o
-  // momento em que o requisito BE-4 se torna visível para um humano").
   onSeatsTaken: (takenSeatIds: string[]) => void
 }
 

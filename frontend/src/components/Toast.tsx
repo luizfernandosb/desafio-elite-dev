@@ -5,11 +5,6 @@ import styles from './Toast.module.css'
 
 const AUTO_DISMISS_MS = 5000
 
-// Do zero, não Radix -- só Dialog e Tabs usam primitiva pronta nesta etapa (§ etapa
-// 02). `role="status"`/`aria-live="polite"` no viewport inteiro (mesmo padrão do
-// live region do mapa de assentos, §5.1.2): anuncia sem interromper o que a pessoa
-// estava fazendo, e sem roubar foco -- diferente de um Dialog, o toast não precisa
-// (e não deve) prender o foco do teclado.
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [toasts, setToasts] = useState<ToastItem[]>([])
 

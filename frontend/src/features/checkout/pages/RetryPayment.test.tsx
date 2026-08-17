@@ -35,7 +35,6 @@ function makeFailedOrder() {
         expiresAt: new Date(Date.now() + 5 * 60 * 1000).toISOString(),
         releasedAt: null,
       },
-      // já consumido/expirado por outro caminho -- não deve ser reenviado
       {
         id: 'hold-3',
         seatId: 'seat-a3',
@@ -82,8 +81,6 @@ describe('RetryPayment -- "Tentar outro cartão" reaproveita os assentos, não c
     await user.click(await screen.findByRole('button', { name: 'Tentar outro cartão' }))
 
     expect(await screen.findByTestId('checkout-page')).toBeInTheDocument()
-    // só os dois holds ainda ativos (hold-3 já tinha expiresAt no passado) -- nunca
-    // manda um hold morto de volta pro back
     expect(receivedBody).toMatchObject({ eventId: 'evt-1', holdIds: ['seat-a1', 'seat-a2'] })
     expect(receivedIdempotencyKey).toBeTruthy()
   })

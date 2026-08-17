@@ -22,10 +22,7 @@ function CopyButton({ value }: { value: string }) {
       await navigator.clipboard.writeText(value.replace(/\s/g, ''))
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
-    } catch {
-      // clipboard indisponível (ex.: contexto não seguro) -- o número já está
-      // visível na tela pra copiar à mão, não precisa de tratamento de erro
-    }
+    } catch {}
   }
 
   return (
@@ -35,10 +32,6 @@ function CopyButton({ value }: { value: string }) {
   )
 }
 
-// Painel SEMPRE visível (§4.5, etapa 08) -- a banca precisa testar aprovação e
-// recusa sem sair da aplicação nem ler documentação, então nunca fica atrás de um
-// "?" ou accordion. Some sozinho com uma chave `pk_live_` -- trava simples contra
-// vazar números de cartão de teste numa produção real por engano.
 export function TestCardsPanel() {
   if (!env.VITE_STRIPE_PUBLISHABLE_KEY.startsWith('pk_test_')) return null
 

@@ -15,9 +15,6 @@ async function tokenForNewUser(role: Role) {
 
 async function seedActiveHold(eventId: string, seatId: string, userId: string) {
   const expiresAt = new Date(Date.now() + 10 * 60_000)
-  // replica o efeito colateral do endpoint real (POST /holds marca o SeatState HELD
-  // na mesma transação) -- criar só o SeatHold deixaria o assento "reservado mas
-  // ainda FREE no snapshot", um estado que a aplicação nunca produz de verdade
   await prisma.seatState.update({ where: { seatId }, data: { status: 'HELD', expiresAt } })
   return prisma.seatHold.create({
     data: { eventId, seatId, userId, expiresAt },
@@ -36,7 +33,7 @@ describe('POST /api/v1/orders', () => {
       .post('/api/v1/orders')
       .set('Authorization', `Bearer ${token}`)
       .set('Idempotency-Key', randomUUID())
-      .send({ eventId: event.id, holdIds: [hold.id], amountInCents: 1 }) // 1 -- deve ser ignorado
+      .send({ eventId: event.id, holdIds: [hold.id], amountInCents: 1 })
 
     expect(res.status).toBe(201)
     expect(res.body.order.amountInCents).toBe(event.priceInCents)
@@ -66,7 +63,6 @@ describe('POST /api/v1/orders', () => {
       .send({ eventId: event.id, holdIds })
 
     expect(res.status).toBe(201)
-    // 5000 (FULL) + 2500 (HALF, metade de 5000) = 7500 -- nunca 5000 x 2 = 10000
     expect(res.body.order.amountInCents).toBe(7500)
   })
 

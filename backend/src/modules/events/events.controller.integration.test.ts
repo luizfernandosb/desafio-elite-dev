@@ -8,16 +8,10 @@ import { cleanDatabase } from '../../test/setup'
 import { bypassLoopbackOnly } from '../../test/msw/on-unhandled-request'
 import { server } from '../../test/msw/server'
 
-// bypassLoopbackOnly, não 'bypass' puro: mistura supertest (loopback) com o mock do
-// TMDb (catalogService, reaproveitado por EventsService na criação de evento) --
-// ver test/msw/on-unhandled-request.ts
 beforeAll(() => server.listen({ onUnhandledRequest: bypassLoopbackOnly }))
 afterEach(() => server.resetHandlers())
 afterAll(() => server.close())
 
-// Event.organizerId tem FK real para User -- diferente de auth/catalog, um token
-// assinado para um `sub` inexistente quebra com violação de FK na hora do INSERT.
-// Cria o usuário de verdade e assina o token para o id dele.
 async function createUserAndToken(role: Role, emailPrefix: string) {
   const user = await prisma.user.create({
     data: { email: `${emailPrefix}-${crypto.randomUUID()}@test.com`, name: `Teste ${role}`, role },
@@ -128,7 +122,7 @@ describe('POST /api/v1/events', () => {
     expect(res.status).toBe(201)
     expect(res.body).toMatchObject({
       priceInCents: 3200,
-      effectivePriceInCents: 4000, // 3200 + 25%
+      effectivePriceInCents: 4000,
       format: 'THREE_D',
       audio: 'SUBTITLED',
       roomType: 'VIP',
@@ -421,8 +415,6 @@ describe('POST /api/v1/events/:id/publish e /cancel', () => {
   })
 })
 
-// insere Order + Ticket direto no banco -- simula "há venda" sem depender do módulo
-// de pedidos (etapa 07, ainda não implementado)
 async function simulateSale(eventId: string) {
   const customer = await prisma.user.create({
     data: { email: `comprador-${crypto.randomUUID()}@test.com`, name: 'Comprador' },

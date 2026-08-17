@@ -7,16 +7,7 @@ import { AppProviders } from '../../app/providers'
 import { routes } from '../../app/router'
 import { TEST_PASSWORD } from '../msw/handlers/auth'
 
-// Suíte inteira sob carga (paralelismo do Vitest, § etapa 13) pode deixar um
-// `findBy*` isolado mais lento do que rodar este arquivo sozinho -- o teste
-// continua correto, só precisa de mais fôlego que o default de 1s da Testing
-// Library antes de desistir.
 configure({ asyncUtilTimeout: 5000 })
-
-// Mesmo caminho do fluxo feliz (checkout-happy-path.e2e.test.tsx), mas com cartão
-// recusado -- prova que o assento escolhido continua reservado na volta ao
-// checkout (§ etapa 13): "Tentar outro cartão" reaproveita o MESMO hold (nunca
-// pede para escolher assento de novo) e consegue pagar na segunda tentativa.
 
 vi.mock('../../lib/supabase', () => ({
   supabase: {
@@ -51,7 +42,6 @@ describe('fluxo de recusa e nova tentativa (§ etapa 13)', () => {
     await user.click(await screen.findByRole('button', { name: 'Reservar por 10 minutos' }))
     await user.click(await screen.findByRole('button', { name: 'Ir para pagamento' }))
 
-    // recusa -- troca o resultado padrão ("Aprovar pagamento") antes de pagar
     expect(await screen.findByText('Total: R$ 32,00')).toBeInTheDocument()
     await user.click(screen.getByLabelText('Resultado do pagamento (simulação)'))
     await user.click(await screen.findByRole('option', { name: 'Recusar pagamento' }))
@@ -61,12 +51,8 @@ describe('fluxo de recusa e nova tentativa (§ etapa 13)', () => {
       await screen.findByRole('heading', { name: 'Pagamento recusado' }, { timeout: 3000 }),
     ).toBeInTheDocument()
 
-    // "Tentar outro cartão" só existe porque o hold ainda está ativo
-    // (`CheckoutReturnPage.tsx`, `canRetry`) -- se o assento tivesse sido liberado,
-    // este botão nem apareceria (a alternativa seria "Escolher assentos de novo")
     await user.click(screen.getByRole('button', { name: 'Tentar outro cartão' }))
 
-    // novo pedido, MESMO assento -- mesmo total, sem passar pelo mapa de novo
     expect(await screen.findByText('Total: R$ 32,00')).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: /Pagar R\$\s?32,00/ }))
 

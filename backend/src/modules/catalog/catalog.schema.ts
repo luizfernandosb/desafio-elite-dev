@@ -1,7 +1,6 @@
 import { z } from 'zod'
 import { CatalogSource } from '../../../generated/prisma/enums'
 
-// TMDb pagina em blocos fixos de 20 -- não aceita `limit`, só `page` (§4.3, §5.6.2)
 export const searchSchema = {
   query: z.object({
     q: z.string().trim().min(2).max(100),

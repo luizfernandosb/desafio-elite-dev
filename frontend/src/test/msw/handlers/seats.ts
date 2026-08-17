@@ -4,11 +4,6 @@ import type { TicketPriceType } from '../../../shared/ticket-price-type'
 
 const API = env.VITE_API_URL
 
-// Convenção só destes handlers de teste (não existe no back real): o id do hold é
-// `hold-<seatId>-<priceType>` -- previsível o bastante para `orders.ts` reconstruir
-// qual assento e qual tipo de ingresso (meia-entrada) cada `holdId` recebido em
-// `POST /orders` representa, sem precisar de um terceiro módulo de estado
-// compartilhado só para isso.
 export function seatIdFromHoldId(holdId: string): string {
   return holdId.replace(/^hold-/, '').replace(/-(FULL|HALF)$/, '')
 }

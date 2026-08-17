@@ -12,8 +12,6 @@ function captureLogLine(fn: (testLogger: pino.Logger) => void): string {
     },
   })
 
-  // mesma configuração (redact, base, etc.) do singleton, só troca o destino por
-  // memória -- testa a configuração real sem depender de I/O de verdade
   fn(pino(loggerOptions, stream))
 
   return Buffer.concat(chunks).toString()

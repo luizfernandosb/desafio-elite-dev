@@ -39,9 +39,6 @@ export interface Seatmap {
   meta: { generatedAt: string; priceInCents: number; effectivePriceInCents: number; currency: string }
 }
 
-// `SeatHold` do back (seat-hold.service.ts) -- um hold por assento, mesmo quando
-// criados juntos numa única chamada (`POST .../holds` aceita vários `seatIds`, mas
-// devolve um array de holds individuais, não "um hold com N assentos").
 export interface SeatHold {
   id: string
   eventId: string
@@ -70,7 +67,6 @@ export function getSeatmap(id: string) {
   return api.get<Seatmap>(`/events/${id}/seatmap`)
 }
 
-// teto de 6 assentos por hold, igual ao back (seat-hold.schema.ts, MAX_SEATS_PER_HOLD)
 export const MAX_SEATS_PER_HOLD = 6
 
 export function createHold(eventId: string, seats: SeatSelection[]) {

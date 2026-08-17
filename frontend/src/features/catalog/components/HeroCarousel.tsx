@@ -17,17 +17,10 @@ function truncate(text: string, max: number): string {
   return `${text.slice(0, max).trimEnd()}…`
 }
 
-// Destaque = primeiras sessões da listagem pública sem filtro (não existe um sinal
-// de "destaque" no back) -- ver CatalogPage. Sem "assistir trailer": não há esse
-// dado no catálogo; o CTA vai direto para a mesma rota pública que o card da grade
-// já usa (`/eventos/:id`, "ver evento é público de propósito", § etapa 05).
 export function HeroCarousel({ events }: HeroCarouselProps) {
   const [index, setIndex] = useState(0)
   const count = events.length
 
-  // Troca automática de slide -- `setInterval`, não CSS, então o
-  // `@media (prefers-reduced-motion: reduce)` de tokens.css (que só zera
-  // transição/animação CSS) não alcança sozinho; checado à mão aqui.
   useEffect(() => {
     if (count <= 1) return
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return

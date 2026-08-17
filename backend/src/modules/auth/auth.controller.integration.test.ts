@@ -10,7 +10,6 @@ function findRawRefreshCookie(res: { headers: Record<string, unknown> }): string
   return cookie
 }
 
-// nome=valor, sem os atributos -- é o formato que o header `Cookie` de uma requisição espera
 function extractRefreshCookie(res: { headers: Record<string, unknown> }): string {
   return findRawRefreshCookie(res).split(';')[0] as string
 }
@@ -130,11 +129,9 @@ describe('POST /api/v1/auth/refresh -- rotação e reuso', () => {
     const secondCookie = extractRefreshCookie(refreshed)
     expect(secondCookie).not.toBe(firstCookie)
 
-    // reapresentar o cookie já usado (rotacionado) é reuso -- 401 e revoga a família inteira
     const reused = await supertest(app).post('/api/v1/auth/refresh').set('Cookie', firstCookie)
     expect(reused.status).toBe(401)
 
-    // a família inteira foi revogada -- até o cookie novo (ainda não usado) para de funcionar
     const afterFamilyRevoked = await supertest(app)
       .post('/api/v1/auth/refresh')
       .set('Cookie', secondCookie)

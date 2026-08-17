@@ -26,9 +26,6 @@ export class OrdersService {
     private readonly seatStateRepo: SeatStateRepository,
     private readonly ticketRepo: TicketRepository,
     private readonly webhookEventRepo: WebhookEventRepository,
-    // um provedor por PaymentMethod -- flag de teste do checkout permite escolher o
-    // Stripe de verdade por PEDIDO específico, não mais um único provedor fixo pro
-    // processo inteiro (§ orders.routes.ts, composição).
     private readonly paymentProviders: Record<PaymentMethod, PaymentProvider>,
   ) {}
 
@@ -42,24 +39,15 @@ export class OrdersService {
 
     const holds = await this.holdRepo.findManyOwnedActive(prisma, dto.holdIds, dto.eventId, userId)
     if (holds.length !== dto.holdIds.length) {
-      // não distingue "não é seu" de "expirou" -- ambos vazariam menos informação juntos
       throw new ConflictError('HOLD_EXPIRED', 'Um ou mais holds não estão disponíveis para este pedido')
     }
 
-    // amountInCents é sempre calculado aqui a partir do preço do evento -- nunca do corpo.
-    // Preço EFETIVO (já com o adicional de Sala VIP, se houver, ver pricing.ts) -- o
-    // cliente paga o mesmo valor que viu no catálogo/carrinho, nunca o preço base cru.
-    // Soma por hold (não `efetivo * quantidade`): meia-entrada é decidida por assento
-    // na reserva (SeatHold.priceType), então o total reflete a mistura escolhida.
     const effectivePriceInCents = computeEffectivePriceInCents(event)
     const amountInCents = holds.reduce(
       (sum, hold) => sum + computeSeatPriceInCents(effectivePriceInCents, hold.priceType),
       0,
     )
 
-    // I/O externo FORA da transação (§5.5.3) -- chamada HTTP dentro de tx aumenta o
-    // tempo de lock e o risco de deadlock. Idempotente pela idempotencyKey: em retry,
-    // o Stripe (e o FakePaymentProvider) devolvem o mesmo intent, nunca cobram 2x.
     const provider = this.resolveProvider(dto.paymentMethod)
     const intent = await provider.createIntent({
       amountInCents,
@@ -89,8 +77,6 @@ export class OrdersService {
     } catch (err) {
       if (!isUniqueViolation(err)) throw err
 
-      // clique duplo: a idempotencyKey já tem um Order -- devolve o primeiro, sem
-      // criar um segundo pedido nem vincular os holds de novo
       const existing = await this.repo.findByIdempotencyKey(prisma, idempotencyKey)
       if (!existing) throw err
 
@@ -101,18 +87,11 @@ export class OrdersService {
 
   async getById(id: string, userId: string) {
     const order = await this.repo.findById(prisma, id)
-    if (!order || order.userId !== userId) throw new NotFoundError('Order') // privado -- não revela
+    if (!order || order.userId !== userId) throw new NotFoundError('Order')
 
     return order
   }
 
-  // Só existe com `FakePaymentProvider` ativo (§4.5, etapa 08 do front, "Dia 2") --
-  // o próprio Stripe não tem como o BROWSER decidir se um pagamento foi aprovado ou
-  // recusado; normalmente é o webhook que confirma. Esta rota é o substituto de
-  // desenvolvimento para esse webhook, para o fluxo inteiro (criação → aprovação/
-  // recusa → emissão de ingresso) fechar sem depender de credenciais reais do
-  // Stripe. `outcome` usa o mesmo vocabulário de `paymentIntent.status` do Stripe --
-  // o front trata os dois caminhos (fake e Stripe de verdade) da mesma forma.
   async simulatePayment(
     orderId: string,
     userId: string,
@@ -120,11 +99,8 @@ export class OrdersService {
     log: Logger,
   ): Promise<void> {
     const order = await this.repo.findById(prisma, orderId)
-    if (!order || order.userId !== userId) throw new NotFoundError('Order') // privado -- não revela
+    if (!order || order.userId !== userId) throw new NotFoundError('Order')
 
-    // capability check é por ORDER agora, não pelo processo inteiro -- uma order
-    // criada com paymentMethod STRIPE nunca pode ser simulada, mesmo que o
-    // FakePaymentProvider também esteja ativo pra outras orders (§ orders.routes.ts).
     if (!this.resolveProvider(order.paymentMethod).supportsSimulation) {
       throw new ForbiddenError('Simulação de pagamento não está disponível com o provedor de pagamento atual')
     }
@@ -136,8 +112,6 @@ export class OrdersService {
     }
   }
 
-  // chamado pelo Service, não pelo controller do webhook direto -- lança
-  // InvalidTransitionError se a Order não estiver PENDING (§7.10.3, copiar como está)
   async confirmPayment(orderId: string, log: Logger): Promise<void> {
     const order = await this.repo.findById(prisma, orderId)
     if (!order) throw new NotFoundError('Order')
@@ -174,9 +148,6 @@ export class OrdersService {
     log.info({ msg: 'order paid, tickets issued', orderId: order.id, ticketCount: holds.length })
   }
 
-  // política (Anexo B #3): mantém o hold vivo pelo TTL restante -- não libera o
-  // assento aqui. O cliente troca de cartão e tenta de novo com os mesmos holds; se
-  // não tentar, o próprio TTL do hold (menor que o do pedido) resolve.
   async failPayment(orderId: string, log: Logger): Promise<void> {
     const order = await this.repo.findById(prisma, orderId)
     if (!order) throw new NotFoundError('Order')
@@ -187,11 +158,6 @@ export class OrdersService {
     log.info({ msg: 'order failed', orderId })
   }
 
-  // Cancelamento pelo CLIENTE, por INGRESSO (não pelo pedido inteiro -- "Meus
-  // ingressos" nunca mostra "pedido" como conceito, só ingressos individuais; um
-  // pedido com 3 assentos permite cancelar 1 sem mexer nos outros 2). `findOwnedById`
-  // já resolve posse (dono do PEDIDO, não uma coluna própria em Ticket) e devolve
-  // 404 tanto pra "não existe" quanto pra "não é seu" -- não revela qual dos dois.
   async cancelTicket(ticketId: string, userId: string, log: Logger) {
     const ticket = await this.ticketRepo.findOwnedById(prisma, ticketId, userId)
     if (!ticket) throw new NotFoundError('Ingresso')
@@ -207,8 +173,6 @@ export class OrdersService {
     const order = await this.repo.findById(prisma, ticket.orderId)
     if (!order) throw new NotFoundError('Order')
 
-    // reembolso é só do assento cancelado, nunca do pedido inteiro -- um Order com
-    // vários assentos não pode devolver o valor de todos por causa de 1 cancelamento
     const effectivePriceInCents = computeEffectivePriceInCents(event)
     const refundAmountInCents = computeSeatPriceInCents(effectivePriceInCents, ticket.priceType)
 
@@ -218,17 +182,12 @@ export class OrdersService {
 
       const remaining = await this.ticketRepo.countActiveByOrderId(tx, order.id)
       if (remaining === 0) {
-        // não existe "parcialmente reembolsado" no enum -- Order só vira REFUNDED
-        // quando não sobra nenhum ticket ACTIVE (§ decisão registrada no README)
         assertTransition(ORDER_TRANSITIONS, order.status, OrderStatus.REFUNDED)
         await this.repo.updateStatus(tx, order.id, OrderStatus.REFUNDED)
       }
       return remaining
     })
 
-    // I/O externo FORA da transação (mesmo trade-off de createOrder, §5.5.3) -- se o
-    // Stripe falhar depois do commit, o cancelamento já está gravado; loga e segue,
-    // não reverte (mesma decisão já aceita ali).
     if (order.stripePaymentIntentId) {
       try {
         await this.resolveProvider(order.paymentMethod).refund(order.stripePaymentIntentId, refundAmountInCents)
@@ -247,8 +206,6 @@ export class OrdersService {
     return this.ticketRepo.findOwnedById(prisma, ticket.id, userId)
   }
 
-  // true = primeira vez que este evento do Stripe é visto (idempotência em duas
-  // camadas, §4.5): esta é a camada 1, INSERT em ProcessedWebhookEvent
   async recordWebhookEvent(id: string, type: string): Promise<boolean> {
     try {
       await this.webhookEventRepo.create(prisma, id, type)
@@ -259,8 +216,6 @@ export class OrdersService {
     }
   }
 
-  // camada 2 da idempotência: se a Order já não está PENDING, assertTransition lança
-  // InvalidTransitionError -- aqui isso é esperado e vira no-op, não erro
   async handleWebhookPaymentSucceeded(paymentIntentId: string, log: Logger): Promise<void> {
     const order = await this.repo.findByPaymentIntentId(prisma, paymentIntentId)
     if (!order) throw new NotFoundError('Order')

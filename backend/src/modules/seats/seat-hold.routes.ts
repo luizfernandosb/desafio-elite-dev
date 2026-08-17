@@ -20,8 +20,6 @@ const seatHoldService = new SeatHoldService(
 )
 const seatHoldController = new SeatHoldController(seatHoldService)
 
-// contém abuso de criação de hold (spam de reservas) -- desligado em teste pelo mesmo
-// motivo dos limiters de /auth (§7.10.2, suíte roda em série no mesmo processo)
 const holdLimiter = rateLimit({
   windowMs: 60 * 1000,
   limit: 30,

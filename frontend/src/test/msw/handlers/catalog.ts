@@ -4,10 +4,6 @@ import type { PublicEvent, PublicSeatmap } from '../../../features/catalog/api'
 
 const API = env.VITE_API_URL
 
-// Uma sessão publicada, no futuro, com poucos assentos livres -- serve tanto a
-// leitura pública (catálogo, detalhe do evento) quanto o mapa de assentos
-// (`reserva/api.ts` bate nos MESMOS dois endpoints de evento/seatmap, § etapa 06)
-// e o seletor de sessão da portaria (`EventPicker`, reaproveita `GET /events`).
 export const DEFAULT_EVENT: PublicEvent = {
   id: 'evt-1',
   source: 'TMDB',

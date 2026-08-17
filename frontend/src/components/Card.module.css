@@ -6,8 +6,6 @@
   padding: var(--space-4);
 }
 
-/* opacity + translate no hover do card individual -- nunca fadeInUp por item numa
-   lista, cansa em scroll longo (§5.1.1, "o que não fazer") */
 .interactive {
   transition:
     transform var(--transition),

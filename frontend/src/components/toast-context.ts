@@ -12,8 +12,6 @@ export interface ToastContextValue {
   showToast: (message: string, variant?: ToastVariant) => void
 }
 
-// Separado de Toast.tsx -- um arquivo que só exporta componente mantém o Fast
-// Refresh funcionando; hook + tipos aqui, `ToastProvider` lá.
 export const ToastContext = createContext<ToastContextValue | null>(null)
 
 export function useToast(): ToastContextValue {

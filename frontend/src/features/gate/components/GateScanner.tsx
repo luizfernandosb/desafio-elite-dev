@@ -10,14 +10,8 @@ interface GateScannerProps {
 
 type CameraState = 'starting' | 'ready' | 'insecure' | 'unavailable'
 
-// `@zxing/browser` (decisão fechada aqui, § etapa 10) -- só decodificação, a UI da
-// câmera é nossa, mesmo raciocínio do Radix "sem estilo" (etapa 02). Câmera
-// traseira (`facingMode: 'environment'`) de propósito: frontal numa portaria é erro
-// de configuração, não fallback.
 export function GateScanner({ paused, onScan }: GateScannerProps) {
   const videoRef = useRef<HTMLVideoElement>(null)
-  // refs, não state -- o efeito de montagem da câmera roda uma única vez; ler
-  // `paused`/`onScan` via ref evita reiniciar o stream a cada mudança de estado
   const pausedRef = useRef(paused)
   const onScanRef = useRef(onScan)
   const [cameraState, setCameraState] = useState<CameraState>(() =>
@@ -41,11 +35,6 @@ export function GateScanner({ paused, onScan }: GateScannerProps) {
 
     reader
       .decodeFromConstraints({ video: { facingMode: 'environment' } }, videoRef.current ?? undefined, (result) => {
-        // `error` (2º parâmetro, ignorado aqui) dispara em praticamente todo frame
-        // sem QR visível -- ruído esperado da decodificação contínua, não falha.
-        // `pausedRef` cobre debounce (mesmo código em frames seguidos) E a pausa
-        // pós-leitura (resultado ainda na tela) com o mesmo flag -- ver
-        // `useGateValidation`.
         if (!result || pausedRef.current) return
         onScanRef.current(result.getText())
       })
@@ -65,7 +54,6 @@ export function GateScanner({ paused, onScan }: GateScannerProps) {
       cancelled = true
       controls?.stop()
     }
-    // monta a câmera uma única vez -- ver refs acima para paused/onScan atuais
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 

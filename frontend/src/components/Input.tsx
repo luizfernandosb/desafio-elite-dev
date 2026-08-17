@@ -7,9 +7,6 @@ interface InputProps extends ComponentProps<'input'> {
   hint?: string
 }
 
-// `ref` explícito no destructure (React 19 aceita `ref` como prop comum em componente
-// função, sem `forwardRef`) -- sem isso, React Hook Form não alcança o `<input>` real
-// (nem `setFocus` no primeiro campo inválido, nem o registro por ref funcionam).
 export function Input({ label, error, hint, id, className, ref, ...rest }: InputProps) {
   const generatedId = useId()
   const inputId = id ?? generatedId

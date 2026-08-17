@@ -8,11 +8,6 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   children: ReactNode
 }
 
-// CTA primário exatamente §5.1.1: background var(--primary), texto branco, sem
-// sombra, sem gradiente. Hover var(--primary-hover), transição 150ms ease, active
-// scale(0.98). `disabled` nativo do <button> -- nenhum clique (nem por teclado)
-// chega ao onClick enquanto desabilitado ou carregando; não precisa de lógica extra
-// para bloquear.
 export function Button({
   variant = 'primary',
   loading = false,

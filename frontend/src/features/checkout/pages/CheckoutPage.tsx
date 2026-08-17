@@ -17,11 +17,6 @@ interface CheckoutLocationState {
   holdIds?: string[]
 }
 
-// Fase fake (Dia 2, § etapa 08) -- seletor aprovar/recusar chamando
-// `POST /orders/:id/simulate-payment` em vez do Stripe Elements. O restante (criação
-// do pedido, navegação, tela de resultado) é o que continua igual quando o Dia 3
-// trocar este formulário pelo real -- ver docs/bugs.md #21 e README sobre o porquê
-// dessa rota de simulação existir no back.
 export default function CheckoutPage() {
   const { orderId } = useParams<{ orderId: string }>()
   const location = useLocation()
@@ -33,19 +28,9 @@ export default function CheckoutPage() {
   const state = (location.state ?? {}) as CheckoutLocationState
   const canCreate = isNewOrder && Boolean(state.eventId) && Boolean(state.holdIds?.length)
 
-  // Flag de teste do checkout (invisível em produção normal) -- deixa escolher, por
-  // pedido, entre o fluxo fake e o Stripe Elements de verdade. Com a flag desligada,
-  // `methodConfirmed` já nasce `true` e o comportamento fica idêntico ao de sempre:
-  // a order já nasce confirmada como FAKE e cria sozinha ao montar.
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('FAKE')
   const [methodConfirmed, setMethodConfirmed] = useState(!env.VITE_ALLOW_PAYMENT_TEST_TOGGLE)
 
-  // Criação automática ao entrar vindo do mapa (§ etapa 08) -- não é um botão que o
-  // cliente aperta. `useQuery` (não `useMutation`) de propósito: a chave de cache é
-  // a própria `Idempotency-Key`, estável por sessão de checkout (`useIdempotencyKey`)
-  // -- duas montagens concorrentes (StrictMode, re-render) compartilham a MESMA
-  // promise em vez de disparar duas requisições, de graça, via o cache do próprio
-  // TanStack Query.
   const {
     data: createdResult,
     isLoading: isCreating,
@@ -64,14 +49,11 @@ export default function CheckoutPage() {
 
   useEffect(() => {
     if (!isCreateError || !state.eventId) return
-    // HOLD_EXPIRED nunca vira um erro solto no checkout -- volta ao mapa com a
-    // mensagem já descrita na etapa 06 (§ etapa 08)
     if (isHoldExpired(createError)) {
       showToast(checkoutErrorMessage(createError), 'danger')
       navigate(`/eventos/${state.eventId}/assentos`, { replace: true })
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- `state` é recriado a
-    // cada render (spread de location.state); `state.eventId` já é a dependência real
   }, [isCreateError, createError, state.eventId, navigate, showToast])
 
   const {
@@ -108,9 +90,6 @@ export default function CheckoutPage() {
     )
   }
 
-  // Só existe atrás da flag de teste (`methodConfirmed` já nasce `true` sem ela) --
-  // escolhido antes da order ser criada, porque `paymentMethod` vai no corpo do
-  // `POST /orders` (não dá pra trocar de método depois que o pedido já existe).
   if (isNewOrder && canCreate && !methodConfirmed) {
     return (
       <div className={styles.page}>
@@ -139,9 +118,6 @@ export default function CheckoutPage() {
   }
 
   if (isNewOrder && isCreateError) {
-    // HOLD_EXPIRED já foi tratado (redirect) no efeito acima -- este ramo só
-    // renderiza por um instante antes do redirect, ou para qualquer outro erro de
-    // infraestrutura (rede/500/timeout), que cai no `ErrorState` central (§ etapa 11)
     return (
       <div className={styles.page}>
         <ErrorState error={createError} onRetry={() => refetchCreateOrder()} />
@@ -167,17 +143,12 @@ export default function CheckoutPage() {
     )
   }
 
-  if (!order) return null // só pra o TS -- os ramos acima já cobrem toda a falta de `order`
+  if (!order) return null
 
-  // pedido já resolvido (revisita de uma URL antiga, F5 depois de pagar) -- a tela de
-  // resultado é quem decide o que mostrar a partir do `order.status`, não aqui
   if (order.status !== 'PENDING') {
     return <Navigate to={`/checkout/${order.id}/retorno`} replace />
   }
 
-  // `order.paymentMethod` (servidor) decide qual UI tentar, não o estado local --
-  // um F5 de verdade reseta `paymentMethod`/`createdResult` (useState, cache do
-  // TanStack Query em memória), mas a order já criada continua sendo Stripe.
   const usingStripe = order.paymentMethod === 'STRIPE'
 
   let paymentSection: ReactNode
@@ -190,9 +161,6 @@ export default function CheckoutPage() {
       />
     )
   } else if (usingStripe) {
-    // F5 no meio do pagamento Stripe -- o clientSecret só existe na resposta do
-    // POST /orders, nunca é regravado nem re-buscado depois (limitação aceita:
-    // este caminho só existe atrás da flag de teste do checkout).
     paymentSection = (
       <EmptyState
         title="Não foi possível retomar o pagamento Stripe"
@@ -236,10 +204,6 @@ export default function CheckoutPage() {
 
       <TestCardsPanel />
 
-      {/* Boundary por seção (§ etapa 11) -- Stripe Elements é um iframe de terceiro,
-          historicamente o tipo de coisa que quebra em runtime. Um erro aqui não
-          deveria levar nem o total já mostrado acima nem o header/nav do resto da
-          aplicação. */}
       <ErrorBoundary>{paymentSection}</ErrorBoundary>
     </div>
   )

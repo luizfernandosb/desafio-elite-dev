@@ -16,11 +16,6 @@ function formatTime(iso: string): string {
   return new Intl.DateTimeFormat('pt-BR', { timeStyle: 'short' }).format(new Date(iso))
 }
 
-// Tela cheia por ~2s, nunca um toast pequeno (§ etapa 10) -- em fila com pressa e luz
-// ruim, um resultado discreto é um resultado perdido. `onDismiss` (chamado sozinho
-// aqui) é a mesma peça que libera a próxima leitura em `useGateValidation` -- a pausa
-// pós-leitura do plano nasce do tempo que este componente fica montado, sem um
-// segundo temporizador em outro lugar.
 export function ValidationResultScreen({ response, muted, onDismiss }: ValidationResultScreenProps) {
   const tone = resultTone(response.result)
 
@@ -31,8 +26,6 @@ export function ValidationResultScreen({ response, muted, onDismiss }: Validatio
 
   useEffect(() => {
     if (!muted) playResultSound(tone)
-    // dispara só quando o RESULTADO muda -- alternar o mute durante a exibição não
-    // deve retocar o som do resultado já anunciado
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [response])
 

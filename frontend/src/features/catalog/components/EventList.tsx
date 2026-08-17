@@ -14,9 +14,6 @@ interface EventListProps {
   onClearFilters: () => void
 }
 
-// Primeiras linhas em `eager` (acima da dobra em qualquer largura razoável de tela)
-// -- o resto entra em `loading="lazy"` (critério de Lighthouse "poucas imagens
-// grandes, loading=lazy fora da primeira dobra").
 const EAGER_CARD_COUNT = 4
 const SKELETON_ROW_COUNT = 6
 
@@ -28,8 +25,6 @@ export function EventList({ q, from, to, page, onPageChange, onClearFilters }: E
     queryFn: () => listPublicEvents({ q: q || undefined, from: from || undefined, to: to || undefined, page }),
   })
 
-  // Carregando: skeleton de linha, não spinner central -- evita layout shift quando
-  // os dados chegam.
   if (isLoading) {
     return (
       <div className={styles.grid} aria-hidden="true">
@@ -40,9 +35,6 @@ export function EventList({ q, from, to, page, onPageChange, onClearFilters }: E
     )
   }
 
-  // Erro de infraestrutura (rede, 500, timeout) -- `ErrorState` central. Filtro sem
-  // resultado (abaixo) continua `EmptyState`: é ausência de dado, não falha de
-  // requisição -- os dois nunca se confundem.
   if (isError) {
     return <ErrorState error={error} onRetry={() => refetch()} />
   }
@@ -59,7 +51,6 @@ export function EventList({ q, from, to, page, onPageChange, onClearFilters }: E
         }
       />
     ) : (
-      // cenário real se o seed não rodou -- mensagem que não parece bug
       <EmptyState
         title="Nenhuma sessão publicada ainda"
         description="Volte em breve - novas sessões aparecem aqui assim que forem publicadas."
@@ -67,10 +58,6 @@ export function EventList({ q, from, to, page, onPageChange, onClearFilters }: E
     )
   }
 
-  // Um filme com várias sessões nesta página (horário/sala/formato diferentes)
-  // aparece UMA vez, nunca um card repetido por sessão -- as diferenças continuam
-  // visíveis ao entrar no filme (`EventDetailPage`), e o card aqui sinaliza quantas
-  // sessões existem (`sessionCount`) quando há mais de uma.
   const movies = groupEventsByMovie(data.data)
 
   return (

@@ -50,14 +50,12 @@ describe('assertValidationWindow', () => {
   })
 
   it('endsAt explícito tem precedência sobre o teto de 6h', () => {
-    // endsAt manda mesmo quando cai ANTES do teto de 6h (evento curto)
     const startsAt = new Date(Date.now() - 3 * HOUR)
-    const endsAt = new Date(Date.now() - HOUR) // evento já encerrou antes das 6h
+    const endsAt = new Date(Date.now() - HOUR)
     expect(() => assertValidationWindow({ startsAt, endsAt })).toThrow(/já encerrado/)
 
-    // e mesmo quando cai DEPOIS do teto de 6h (evento longo) -- endsAt ainda abre a janela
     const startsAt2 = new Date(Date.now() - 7 * HOUR)
-    const endsAt2 = new Date(Date.now() + HOUR) // evento longo, ainda não acabou
+    const endsAt2 = new Date(Date.now() + HOUR)
     expect(() => assertValidationWindow({ startsAt: startsAt2, endsAt: endsAt2 })).not.toThrow()
   })
 })
@@ -70,13 +68,13 @@ describe('computeShareExpiresAt', () => {
 
   it('endsAt antes de startsAt + 6h -- o mais restritivo (endsAt) vence', () => {
     const startsAt = new Date('2026-08-23T21:00:00Z')
-    const endsAt = new Date(startsAt.getTime() + 2 * HOUR) // show curto
+    const endsAt = new Date(startsAt.getTime() + 2 * HOUR)
     expect(computeShareExpiresAt({ startsAt, endsAt })).toEqual(endsAt)
   })
 
   it('endsAt depois de startsAt + 6h -- o teto de 6h vence, não o fim do evento', () => {
     const startsAt = new Date('2026-08-23T21:00:00Z')
-    const endsAt = new Date(startsAt.getTime() + 10 * HOUR) // evento longo
+    const endsAt = new Date(startsAt.getTime() + 10 * HOUR)
     expect(computeShareExpiresAt({ startsAt, endsAt })).toEqual(new Date(startsAt.getTime() + 6 * HOUR))
   })
 })

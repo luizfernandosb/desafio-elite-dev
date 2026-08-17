@@ -4,15 +4,9 @@ import styles from './SeatMap.module.css'
 export type SeatMapSeatStatus = 'FREE' | 'HELD' | 'SOLD'
 
 export interface SeatMapSeat {
-  label: string // "A12" -- fileira + número, mesmo formato do back (§ seatmap.service.ts)
+  label: string
   accessible?: boolean
-  // ausente = modo de projeto (assistente de criação, etapa 04): não existe ocupação
-  // real ainda, só o desenho da sala. Presente = leitura de um evento de verdade
-  // (gestão da sessão, etapa 04, ou mapa de reserva, etapa 06).
   status?: SeatMapSeatStatus
-  // etapa 06: assento escolhido pelo CLIENTE para comprar -- só faz sentido junto de
-  // `status: 'FREE'`. Não confundir com `accessible` (fato do layout da sala,
-  // permanente); `selected` é estado efêmero da sessão de compra de um usuário.
   selected?: boolean
 }
 
@@ -23,16 +17,9 @@ export interface SeatMapRow {
 
 interface SeatMapProps {
   rows: SeatMapRow[]
-  // presente = modo interativo: projeto (marca/desmarca acessível, etapa 04) ou
-  // reserva (seleciona/desmarca assento, etapa 06). Ausente = leitura (gestão da
-  // sessão) -- mesmo componente, três usos, para nunca haver duas verdades sobre o
-  // desenho da sala.
   onSeatClick?: (label: string) => void
   legend?: boolean
   ariaLabel?: string
-  // etapa de compra: orienta o cliente sobre qual lado da sala é a frente --
-  // sem isso, "assento A1" não diz nada sobre proximidade da tela. Fora do modo
-  // projeto/gestão, que já mostram a sala numa perspectiva neutra (§ RoomStep).
   showScreen?: boolean
 }
 
@@ -51,13 +38,6 @@ function seatAriaLabel(seat: SeatMapSeat, isDesignMode: boolean): string {
   return parts.join(', ')
 }
 
-// Estrutura ARIA de grid de verdade (§5.1.2) -- `role="grid"` não move o foco
-// automaticamente, então a navegação por setas é implementada à mão (`handleArrowNav`
-// abaixo). Cada célula é um `<div>`, não um `<button>`: um `<button disabled>` nativo
-// nunca pode ser focado via `.focus()` (nem programaticamente), o que quebraria a
-// navegação por teclado *através* de assentos vendidos/reservados -- quem usa teclado
-// precisa conseguir "passar por cima" de um assento indisponível para continuar
-// explorando a fileira, só não pode *selecioná-lo*.
 export function SeatMap({
   rows,
   onSeatClick,
@@ -82,7 +62,7 @@ export function SeatMap({
 
     const nextSeat = rows[targetRow]?.seats[targetCol]
     if (!nextSeat) return
-    event.preventDefault() // não rola a página quando a seta de fato move o foco
+    event.preventDefault()
     focusSeat(nextSeat.label)
   }
 
@@ -99,10 +79,6 @@ export function SeatMap({
               const number = seat.label.slice(row.row.length)
               const isDesignMode = seat.status === undefined
               const hasHandler = Boolean(onSeatClick)
-              // modo projeto: sempre clicável (marca/desmarca acessível). Modo
-              // seatmap real: só livre ou já selecionado -- clique em vendido/
-              // reservado por outro usuário não faz nada (o próprio `aria-disabled`
-              // documenta por quê, não precisa de lógica extra pra bloquear).
               const interactive = hasHandler && (isDesignMode || seat.status === 'FREE' || Boolean(seat.selected))
 
               const statusClass = seat.selected
@@ -137,7 +113,7 @@ export function SeatMap({
                   onClick={interactive ? activate : undefined}
                   onKeyDown={(event) => {
                     if (interactive && (event.key === 'Enter' || event.key === ' ')) {
-                      if (event.key === ' ') event.preventDefault() // espaço não rola a página
+                      if (event.key === ' ') event.preventDefault()
                       activate()
                       return
                     }

@@ -8,9 +8,6 @@ import { registerSchema, type RegisterFormValues } from '../schemas'
 import { useAuth } from '../useAuth'
 import styles from './auth-form.module.css'
 
-// Sem seletor de papel na UI e sem campo `role` no payload -- o formulário público
-// cria sempre CUSTOMER (§7.3). Deixar a pessoa escolher "sou organizador" aqui seria
-// escalonamento de privilégio por formulário; ORGANIZER/GATE só existem por seed.
 export function RegisterPage() {
   const { register: registerUser } = useAuth()
   const navigate = useNavigate()
@@ -29,8 +26,6 @@ export function RegisterPage() {
     setFormError(null)
     try {
       await registerUser(values.name, values.email, values.password)
-      // cadastro -> login automático -> destino pretendido (§ critério de aceite).
-      // Cadastro não vem de um /entrar?redirect=..., então o destino padrão é a home.
       navigate('/', { replace: true })
     } catch (err) {
       setFormError(registerErrorMessage(err))

@@ -24,7 +24,7 @@ describe('seed (etapa 13, §6)', () => {
 
     expect(users).toBe(4)
     expect(events).toBe(3)
-    expect(seats).toBe(96 + 50) // Evento A + Evento B -- Evento C (DRAFT) nunca teve layout definido
+    expect(seats).toBe(96 + 50)
     expect(orders).toBe(2)
     expect(tickets).toBe(3)
     expect(usedTickets).toBeGreaterThanOrEqual(1)
@@ -58,7 +58,6 @@ describe('seed (etapa 13, §6)', () => {
 
     const organizer = await prisma.user.findUniqueOrThrow({ where: { id: users.organizer.id } })
     expect(organizer.role).toBe('ORGANIZER')
-    // hash de verdade (argon2id), não um placeholder -- a mesma senha documentada verifica
     const argon2 = await import('argon2')
     await expect(argon2.verify(organizer.passwordHash as string, SEED_PASSWORD)).resolves.toBe(true)
   })
@@ -79,9 +78,6 @@ describe('seed (etapa 13, §6)', () => {
     const { events } = await runSeed(prisma)
     const demo = await readDemoSummary(prisma, events.eventA.id)
 
-    // mesmo critério de `readDemoSummary` (orderBy createdAt asc) -- Cliente 1 tem 2
-    // tickets ACTIVE (D4, D5); sem essa ordenação, o achado aqui podia não ser o
-    // mesmo cujo código `demo.activeCode` codifica
     const activeTicket = await prisma.ticket.findFirstOrThrow({
       where: { eventId: events.eventA.id, status: 'ACTIVE' },
       orderBy: { createdAt: 'asc' },
@@ -94,11 +90,8 @@ describe('seed (etapa 13, §6)', () => {
     expect(verifyTicketCode(demo.activeCode as string, { ticketId: activeTicket.id, eventId: events.eventA.id })).toBe(true)
     expect(verifyTicketCode(demo.usedCode as string, { ticketId: usedTicket.id, eventId: events.eventA.id })).toBe(true)
 
-    // evento errado -- o mesmo código, verificado contra o evento B, falha (prova que
-    // a assinatura amarra o código a um evento específico, base do WRONG_EVENT real)
     expect(verifyTicketCode(demo.activeCode as string, { ticketId: activeTicket.id, eventId: events.eventB.id })).toBe(false)
 
-    // código adulterado -- 1 caractere trocado no meio da assinatura invalida tudo
     const tampered = `${(demo.activeCode as string).slice(0, -1)}${(demo.activeCode as string).endsWith('A') ? 'B' : 'A'}`
     expect(verifyTicketCode(tampered, { ticketId: activeTicket.id, eventId: events.eventA.id })).toBe(false)
   })

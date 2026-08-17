@@ -3,10 +3,6 @@ import { prisma } from '../../lib/prisma'
 import { cleanDatabase } from '../../test/setup'
 import { seedEventWithSeats, seedUser } from '../../test/factories'
 
-// Mesmo SQL do job 'expire-seat-holds' agendado pelo pg_cron -- ver
-// prisma/migrations/20260812030000_realtime_rls_pg_cron/migration.sql. pg_cron só existe
-// como extensão no Supabase (não em postgres:16-alpine, usado local e no CI); rodar o SQL
-// à mão aqui prova a lógica do job sem depender da extensão estar instalada (etapa 11).
 const EXPIRE_SEAT_HOLDS_SQL = `
   WITH expired AS (
     UPDATE "SeatHold" SET "releasedAt" = now()

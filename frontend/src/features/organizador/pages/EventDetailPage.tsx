@@ -78,8 +78,6 @@ function PublishEventDialog({ event }: { event: OrganizerEvent }) {
   )
 }
 
-// Confirmação por digitação do nome da sessão (§ etapa 04) -- cancelamento é
-// irreversível e sem estorno nesta versão; o diálogo diz isso, não só o README.
 function CancelEventDialog({ event }: { event: OrganizerEvent }) {
   const [open, setOpen] = useState(false)
   const [confirmText, setConfirmText] = useState('')
@@ -95,9 +93,6 @@ function CancelEventDialog({ event }: { event: OrganizerEvent }) {
       showToast('Sessão cancelada.', 'success')
       setOpen(false)
       setConfirmText('')
-      // sai do detalhe (que só mostra "Cancelar sessão" de novo, sem ação possível) e
-      // volta pra lista já na aba "Publicadas" -- de onde a maioria dos cancelamentos
-      // parte -- com dados frescos (a invalidação acima já forçou o refetch)
       navigate('/organizador?status=PUBLISHED')
     },
   })
@@ -161,8 +156,6 @@ function EventImageSection({ event }: { event: OrganizerEvent }) {
     if (!file) return
     setLocalError(null)
 
-    // validado no cliente também (§ etapa 04, upload de imagem) -- deixar subir
-    // 5 MB para receber 400 é desperdício de tempo do organizador
     if (file.size > MAX_IMAGE_BYTES || !ACCEPTED_IMAGE_TYPES.includes(file.type)) {
       setLocalError(INVALID_IMAGE_MESSAGE)
       changeEvent.target.value = ''
@@ -181,7 +174,6 @@ function EventImageSection({ event }: { event: OrganizerEvent }) {
       {(previewUrl ?? event.imageUrl) && (
         <img src={previewUrl ?? event.imageUrl} alt="" className={styles.poster} />
       )}
-      {/* Corte nº 3 (§12.1): sem imagem própria, o pôster do TMDb cobre tudo */}
       {!hasCustomImage && <p className={styles.note}>Usando o pôster do TMDb - envie uma imagem para substituí-lo.</p>}
       {localError && (
         <p role="alert" className={styles.formError}>

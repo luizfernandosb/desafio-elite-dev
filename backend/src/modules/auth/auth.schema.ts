@@ -1,7 +1,5 @@
 import { z } from 'zod'
 
-// TLD ≥ 2 caracteres, sem pontos consecutivos, sem ponto no fim -- checagem de domínio
-// que complementa o `.email()` do Zod (§7.4). Não é regex artesanal de e-mail inteiro.
 function isValidEmailDomain(domain: string): boolean {
   if (domain.length === 0) return false
   if (domain.startsWith('.') || domain.endsWith('.')) return false
@@ -27,8 +25,6 @@ export const registerSchema = {
     name: z.string().trim().min(1).max(100),
     email: emailSchema,
     password: z.string().min(10, 'Senha deve ter ao menos 10 caracteres'),
-    // nenhum campo `role` aqui -- endpoint público sempre cria CUSTOMER (§7.3).
-    // um `role` enviado no corpo é descartado pelo `.strip()` implícito do Zod.
   }),
 }
 

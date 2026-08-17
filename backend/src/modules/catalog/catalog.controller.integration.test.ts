@@ -7,9 +7,6 @@ import { cleanDatabase } from '../../test/setup'
 import { bypassLoopbackOnly } from '../../test/msw/on-unhandled-request'
 import { server } from '../../test/msw/server'
 
-// bypassLoopbackOnly, não 'bypass' puro nem 'error' puro: este arquivo mistura supertest
-// (loopback local, precisa passar sem ser interceptado) com o mock do TMDb (precisa ser
-// interceptado) -- ver comentário em test/msw/on-unhandled-request.ts
 beforeAll(() => server.listen({ onUnhandledRequest: bypassLoopbackOnly }))
 afterEach(() => server.resetHandlers())
 afterAll(() => server.close())
@@ -70,8 +67,6 @@ describe('GET /api/v1/catalog/search', () => {
     const first = await supertest(app).get('/api/v1/catalog/search?q=matrix').set('Authorization', authHeader)
     expect(first.status).toBe(200)
 
-    // handler removido -- se a segunda busca tentasse ir à rede, cairia no
-    // 'bypass' e voltaria vazio (sem handler == sem mock == sem resposta simulada)
     server.resetHandlers()
 
     const second = await supertest(app).get('/api/v1/catalog/search?q=matrix').set('Authorization', authHeader)

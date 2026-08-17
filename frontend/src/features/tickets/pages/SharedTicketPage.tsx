@@ -12,10 +12,6 @@ import styles from './SharedTicketPage.module.css'
 
 const QR_SIZE = 220
 
-// Dupla garantia contra indexação (§ etapa 09) -- o back já manda `X-Robots-Tag:
-// noindex` (`share.controller.ts`), esta tag espelha a mesma intenção no HTML em si.
-// Sem lib de `<head>` no projeto (nenhuma outra tela precisou até agora): a tag é
-// inserida/removida a mão, com o mesmo ciclo de vida da página.
 function useNoIndex() {
   useEffect(() => {
     const meta = document.createElement('meta')
@@ -28,9 +24,6 @@ function useNoIndex() {
   }, [])
 }
 
-// Layout próprio, deliberadamente mais simples que o resto da aplicação (§ etapa 09)
-// -- é a tela que um estranho abre a partir de um link, sem <Layout> (sem logo, sem
-// nav, sem sessão). Rota montada fora da árvore de `<Layout>` no router.
 export default function SharedTicketPage() {
   useNoIndex()
 

@@ -11,6 +11,6 @@ describe('computeSeatPriceInCents', () => {
   })
 
   it('HALF com preço efetivo ímpar -- arredonda ao centavo mais próximo', () => {
-    expect(computeSeatPriceInCents(2501, 'HALF')).toBe(1251) // 1250.5 -> 1251
+    expect(computeSeatPriceInCents(2501, 'HALF')).toBe(1251)
   })
 })

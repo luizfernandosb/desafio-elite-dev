@@ -81,8 +81,6 @@ describe('MovieSearch', () => {
 
     await user.type(screen.getByLabelText('Buscar filme'), 'duna')
 
-    // 503 aciona 1 retry (query-client.ts, "5xx vale tentar de novo") antes do erro
-    // aparecer -- timeout maior que o findBy* default de 1s para dar tempo ao retry
     expect(await screen.findByRole('alert', {}, { timeout: 3000 })).toHaveTextContent(
       'Catálogo temporariamente indisponível',
     )

@@ -27,16 +27,11 @@ export function VenueStep({ defaultValues, onBack, onNext }: VenueStepProps) {
     mode: 'onBlur',
   })
 
-  // Primeiro uso de `useFieldArray` no projeto -- não há um padrão prévio de "lista
-  // de campos repetível" pra espelhar aqui, mas o resto (zodResolver, setValue pros
-  // pickers controlados) segue exatamente a mesma convenção do resto do formulário.
   const { fields, append, remove } = useFieldArray({ control, name: 'slots' })
 
   const timezone = watch('timezone')
   const venueState = watch('venueState')
   const venueCity = watch('venueCity')
-  // fuso é um só pro lote inteiro -- a confirmação mostra o primeiro horário como
-  // representante (§ "Sessão às... no horário de..."), não um resumo por linha
   const firstSlot = watch('slots.0')
 
   return (
@@ -47,7 +42,6 @@ export function VenueStep({ defaultValues, onBack, onNext }: VenueStepProps) {
         value={venueState}
         onChange={(value) => {
           setValue('venueState', value, { shouldValidate: true })
-          // cidade selecionada pertencia ao estado anterior -- não faz sentido sobrar
           setValue('venueCity', '', { shouldValidate: true })
         }}
         error={errors.venueState?.message}
@@ -63,7 +57,6 @@ export function VenueStep({ defaultValues, onBack, onNext }: VenueStepProps) {
         <p className={styles.slotsLabel}>Horários (uma sessão por horário)</p>
         {fields.map((field, index) => (
           <div key={field.id} className={styles.slotRow}>
-            {/* data e hora separadas -- um datetime-local só é ruim no celular (§ etapa 04) */}
             <Input
               label="Data"
               type="date"
@@ -102,10 +95,6 @@ export function VenueStep({ defaultValues, onBack, onNext }: VenueStepProps) {
         </Button>
       </div>
 
-      {/* Select do Radix não tem `register()` (sem <input> nativo por trás) -- valor
-          escrito no form via `setValue`, mesmo padrão de qualquer campo controlado
-          fora do DOM nativo (§ exploração da etapa 04, "Select ... via Controller ou
-          onValueChange manual"). */}
       <TimezonePicker
         value={timezone}
         onChange={(value) => setValue('timezone', value, { shouldValidate: true })}

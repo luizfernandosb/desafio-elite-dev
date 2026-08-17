@@ -9,8 +9,6 @@ import { seedPaidTicket, seedUser } from '../../test/factories'
 import { generateTicketCode } from '../tickets/qr.service'
 
 async function issueTicket() {
-  // dentro da janela de portaria (2h antes até 6h depois, §4.6.3) -- o padrão da
-  // factory é 24h no futuro, de propósito fora da janela para outros módulos
   const paid = await seedPaidTicket({ startsAt: new Date(Date.now() - 30 * 60_000) })
   const gate = await seedUser(Role.GATE)
   const gateToken = signAccessToken({ sub: gate.id, role: Role.GATE })
@@ -36,7 +34,7 @@ describe('POST /api/v1/gate/validate', () => {
       .set('Authorization', `Bearer ${gateToken}`)
       .send({ code, eventId: event.id })
 
-    expect(first.status).toBe(200) // sempre 200, mesmo pra resultado negativo
+    expect(first.status).toBe(200)
     expect(first.body.result).toBe('VALID')
     expect(first.body.ticket).toEqual({ seat: expect.any(String), eventTitle: event.title })
 
@@ -74,7 +72,7 @@ describe('POST /api/v1/gate/validate', () => {
 
   it('WRONG_EVENT -- código válido, mas de outro evento', async () => {
     const { ticket } = await issueTicket()
-    const other = await issueTicket() // segundo evento + segundo posto
+    const other = await issueTicket()
     const customer = await prisma.ticket.findUniqueOrThrow({ where: { id: ticket.id }, include: { order: true } })
     const ownerToken = signAccessToken({ sub: customer.order.userId, role: Role.CUSTOMER })
     const code = await getCode(ticket.id, ownerToken)
@@ -91,8 +89,6 @@ describe('POST /api/v1/gate/validate', () => {
 
   it('NOT_FOUND -- código genuinamente assinado, mas de um ticket que nunca foi emitido', async () => {
     const { event, gateToken } = await issueTicket()
-    // assinado com o segredo real (mesmo mecanismo do qr.service) -- passa o passo 1
-    // (assinatura), mas o codeHash não corresponde a nenhum Ticket de verdade
     const { code } = generateTicketCode({ ticketId: 'ticket-nunca-emitido', eventId: event.id })
 
     const res = await supertest(app)

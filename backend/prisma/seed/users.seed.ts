@@ -2,9 +2,6 @@ import { Role } from '../../generated/prisma/enums'
 import type { PrismaClient } from '../../generated/prisma/client'
 import { hashPassword } from '../../src/modules/auth/password.service'
 
-// Credenciais fixas, documentadas no README -- ORGANIZER e GATE só existem por seed,
-// o registro público cria apenas CUSTOMER (§7.3). Hash em argon2id de verdade
-// (hashPassword real, etapa 03): um seed com hash falso mascararia bug de login.
 export const SEED_PASSWORD = 'Ticket@2026'
 
 export interface SeededUsers {
@@ -21,7 +18,7 @@ async function upsertUser(
   return prisma.user.upsert({
     where: { email: input.email },
     create: { email: input.email, name: input.name, role: input.role, passwordHash: input.passwordHash },
-    update: { name: input.name, role: input.role }, // idempotente -- não regrava o hash a cada rerun
+    update: { name: input.name, role: input.role },
   })
 }
 

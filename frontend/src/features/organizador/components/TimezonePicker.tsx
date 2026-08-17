@@ -11,8 +11,6 @@ interface TimezonePickerProps {
   disabled?: boolean
 }
 
-// Seletor de fuso obrigatório, default América/São Paulo (§ etapa 04, passo 2) --
-// o default de verdade fica no `defaultValues` do `useForm` do passo, não aqui.
 export function TimezonePicker({ value, onChange, date, time, error, disabled }: TimezonePickerProps) {
   let confirmation: string | null = null
   if (date && time && value) {

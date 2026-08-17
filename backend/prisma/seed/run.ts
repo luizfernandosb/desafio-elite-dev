@@ -8,9 +8,6 @@ export interface SeedResult {
   events: SeededEvents
 }
 
-// Corpo do seed, sem I/O de console -- importado tanto por `prisma/seed.ts` (que
-// imprime o resumo) quanto pelo teste de integração (que só quer as contagens),
-// para as duas execuções nunca divergirem uma da outra.
 export async function runSeed(prisma: PrismaClient): Promise<SeedResult> {
   const users = await seedUsers(prisma)
   const events = await seedEvents(prisma, users.organizer.id)

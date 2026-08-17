@@ -1,11 +1,6 @@
 import { useEffect, useState } from 'react'
 import styles from './OfflineBanner.module.css'
 
-// `navigator.onLine` só dá o ponto de partida (§ etapa 11) -- os eventos `online`/
-// `offline` da própria API do navegador mantêm o estado correto depois, sem
-// polling. Diferente de erro de servidor: a ação certa aqui é esperar a rede
-// voltar, não tentar de novo imediatamente -- por isso um banner fixo, não um
-// `ErrorState` com botão de retry.
 export function OfflineBanner() {
   const [isOnline, setIsOnline] = useState(() => (typeof navigator === 'undefined' ? true : navigator.onLine))
 

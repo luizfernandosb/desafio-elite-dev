@@ -15,10 +15,6 @@ interface RoomStepProps {
   venueName: string
   venueCity: string
   venueState: string
-  // um item por horário do passo anterior -- "Publicar sessão" cria E publica uma
-  // sessão por data/hora desta lista, todas com o mesmo filme/local/sala física/
-  // preço-base (§ etapa "múltiplos horários", CreateEventWizard.tsx); formato/
-  // áudio/sala variam por horário, ver `defaultValues.sessions`
   startsAtUtcList: Date[]
   timezone: string
   accessibleSeats: string[]
@@ -29,8 +25,6 @@ interface RoomStepProps {
   submitError?: string | null
 }
 
-// Prévia do mapa ao vivo (§ etapa 04, passo 3) -- gera só os rótulos ("A1", "A2", ...)
-// a partir do layout ainda sendo digitado; não existe seat de verdade até o POST.
 function buildDesignRows(rows: number, seatsPerRow: number, accessibleSeats: string[]): SeatMapRow[] {
   const accessibleSet = new Set(accessibleSeats)
   const result: SeatMapRow[] = []
@@ -45,9 +39,6 @@ function buildDesignRows(rows: number, seatsPerRow: number, accessibleSeats: str
   return result
 }
 
-// preço-base é um só pro lote (mesma sala física); o efetivo por horário só muda
-// quando AQUELE horário específico é Sala VIP -- dois horários da mesma sessão podem
-// ter preços finais diferentes (um padrão, outro VIP com acréscimo)
 function effectivePriceInCents(basePriceInCents: number, session: SessionAttrsValues): number {
   return session.roomType === 'VIP' && session.vipSurchargePercent
     ? Math.round(basePriceInCents * (1 + session.vipSurchargePercent / 100))
@@ -81,8 +72,6 @@ export function RoomStep({
     mode: 'onBlur',
   })
 
-  // `valueAsNumber` (register abaixo) já entrega `number` -- campo vazio vira `NaN`,
-  // nunca `undefined`, por isso o `Number.isFinite` (não `??`) para tratar como 0.
   const rawRows = watch('rows')
   const rawSeatsPerRow = watch('seatsPerRow')
   const rawPriceInReais = watch('priceInReais')

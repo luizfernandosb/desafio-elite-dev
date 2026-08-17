@@ -5,9 +5,6 @@ import { generateSeats, type GeneratedSeat } from '../../src/modules/events/seat
 const DAY_MS = 24 * 60 * 60 * 1000
 const HOUR_MS = 60 * 60 * 1000
 
-// Snapshot do catálogo fixo no código (§6) -- sem chamada de rede. É exatamente o que
-// EventsService.create faria com a resposta do TMDb, só que hardcoded: um seed que
-// depende do TMDb falha sem chave e falha em CI.
 const MOVIE_A = {
   externalId: '693134',
   title: 'Duna: Parte Dois',
@@ -73,14 +70,10 @@ interface EnsuredEvent {
   currency: string
   startsAt: Date
   endsAt: Date | null
-  seats: GeneratedSeat[] // só populado quando `created` -- é a única vez que os ids importam
+  seats: GeneratedSeat[]
   created: boolean
 }
 
-// Idempotência por id fixo (não por (source, externalId), que não é @@unique no
-// schema -- só um índice): evento já existente é achado por id e a etapa toda
-// (assentos, seat_state, vendas) é pulada, exatamente como a aplicação real nunca
-// regenera assentos depois da criação (etapa 05).
 async function ensureEvent(prisma: PrismaClient, input: EnsureEventInput): Promise<EnsuredEvent> {
   const existing = await prisma.event.findUnique({ where: { id: input.id } })
   if (existing) {
@@ -138,13 +131,6 @@ export interface SeededEvents {
 export async function seedEvents(prisma: PrismaClient, organizerId: string): Promise<SeededEvents> {
   const now = Date.now()
 
-  // Evento A -- desvio deliberado do plano: a etapa pede "hoje + 2 dias", mas o
-  // critério de aceite pede a portaria demonstrando VALID *imediatamente* após o
-  // seed, e a janela de validação só abre 2h antes do início (etapa 10,
-  // shared/date.ts). As duas coisas juntas são inconsistentes -- resolvido a favor
-  // do critério de aceite (é o que importa para quem avalia): o evento já começou
-  // há 1h, dentro da janela agora e por mais ~5h (sem endsAt -- fecha 6h após o
-  // início). Registrado no README junto das outras inconsistências do plano.
   const eventA = await ensureEvent(prisma, {
     id: 'seed-event-duna',
     organizerId,
@@ -156,7 +142,7 @@ export async function seedEvents(prisma: PrismaClient, organizerId: string): Pro
     startsAt: new Date(now - HOUR_MS),
     endsAt: null,
     priceInCents: 3200,
-    layout: { rows: 8, seatsPerRow: 12 }, // 96 assentos
+    layout: { rows: 8, seatsPerRow: 12 },
     format: EventFormat.THREE_D,
     audio: EventAudio.SUBTITLED,
     roomType: RoomType.VIP,
@@ -174,7 +160,7 @@ export async function seedEvents(prisma: PrismaClient, organizerId: string): Pro
     startsAt: new Date(now + 5 * DAY_MS),
     endsAt: null,
     priceInCents: 4000,
-    layout: { rows: 5, seatsPerRow: 10 }, // 50 assentos, todos livres
+    layout: { rows: 5, seatsPerRow: 10 },
   })
 
   const eventC = await ensureEvent(prisma, {
@@ -188,8 +174,6 @@ export async function seedEvents(prisma: PrismaClient, organizerId: string): Pro
     startsAt: new Date(now + 10 * DAY_MS),
     endsAt: null,
     priceInCents: 2800,
-    // sem layout -- DRAFT nunca chegou a ter assentos definidos, prova o "0 assentos"
-    // do critério de aceite tão bem quanto teria com eles
   })
 
   return { eventA, eventB, eventC }

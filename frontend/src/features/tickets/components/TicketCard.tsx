@@ -37,9 +37,6 @@ export function TicketCard({ ticket }: TicketCardProps) {
               <Badge key={label}>{label}</Badge>
             ))}
           </div>
-          {/* `seat` é opcional no tipo (schema: `seatId String?`, "sempre preenchido
-              nesta versão SEATED-only") -- fallback nunca deveria aparecer hoje, mas
-              o componente não presume um campo que o próprio back marca como opcional */}
           <p className={styles.seat}>
             {seat ? `Fileira ${seat.row}, assento ${seat.number}` : 'Assento não atribuído'}
           </p>

@@ -12,9 +12,6 @@ const HANDLED_EVENT_TYPES = new Set([
   'payment_intent.canceled',
 ])
 
-// chega antes do express.json() (body cru, montado em app.ts) -- req.log já existe
-// (requestLogger roda primeiro), mas um logger filho próprio, com stripeEventId,
-// evita ficar preso ao formato genérico de log de requisição (§5.5.7)
 export function createStripeWebhookHandler(ordersService: OrdersService) {
   return async (req: Request, res: Response) => {
     const webhookLog = logger.child({ requestId: req.id, handler: 'stripe-webhook' })
@@ -56,12 +53,10 @@ export function createStripeWebhookHandler(ordersService: OrdersService) {
       res.json({ received: true })
     } catch (err) {
       if (err instanceof NotFoundError) {
-        // falha permanente -- a Order não existe pra esse intent, reentregar não resolve
         log.error({ msg: 'falha permanente ao processar webhook', type: event.type, err })
         return res.json({ received: true })
       }
 
-      // falha transitória (banco fora, etc.) -- 500 faz o Stripe reentregar
       log.error({ msg: 'falha ao processar webhook', type: event.type, err })
       res.status(500).json({ code: 'PROCESSING_ERROR' })
     }

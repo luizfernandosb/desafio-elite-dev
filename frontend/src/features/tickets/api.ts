@@ -34,9 +34,6 @@ export interface Ticket {
   seat: TicketSeat | null
 }
 
-// `code` só existe aqui, nunca na listagem (back: `ticket.service.ts`, `toPublicTicket`
-// nunca inclui o QR em claro) -- espelha a decisão do back de não vazar o código de
-// validação numa tela que nem mostra QR.
 export interface TicketDetail extends Ticket {
   code: string
 }
@@ -46,8 +43,6 @@ export interface ShareLink {
   expiresAt: string
 }
 
-// payload mínimo da página pública (§7.7) -- sem ticketId, orderId, nome ou e-mail de
-// quem comprou, igual ao que o back devolve (`SharedTicketView`)
 export interface SharedTicketView {
   event: Pick<
     TicketEventSummary,
@@ -73,8 +68,6 @@ export function getTicket(id: string) {
   return api.get<TicketDetail>(`/tickets/${id}`)
 }
 
-// idempotente enquanto o link vigente existir (back: `TicketService.createShareLink`)
-// -- chamar de novo é seguro, sempre devolve o mesmo link em vez de criar um segundo
 export function createShareLink(id: string) {
   return api.post<ShareLink>(`/tickets/${id}/share`)
 }
@@ -83,15 +76,10 @@ export function revokeShareLink(id: string) {
   return api.delete<void>(`/tickets/${id}/share`)
 }
 
-// devolve o ticket atualizado (status CANCELLED) -- back-end libera o assento e
-// estorna o valor daquele assento (parcial, se o pedido teve mais de um)
 export function cancelTicket(id: string) {
   return api.post<TicketDetail>(`/tickets/${id}/cancel`)
 }
 
-// rota pública, sem Authorization (back: `share.routes.ts` não tem `requireAuth`) --
-// prefixo `/share`, não `/tickets`, é o mesmo usado por `APP_PUBLIC_URL` na URL que o
-// dono recebe (`${APP_PUBLIC_URL}/share/:token`)
 export function getSharedTicket(shareToken: string) {
   return api.get<SharedTicketView>(`/share/${shareToken}`)
 }

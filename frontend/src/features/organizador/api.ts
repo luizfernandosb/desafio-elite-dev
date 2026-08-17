@@ -16,9 +16,6 @@ export interface CatalogItem {
   genres: string[]
 }
 
-// TMDb pagina em blocos fixos de 20, sem `limit` configurável (§4.3, backend
-// catalog.schema.ts) -- `meta.stale` só aparece quando o back serve cache vencido
-// após falha do provedor (bugs.md não cobre isto, mas catalog.service.ts sim).
 export interface CatalogSearchResult extends Paginated<CatalogItem> {
   meta: Paginated<CatalogItem>['meta'] & { stale?: boolean }
 }
@@ -93,7 +90,7 @@ export interface CreateEventInput {
   venueName: string
   venueCity: string
   venueState: string
-  startsAt: string // ISO -- o back faz `z.coerce.date()`, aceita string
+  startsAt: string
   endsAt?: string
   timezone: string
   priceInCents: number
@@ -102,15 +99,12 @@ export interface CreateEventInput {
     seatsPerRow: number
     accessibleSeats?: string[]
   }
-  // sem default aqui -- o back já assume 2D/Dublado/Padrão se nada vier (events.schema.ts)
   format?: SessionFormat
   audio?: SessionAudio
   roomType?: SessionRoomType
   vipSurchargePercent?: number
 }
 
-// campos bloqueados após a primeira venda (SALE_LOCKED_FIELDS no back) já ficam de
-// fora do formulário quando `event._count.tickets > 0` -- ver EventEditForm.tsx
 export interface UpdateEventInput {
   venueName?: string
   synopsis?: string
@@ -149,8 +143,6 @@ export function searchCatalog(q: string, page = 1) {
   return api.get<CatalogSearchResult>(`/catalog/search?${search.toString()}`)
 }
 
-// estados e municípios do IBGE não mudam de um dia para o outro -- só o back cacheia
-// (locations.service.ts); aqui é só o `unwrap` do envelope `{ data }` de resposta
 export function getStates() {
   return api.get<{ data: StateOption[] }>('/locations/states').then((res) => res.data)
 }

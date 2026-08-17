@@ -1,5 +1,3 @@
-/* Pulso de opacidade, não shimmer em gradiente -- `linear-gradient` neste projeto só
-   existe no overlay do card de evento (§5.1.1, critério de aceite via grep). */
 .skeleton {
   display: block;
   background: var(--surface-2);

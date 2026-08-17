@@ -11,8 +11,6 @@ import { bypassLoopbackOnly } from '../../test/msw/on-unhandled-request'
 import { server } from '../../test/msw/server'
 import { removedStorageKeys } from '../../test/msw/storage-handlers'
 
-// bypassLoopbackOnly, não 'bypass' puro: mistura supertest (loopback local) com o mock
-// do Supabase Storage (precisa ser interceptado) -- ver test/msw/on-unhandled-request.ts
 beforeAll(() => server.listen({ onUnhandledRequest: bypassLoopbackOnly }))
 afterEach(() => {
   server.resetHandlers()

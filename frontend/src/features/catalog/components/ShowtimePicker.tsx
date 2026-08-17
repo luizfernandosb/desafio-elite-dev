@@ -9,16 +9,9 @@ interface ShowtimePickerProps {
   groupsByDay: Map<string, ShowtimeGroup[]>
   selectedDayKey: string
   onSelectDay: (key: string) => void
-  // href varia por sessão (auth decide no clique -- direto pro mapa de assentos
-  // quando logado, ou pra /entrar com ?redirect= de volta quando não, § EventDetailPage)
   hrefForSession: (sessionId: string) => string
 }
 
-// Tela "escolher sessão" de um cinema físico: aba por dia (rolagem horizontal com
-// setas, já que 7+ dias não cabem numa tela estreita), e dentro do dia um grupo por
-// combinação de áudio/formato/sala ("Dublado - 2D"), cada sessão um botão com local
-// + horário. Cada botão já navega direto pro mapa de assentos daquela sessão
-// específica -- não existe um passo de "confirmar" separado.
 export function ShowtimePicker({ dayTabs, groupsByDay, selectedDayKey, onSelectDay, hrefForSession }: ShowtimePickerProps) {
   const scrollerRef = useRef<HTMLDivElement>(null)
 

@@ -1,8 +1,3 @@
-/* Os quatro blocos de cor da portaria são a única exceção documentada ao resto do
-   design system (tokens.css, § etapa 02/10) -- literais do plano, fixos nos dois
-   temas de propósito: o resultado precisa ser legível a 2 metros de distância sob
-   luz de ambiente variável, não seguir claro/escuro do sistema. */
-
 .overlay {
   position: fixed;
   inset: 0;

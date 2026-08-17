@@ -25,9 +25,6 @@ export function validate(schema: RequestSchema) {
     if (schema.query) {
       const result = schema.query.safeParse(req.query)
       if (!result.success) return next(new ValidationError(result.error.issues[0]?.message))
-      // Express 5 define `req.query` como getter só-leitura no prototype -- `=` direto
-      // lança "Cannot set property query". `configurable: true` permite redefinir por
-      // instância; sobrescreve com um valor gravável comum.
       Object.defineProperty(req, 'query', {
         value: result.data,
         writable: true,

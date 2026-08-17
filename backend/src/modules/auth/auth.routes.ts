@@ -15,16 +15,11 @@ const googleProvider = new GoogleAuthProvider()
 const authService = new AuthService(authRepository, googleProvider)
 const authController = new AuthController(authService)
 
-// desligado sob NODE_ENV=test -- a suíte de integração roda em série no mesmo
-// processo (§7.10.2) e compartilharia o mesmo contador entre arquivos de teste
 const skipInTest = () => env.NODE_ENV === 'test'
 
-// resposta padrão do express-rate-limit não é { code, message } -- next(err) cai no
-// errorHandler global, igual a qualquer outro erro da API (§5.5.4)
 const rateLimitHandler = (_req: unknown, _res: unknown, next: (err: unknown) => void) =>
   next(new RateLimitedError())
 
-// por IP -- contém um atacante batendo em várias contas a partir do mesmo lugar
 const perIpLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   limit: 20,
@@ -34,7 +29,6 @@ const perIpLimiter = rateLimit({
   handler: rateLimitHandler,
 })
 
-// por e-mail -- contém varredura de senha distribuída por IP contra UMA conta (§7.8)
 const perEmailLoginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   limit: 10,

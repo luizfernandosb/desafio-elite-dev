@@ -1,9 +1,5 @@
 import { ApiError } from '../../lib/api'
 
-// SEAT_TAKEN nunca vira uma mensagem genérica (§ etapa 06) -- é o momento em que o
-// requisito BE-4 (anti-double-booking) se torna visível para um humano. O ajuste da
-// seleção em si (usando `takenSeatIds`) é feito por quem chama `useHold`, não aqui --
-// esta função só traduz o `code` em texto.
 export function holdErrorMessage(err: unknown): string {
   if (err instanceof ApiError) {
     if (err.code === 'SEAT_TAKEN') {

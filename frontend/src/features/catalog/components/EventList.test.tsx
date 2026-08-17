@@ -133,8 +133,6 @@ describe('EventList', () => {
     )
     renderList()
 
-    // 500 aciona 1 retry (query-client.ts) antes do erro aparecer -- timeout maior
-    // que o findBy* default de 1s (mesmo raciocínio de outros testes de estado de erro)
     expect(await screen.findByRole('alert', {}, { timeout: 3000 })).toHaveTextContent('Erro interno')
     expect(screen.getByText(/req-abc/)).toBeInTheDocument()
   })

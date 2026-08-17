@@ -57,8 +57,6 @@ export class SeatHoldService {
     } catch (err) {
       if (!isUniqueViolation(err)) throw err
 
-      // liberação preguiçosa: 1 tentativa de expirar os holds vencidos DESSES assentos
-      // e repetir -- sem isso um assento fica falsamente ocupado até o pg_cron rodar
       await this.repo.releaseExpiredAmong(prisma, seatIds)
 
       try {
@@ -75,9 +73,9 @@ export class SeatHoldService {
 
   async release(userId: string, eventId: string, holdId: string, log: Logger): Promise<void> {
     const hold = await this.repo.findOwnedById(prisma, holdId, eventId, userId)
-    if (!hold) throw new NotFoundError('Hold') // privado -- não revela se existe de outro dono
+    if (!hold) throw new NotFoundError('Hold')
 
-    if (hold.releasedAt) return // idempotente: já liberado não é erro
+    if (hold.releasedAt) return
 
     await prisma.$transaction(async (tx) => {
       await this.repo.release(tx, hold.id)

@@ -16,9 +16,6 @@ import { StripePaymentProvider } from './providers/stripe-payment.provider'
 import { createStripeWebhookHandler } from './webhook.controller'
 import { WebhookEventRepository } from './webhook-event.repository'
 
-// Os dois provedores ativos ao mesmo tempo -- a flag de teste do checkout (front)
-// escolhe por PEDIDO qual usar (§4.5, §12), em vez de um único provedor fixo pro
-// processo inteiro. FAKE continua o default de `createOrderSchema`.
 const paymentProviders: Record<PaymentMethod, PaymentProvider> = {
   FAKE: new FakePaymentProvider(),
   STRIPE: new StripePaymentProvider(),
@@ -51,9 +48,6 @@ ordersRoutes.get(
   validate(orderIdSchema),
   ordersController.getById,
 )
-// substituto de dev para o webhook do Stripe (§4.5, etapa 08 do front, "Dia 2") --
-// só funciona com `FakePaymentProvider` (`supportsSimulation`, checado no Service);
-// trocar para Stripe real (§12) faz este endpoint parar de funcionar sozinho.
 ordersRoutes.post(
   '/:id/simulate-payment',
   requireAuth,
@@ -62,6 +56,4 @@ ordersRoutes.post(
   ordersController.simulatePayment,
 )
 
-// composto aqui (mesma instância de OrdersService) mas montado direto em app.ts, antes
-// do express.json() -- ver comentário lá sobre por que não pode passar por v1Router
 export const stripeWebhookHandler = createStripeWebhookHandler(ordersService)

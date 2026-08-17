@@ -5,8 +5,6 @@ import type { GateService } from './gate.service'
 export class GateController {
   constructor(private readonly service: GateService) {}
 
-  // sempre 200 -- os quatro (na verdade oito) resultados são operacionalmente
-  // esperados, não erros da requisição (§ etapa 10, decisão de contrato)
   validate = async (req: Request, res: Response) => {
     const result = await this.service.validate(req.user!.id, req.body as ValidateDto, req.log)
     res.status(200).json(result)

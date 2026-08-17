@@ -7,8 +7,6 @@ import { isValidSeatLabel, MAX_ROWS, MAX_SEATS_PER_ROW } from './seatmap.service
 
 function isValidIanaTimezone(timezone: string): boolean {
   try {
-    // lança RangeError para qualquer coisa que não seja um fuso IANA reconhecido --
-    // não escrever regex artesanal de fuso horário (§4.6.3)
     new Intl.DateTimeFormat(undefined, { timeZone: timezone })
     return true
   } catch {
@@ -45,9 +43,7 @@ export const createEventSchema = {
       format: z.enum(EventFormat).default(EventFormat.TWO_D),
       audio: z.enum(EventAudio).default(EventAudio.DUBBED),
       roomType: z.enum(RoomType).default(RoomType.STANDARD),
-      // percentual sobre priceInCents, só quando roomType = VIP (ver refine abaixo)
       vipSurchargePercent: z.coerce.number().int().min(1).max(300).optional(),
-      // nenhum campo `organizerId`, `type` ou `status` aqui -- vêm do servidor (§7.5)
     })
     .refine((data) => isFutureEventStart(data.startsAt), {
       message: 'startsAt deve ser pelo menos 1h à frente do horário atual',
@@ -63,12 +59,6 @@ export const createEventSchema = {
     }),
 }
 
-// campos que não alteram o contrato de compra ficam sempre editáveis; os que alteram
-// (data, fuso, preço, cidade) só quando o evento ainda não vendeu ingresso -- checado
-// no Service, que conhece o estado atual do evento (§ etapa 05, "PATCH com vendas").
-// `imageUrl` propositalmente fora daqui (etapa 12): só muda via POST/DELETE
-// /events/:id/image, que passa pela validação de magic bytes -- um PATCH aceitando
-// qualquer URL seria um segundo caminho para o mesmo campo, sem a validação do primeiro.
 export const updateEventSchema = {
   params: z.object({ id: z.string().min(1) }),
   body: z
@@ -96,10 +86,6 @@ export const listEventsSchema = {
       from: z.coerce.date().optional(),
       to: z.coerce.date().optional(),
       status: z.enum(EventStatus).default(EventStatus.PUBLISHED),
-      // filtra sessões do MESMO filme (catálogo TMDb) -- usado pela tela pública de
-      // detalhe para listar todos os horários de uma sessão (§ tela "escolher
-      // horário"), não só a que o cliente abriu. Casa com o índice
-      // `@@index([source, externalId])` do schema.
       externalId: z.string().trim().min(1).optional(),
     })
     .refine((data) => !data.from || !data.to || data.from <= data.to, {

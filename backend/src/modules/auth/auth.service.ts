@@ -55,7 +55,7 @@ export class AuthService {
       email: dto.email,
       name: dto.name,
       passwordHash,
-      emailVerified: false, // confirmação por link fora de escopo (§7.4) -- omissão deliberada
+      emailVerified: false,
     })
 
     log.info({ msg: 'user registered', userId: user.id })
@@ -68,7 +68,6 @@ export class AuthService {
 
     if (!user || !passwordOk) {
       log.warn({ msg: 'login failed' })
-      // mesmo code, mesma mensagem, mesmo status para e-mail inexistente e senha errada (§7.1)
       throw new UnauthorizedError('Credenciais inválidas')
     }
 
@@ -90,7 +89,6 @@ export class AuthService {
         }
         user = await this.authRepo.linkGoogleSub(prisma, existing.id, profile.sub)
       } else {
-        // conta via Google entra sempre como CUSTOMER -- ORGANIZER/GATE só por seed (§7.3)
         user = await this.authRepo.createCustomer(prisma, {
           email: profile.email,
           name: profile.name,
@@ -111,7 +109,6 @@ export class AuthService {
     if (!stored) throw new UnauthorizedError('Sessão inválida')
 
     if (stored.revokedAt || stored.tokenHash !== hashToken(presentedToken)) {
-      // token já usado (ou hash não corresponde) -- reuso: revoga toda a família (§7.2)
       log.warn({ msg: 'refresh token reuse detected', userId: stored.userId })
       await this.authRepo.revokeFamily(prisma, stored.userId)
       throw new UnauthorizedError('Sessão inválida')
@@ -134,7 +131,7 @@ export class AuthService {
     try {
       decoded = verifyRefreshToken(presentedToken)
     } catch {
-      return // token já inválido -- nada a revogar
+      return
     }
 
     const stored = await this.authRepo.findRefreshTokenByJti(prisma, decoded.jti)

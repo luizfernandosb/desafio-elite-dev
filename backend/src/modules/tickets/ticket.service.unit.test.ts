@@ -76,7 +76,6 @@ describe('TicketService.createShareLink', () => {
 
     expect(repo.setShareToken).toHaveBeenCalledTimes(1)
     const [, , data] = vi.mocked(repo.setShareToken).mock.calls[0] as unknown as [unknown, unknown, { shareToken: string }]
-    // base64url de 32 bytes -> 43 caracteres, sem padding
     expect(data.shareToken).toHaveLength(43)
     expect(data.shareToken).toMatch(/^[A-Za-z0-9_-]+$/)
     expect(link.url).toContain(data.shareToken)

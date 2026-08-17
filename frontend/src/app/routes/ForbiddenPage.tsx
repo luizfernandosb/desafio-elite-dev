@@ -1,9 +1,5 @@
 import { Link } from 'react-router-dom'
 
-// Página 403 própria -- papel errado não é a mesma coisa que rota inexistente
-// (NotFoundPage) nem que sessão ausente (redireciona para /entrar). Sumir com a rota
-// (redirecionar pra home em silêncio) faz o usuário achar que o link está quebrado
-// (§ etapa 03, guards por papel).
 export function ForbiddenPage() {
   return (
     <>

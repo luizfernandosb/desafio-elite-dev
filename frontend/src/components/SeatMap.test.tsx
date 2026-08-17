@@ -52,7 +52,7 @@ describe('SeatMap', () => {
     expect(a1).toHaveFocus()
 
     await user.keyboard('{ArrowRight}')
-    expect(screen.getByLabelText('Assento A2, vendido')).toHaveFocus() // passa por cima, não pula
+    expect(screen.getByLabelText('Assento A2, vendido')).toHaveFocus()
 
     await user.keyboard('{ArrowRight}')
     expect(screen.getByLabelText('Assento A3, disponível')).toHaveFocus()
@@ -73,7 +73,7 @@ describe('SeatMap', () => {
 
     onSeatClick.mockClear()
     const a2 = screen.getByLabelText('Assento A2, vendido')
-    a2.focus() // .focus() ainda funciona -- tabIndex=-1, não um <button disabled> de verdade
+    a2.focus()
     await user.keyboard(' ')
     expect(onSeatClick).not.toHaveBeenCalled()
   })

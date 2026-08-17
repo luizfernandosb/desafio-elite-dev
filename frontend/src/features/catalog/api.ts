@@ -3,16 +3,8 @@ import type { SessionAudio, SessionFormat, SessionRoomType } from '../../shared/
 
 export type PublicEventStatus = 'PUBLISHED' | 'CANCELLED'
 
-// Formato que a listagem/detalhe pública recebe -- mesmo endpoint `GET /events` do
-// organizador (etapa 04), sem `status` no query: o back já assume `PUBLISHED` por
-// padrão (events.schema.ts) e nunca devolve `DRAFT`/`CANCELLED` para quem não é o
-// dono (events.service.ts, `isVisibleTo`) -- não repetimos essa checagem aqui, só
-// aceitamos o que a API decide mostrar.
 export interface PublicEvent {
   id: string
-  // mesmo filme do catálogo TMDb (`@@index([source, externalId])` no back) -- usado
-  // pra buscar as OUTRAS sessões do mesmo filme na tela de detalhe (ver
-  // `listPublicEvents({ externalId })`), não exibido diretamente em nenhuma tela
   source: string
   externalId: string
   title: string
@@ -21,8 +13,6 @@ export interface PublicEvent {
   imageUrl?: string
   runtimeMinutes?: number
   genres: string[]
-  // classificação indicativa BR ("L", "10", "12", "14", "16", "18") -- snapshot do
-  // TMDb feito na criação do evento, ausente quando o TMDb não tinha essa entrada
   ageRating?: string
   venueName: string
   venueCity: string

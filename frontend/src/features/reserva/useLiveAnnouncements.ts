@@ -1,8 +1,6 @@
 import { useRef, useState } from 'react'
 import type { SeatStatus } from './api'
 
-// Debounce de anúncios (§ etapa 07) -- "5 assentos mudam no mesmo segundo" vira UM
-// anúncio agregado, não cinco falas em sequência (tão hostil quanto silêncio total).
 const AGGREGATION_WINDOW_MS = 800
 
 export interface AnnouncedSeat {
@@ -11,11 +9,6 @@ export interface AnnouncedSeat {
   status: SeatStatus
 }
 
-// `seat_state` não tem `userId` (README, "quem reservou é dado de outra pessoa") --
-// a única forma de saber "essa mudança fui eu" é comparar com o que a PRÓPRIA sessão
-// já sabe que selecionou/segura (`selection.selectedSeatIds` + `hold`). Mudança do
-// próprio usuário nunca é anunciada aqui: já foi anunciada pelo clique/seleção em si
-// (§ etapa 07, "anunciar duas vezes a mesma ação é ruído").
 export function isOwnSeatChange(seatId: string, ownSeatIds: readonly string[]): boolean {
   return ownSeatIds.includes(seatId)
 }
@@ -46,7 +39,7 @@ export function useLiveAnnouncements() {
 
   function announce(seat: AnnouncedSeat) {
     bufferRef.current.push(seat)
-    if (timerRef.current) return // já tem um flush agendado -- só acumula no buffer
+    if (timerRef.current) return
 
     timerRef.current = setTimeout(() => {
       const batch = bufferRef.current

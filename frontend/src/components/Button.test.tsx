@@ -40,7 +40,7 @@ describe('Button', () => {
     const button = screen.getByRole('button', { name: /enviar/i })
     expect(button).toHaveAttribute('aria-busy', 'true')
     expect(button).toBeDisabled()
-    expect(screen.getByRole('status')).toBeInTheDocument() // Spinner
+    expect(screen.getByRole('status')).toBeInTheDocument()
 
     await user.click(button)
 

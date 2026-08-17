@@ -3,15 +3,15 @@ import { audioLabel, formatLabel, type SessionAudio, type SessionFormat } from '
 import type { PublicEvent } from './api'
 
 export interface DayTab {
-  key: string // "yyyy-mm-dd" no fuso do evento
-  label: string // "Hoje" | "Amanhã" | "SÁB" (ver `dayTabLabel`)
-  shortDate: string // "14/08"
+  key: string
+  label: string
+  shortDate: string
 }
 
 export interface ShowtimeGroup {
   key: string
-  label: string // "Dublado - 2D", opcionalmente "- Sala VIP"
-  sessions: PublicEvent[] // mesmo grupo, ordenadas por horário
+  label: string
+  sessions: PublicEvent[]
 }
 
 export interface ShowtimesByDay {
@@ -19,8 +19,6 @@ export interface ShowtimesByDay {
   groupsByDay: Map<string, ShowtimeGroup[]>
 }
 
-// mesma ordem de AUDIO_OPTIONS/FORMAT_OPTIONS (shared/session-attributes.ts) --
-// Dublado antes de Legendado, 2D antes de 3D, Padrão antes de VIP
 const AUDIO_ORDER: SessionAudio[] = ['DUBBED', 'SUBTITLED']
 const FORMAT_ORDER: SessionFormat[] = ['TWO_D', 'THREE_D']
 
@@ -40,12 +38,6 @@ function groupSortIndex(session: PublicEvent): number {
   return audioIndex * 100 + formatIndex * 10 + vipIndex
 }
 
-// Agrupa as sessões de um filme (mesmo `source`+`externalId`, já filtradas no back
-// via `listPublicEvents({ externalId })`) por dia (aba) e, dentro do dia, por
-// combinação de áudio/formato/sala -- espelha a tela "Dublado - 2D" / "Legendado -
-// 2D" do cinema físico. Sessões passadas nunca aparecem (não dá pra comprar
-// ingresso pro que já aconteceu); o dia de HOJE sempre vira aba, mesmo sem sessão
-// (dá pro cliente ver que não tem mais nada hoje, em vez de a aba simplesmente sumir).
 export function buildShowtimesByDay(sessions: PublicEvent[], timezone: string, now: Date = new Date()): ShowtimesByDay {
   const upcoming = sessions.filter((session) => new Date(session.startsAt).getTime() > now.getTime())
 
@@ -78,9 +70,6 @@ export function buildShowtimesByDay(sessions: PublicEvent[], timezone: string, n
   return { dayTabs, groupsByDay }
 }
 
-// aba selecionada por padrão: a do dia da sessão que o cliente abriu (se ainda
-// estiver entre as abas -- ainda no futuro), senão a primeira aba que tem sessão,
-// senão simplesmente a primeira aba (só "Hoje", sem nada pra mostrar)
 export function defaultDayTabKey(
   dayTabs: DayTab[],
   groupsByDay: Map<string, ShowtimeGroup[]>,

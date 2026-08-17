@@ -3,11 +3,9 @@ import { beforeAll } from 'vitest'
 import { prisma } from '../lib/prisma'
 
 beforeAll(() => {
-  // sem a opção `env` -- execSync já herda as variáveis do processo atual
   execSync('npx prisma migrate deploy', { stdio: 'inherit' })
 })
 
-// ordem respeita as foreign keys -- tabela dependente antes da que ela referencia
 export async function cleanDatabase() {
   await prisma.$transaction([
     prisma.validationLog.deleteMany(),

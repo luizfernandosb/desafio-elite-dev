@@ -16,25 +16,16 @@ const globalLimiter = rateLimit({
   limit: 300,
   standardHeaders: true,
   legacyHeaders: false,
-  // desligado sob NODE_ENV=test -- a suíte de integração roda em série, no mesmo
-  // processo, e compartilharia o mesmo contador entre todos os arquivos de teste
   skip: () => env.NODE_ENV === 'test',
-  // resposta padrão do express-rate-limit não é { code, message } (§5.5.4) -- via
-  // `next(err)` cai no mesmo errorHandler global de todo o resto da API, em vez de
-  // duplicar a serialização aqui
   handler: (_req, _res, next) => next(new RateLimitedError()),
 })
 
 export const app = express()
 
-app.use(requestLogger) // 1º: todo request tem ID antes de tudo
+app.use(requestLogger)
 app.use(helmet())
-app.use(cors({ origin: env.CORS_ORIGINS, credentials: true })) // allowlist, nunca '*'
+app.use(cors({ origin: env.CORS_ORIGINS, credentials: true }))
 
-// body cru para a verificação de assinatura do Stripe -- precisa vir antes do
-// express.json(), e a rota fica montada aqui mesmo (não em v1Router) porque, por essa
-// ordem de middlewares, a resposta já foi enviada antes de qualquer coisa depois deste
-// bloco rodar. Se fosse por v1Router, o request passaria pelo express.json() antes.
 app.use('/api/v1/stripe/webhook', express.raw({ type: 'application/json' }), stripeWebhookHandler)
 
 app.use(express.json({ limit: '100kb' }))

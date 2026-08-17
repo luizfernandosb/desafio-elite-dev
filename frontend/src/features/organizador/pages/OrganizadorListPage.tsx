@@ -28,10 +28,6 @@ function emptyStateCopy(status: EventStatus): { title: string; description?: str
 
 function EventRow({ event }: { event: OrganizerEvent }) {
   const sold = event._count.tickets
-  // `_count.tickets` é o único número de vendas que a listagem devolve (§5.6.2) -- a
-  // capacidade total exigiria o seatmap de cada evento (uma chamada a mais por linha),
-  // então "vendidos/total" do plano vira só "vendidos" aqui; ver mapa de assentos na
-  // própria página de gestão para a ocupação completa.
   const revenue = event.effectivePriceInCents * sold
 
   return (
@@ -108,9 +104,6 @@ function EventStatusList({ status }: { status: EventStatus }) {
 }
 
 export default function OrganizadorListPage() {
-  // `?status=` na URL escolhe a aba inicial (mesmo padrão de `?passo=` no
-  // CreateEventWizard) -- permite outras telas linkarem direto pra aba certa, ex.:
-  // cancelar uma sessão e cair em "Publicadas" já mostrando as demais.
   const [searchParams] = useSearchParams()
   const statusParam = searchParams.get('status')
   const initialTab = STATUS_TABS.find((tab) => tab.value === statusParam)?.value

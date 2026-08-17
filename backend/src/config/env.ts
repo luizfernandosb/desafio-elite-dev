@@ -23,9 +23,7 @@ export const envSchema = z.object({
 
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace']).default('info'),
 
-  // base pública usada para montar o link de compartilhamento (etapa 09)
   APP_PUBLIC_URL: z.string().url(),
-  // allowlist de origens para o CORS -- lista separada por vírgula, nunca '*'
   CORS_ORIGINS: z
     .string()
     .min(1)
@@ -33,4 +31,3 @@ export const envSchema = z.object({
 })
 
 export const env = envSchema.parse(process.env)
-// lança ZodError com o campo exato se algo faltar -- processo não sobe

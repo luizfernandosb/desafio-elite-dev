@@ -4,10 +4,6 @@ import type { PaginationQuery } from '../../shared/pagination'
 import type { TicketService } from './ticket.service'
 
 export class TicketController {
-  // cancelamento mora em OrdersService (§ cancelamento: já tem SeatStateRepository +
-  // PaymentProvider injetados, nenhuma dependência nova precisa ser composta aqui de
-  // novo) -- mesmo padrão de reuso entre módulos que share.routes.ts já faz com
-  // `ticketService`.
   constructor(
     private readonly service: TicketService,
     private readonly ordersService: OrdersService,

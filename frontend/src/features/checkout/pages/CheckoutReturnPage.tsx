@@ -10,11 +10,6 @@ import styles from './CheckoutReturnPage.module.css'
 const MAX_POLLS = 3
 const POLL_INTERVAL_MS = 1000
 
-// O resultado NUNCA vem do retorno do provedor de pagamento diretamente (§ etapa
-// 08) -- mesmo na fase fake, esta página é quem decide o que mostrar a partir do
-// `order.status` já persistido, nunca de um parâmetro de URL. Isso já deixa pronto
-// o caminho para a fase Stripe (Dia 3): o botão "Pagar" só saberia que tela mostrar
-// depois que ESTA página confirmar via `GET /orders/:id`, exatamente como aqui.
 export default function CheckoutReturnPage() {
   const { orderId } = useParams<{ orderId: string }>()
   const navigate = useNavigate()
@@ -34,9 +29,6 @@ export default function CheckoutReturnPage() {
     enabled: Boolean(orderId),
   })
 
-  // Polling curto (§ etapa 08): até 3 tentativas de 1s esperando o webhook (ou, na
-  // fase fake, a simulação) confirmar. Nunca conta como "falhou" -- só para de
-  // tentar sozinho e mostra um estado neutro com um botão manual.
   useEffect(() => {
     if (order?.status !== 'PENDING' || pollCount >= MAX_POLLS || !orderId) return
 
@@ -66,12 +58,6 @@ export default function CheckoutReturnPage() {
       return createOrder(order!.eventId, activeSeatIds, crypto.randomUUID())
     },
     onSuccess: (result) => navigate(`/checkout/${result.order.id}`, { replace: true }),
-    // o filtro client-side acima (`releasedAt`/`expiresAt`) é só uma prévia --
-    // achado em verificação manual (docs/bugs.md #22): o hold pode ter expirado
-    // DE VERDADE entre o carregamento desta tela e o clique em "tentar outro
-    // cartão" (nada aqui é instantâneo). O servidor é a fonte de verdade; se ele
-    // disser HOLD_EXPIRED mesmo assim, o tratamento é o MESMO do CheckoutPage --
-    // volta pro mapa, nunca deixa "tentar outro cartão" preso num erro sem saída.
     onError: (err) => {
       if (isHoldExpired(err)) {
         showToast(checkoutErrorMessage(err), 'danger')
@@ -158,7 +144,6 @@ export default function CheckoutReturnPage() {
     )
   }
 
-  // PENDING: ainda dentro da janela de polling, ou já esgotou as tentativas
   const stillPolling = pollCount < MAX_POLLS
   return (
     <div className={styles.page}>

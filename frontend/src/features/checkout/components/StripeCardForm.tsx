@@ -22,9 +22,6 @@ function PaymentForm({ orderId, onSuccess }: PaymentFormProps) {
     setIsSubmitting(true)
     setErrorMessage(null)
 
-    // `redirect: 'if_required'` -- só sai da página pra cartões que exigem 3D Secure
-    // (ex.: 4000 0025 0000 3155, já listado no TestCardsPanel); 4242... e a maioria
-    // dos cartões de teste confirmam sem nunca redirecionar.
     const { error } = await stripe.confirmPayment({
       elements,
       confirmParams: { return_url: `${window.location.origin}/checkout/${orderId}/retorno` },
@@ -63,11 +60,6 @@ interface StripeCardFormProps {
   onSuccess: () => void
 }
 
-// Caminho real do Stripe -- só existe atrás da flag de teste do checkout
-// (VITE_ALLOW_PAYMENT_TEST_TOGGLE). Reaproveita o StripePaymentProvider já existente
-// no back e os eventos `payment_intent.*` que o webhook já trata -- `onSuccess`
-// navega pro mesmo destino (`/checkout/:id/retorno`) que o fluxo fake já usa; essa
-// tela já sabe esperar o pedido virar PAID via polling, provedor-agnóstico.
 export function StripeCardForm({ clientSecret, orderId, onSuccess }: StripeCardFormProps) {
   return (
     <Elements stripe={stripePromise} options={{ clientSecret }}>

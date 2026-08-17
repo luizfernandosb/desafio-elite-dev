@@ -81,8 +81,8 @@ describe('useSeatSelection', () => {
     act(() => result.current.toggle('seat-1'))
     act(() => result.current.setPriceType('seat-1', 'HALF'))
 
-    act(() => result.current.toggle('seat-1')) // remove
-    act(() => result.current.toggle('seat-1')) // seleciona de novo
+    act(() => result.current.toggle('seat-1'))
+    act(() => result.current.toggle('seat-1'))
 
     expect(result.current.selectedSeats).toEqual([{ seatId: 'seat-1', priceType: 'FULL' }])
   })

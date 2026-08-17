@@ -15,12 +15,6 @@ import TicketListPage from './features/tickets/pages/TicketListPage'
 
 const API = env.VITE_API_URL
 
-// Zero violação CRÍTICA é o critério de aceite da etapa 12 -- "moderada" fica
-// registrada e justificada, não trava o build. Fragmentos isolados (sem <html
-// lang>, sem landmark de página) disparam ruído de nível "serious"/"moderate"
-// (`html-has-lang`, `region`) que não é sobre o componente em si -- filtrar por
-// `impact` em vez de usar o matcher pronto da lib evita esse falso positivo sem
-// esconder o que de fato importa.
 function criticalViolations(results: Awaited<ReturnType<typeof axe>>) {
   return results.violations
     .filter((violation) => violation.impact === 'critical')
@@ -32,7 +26,6 @@ afterEach(() => {
 })
 
 describe('a11y smoke -- axe-core, zero violação crítica (§ etapa 12)', () => {
-  // risco nº 1 do plano: grid de assentos, os quatro estados + acessível juntos
   it('SeatMap -- livre, reservado, selecionado, vendido, acessível', async () => {
     const rows: SeatMapRow[] = [
       {
@@ -54,9 +47,6 @@ describe('a11y smoke -- axe-core, zero violação crítica (§ etapa 12)', () =>
     expect(criticalViolations(results)).toEqual([])
   })
 
-  // risco nº 2 do plano: card de resultado da portaria em tela cheia, anunciado
-  // via role="alert"/aria-live="assertive" -- os quatro tons (valid/invalid/used/
-  // neutral, ver `status.ts`) num único smoke por representatividade
   it.each([
     ['VALID', 'Entrada liberada'],
     ['ALREADY_USED', 'Ingresso já utilizado'],
@@ -76,8 +66,6 @@ describe('a11y smoke -- axe-core, zero violação crítica (§ etapa 12)', () =>
     expect(criticalViolations(results)).toEqual([])
   })
 
-  // tela de lista comum (§ etapa 09/11) -- skeleton, conteúdo agrupado e paginação
-  // juntos, representativa das outras listas retrofitadas na etapa 11
   it('TicketListPage -- com dados (skeleton já resolvido)', async () => {
     server.use(
       http.get(`${API}/tickets`, () =>
@@ -118,9 +106,6 @@ describe('a11y smoke -- axe-core, zero violação crítica (§ etapa 12)', () =>
     expect(criticalViolations(results)).toEqual([])
   })
 
-  // risco nº 4 do plano: resultado de busca -- card poster+legenda lado a lado (não
-  // sobreposto) e o estado de "sem resultado com filtro", que introduz um botão
-  // dentro do EmptyState (ver EventList.tsx)
   it('EventList -- sem resultado para o filtro, com ação de limpar', async () => {
     server.use(
       http.get(`${API}/events`, () =>
@@ -140,7 +125,6 @@ describe('a11y smoke -- axe-core, zero violação crítica (§ etapa 12)', () =>
     expect(criticalViolations(results)).toEqual([])
   })
 
-  // mesmo componente, agora com resultado real -- pôster + legenda em texto normal
   it('EventList -- com resultados', async () => {
     server.use(
       http.get(`${API}/events`, () =>

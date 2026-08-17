@@ -27,7 +27,7 @@ function makeEvent(overrides: Record<string, unknown> = {}) {
     audio: 'DUBBED',
     roomType: 'STANDARD',
     status: 'PUBLISHED',
-    startsAt: '2026-09-20T23:00:00.000Z', // 19:00 em Manaus (UTC-4, sem horário de verão)
+    startsAt: '2026-09-20T23:00:00.000Z',
     timezone: 'America/Manaus',
     priceInCents: 3200,
     effectivePriceInCents: 3200,
@@ -38,10 +38,6 @@ function makeEvent(overrides: Record<string, unknown> = {}) {
   }
 }
 
-// `GET /events` (sem id) é a lista de OUTRAS sessões do mesmo filme
-// (ShowtimePicker) -- o back nunca devolve DRAFT/CANCELLED nem sessão passada por
-// conta própria (o passado é filtrado no cliente, ver `showtimes.ts`), então o mock
-// aqui só precisa devolver exatamente o que o cenário do teste representa.
 function mockEventsList(sessions: ReturnType<typeof makeEvent>[]) {
   server.use(
     http.get(`${API}/events`, () =>
@@ -75,14 +71,6 @@ afterEach(() => {
 })
 
 describe('EventDetailPage', () => {
-  // O componente precisa formatar o horário no fuso IANA do EVENTO
-  // (`event.timezone`), nunca no fuso de quem roda o processo (§4.6.3) -- não dá
-  // para fixar `process.env.TZ` neste arquivo (tsconfig.app.json não tem tipos de
-  // Node, e não deveria ganhar -- só para um teste). Em vez disso, o teste escolhe
-  // dois fusos com offsets bem diferentes (Manaus e São Paulo, ambos sem horário de
-  // verão) e verifica que o texto renderizado muda de acordo com `event.timezone`,
-  // nunca com o relógio da máquina que roda a suíte -- mesmo raciocínio de
-  // `shared/date.test.ts`, aplicado aqui à tela de verdade.
   it('mostra o horário no fuso do EVENTO (Manaus), não em outro fuso qualquer', async () => {
     const event = makeEvent()
     server.use(
@@ -92,8 +80,6 @@ describe('EventDetailPage', () => {
     mockEventsList([event])
     renderDetail(makeAuth())
 
-    // 23:00 UTC em Manaus (UTC-4, sem horário de verão) é 19:00 -- em São Paulo
-    // (UTC-3) seria 20:00; nenhuma das duas pode aparecer no lugar da outra
     expect(await screen.findByText('19:00')).toBeInTheDocument()
     expect(screen.queryByText('20:00')).not.toBeInTheDocument()
   })
@@ -134,8 +120,6 @@ describe('EventDetailPage', () => {
       http.get(`${API}/events/evt-1`, () => HttpResponse.json(makeEvent({ status: 'CANCELLED' }))),
       http.get(`${API}/events/evt-1/seatmap`, () => emptySeatmap()),
     )
-    // o back nunca lista CANCELLED pro público (events.service.ts, status=PUBLISHED
-    // por padrão) -- lista de outras sessões vazia é o cenário real
     mockEventsList([])
     renderDetail(makeAuth())
 
@@ -157,8 +141,8 @@ describe('EventDetailPage', () => {
   })
 
   it('duas sessões do mesmo filme em dias diferentes -- trocar de aba mostra a outra', async () => {
-    const day1 = makeEvent({ id: 'evt-1', startsAt: '2026-09-20T23:00:00.000Z' }) // 19:00 Manaus
-    const day2 = makeEvent({ id: 'evt-2', startsAt: '2026-09-21T22:00:00.000Z' }) // 18:00 Manaus
+    const day1 = makeEvent({ id: 'evt-1', startsAt: '2026-09-20T23:00:00.000Z' })
+    const day2 = makeEvent({ id: 'evt-2', startsAt: '2026-09-21T22:00:00.000Z' })
     server.use(
       http.get(`${API}/events/evt-1`, () => HttpResponse.json(day1)),
       http.get(`${API}/events/evt-1/seatmap`, () => emptySeatmap()),

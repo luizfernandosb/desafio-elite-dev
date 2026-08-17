@@ -10,7 +10,7 @@ describe('generateSeats', () => {
     expect(seats).toHaveLength(96)
     expect(seats[0]).toMatchObject({ row: 'A', number: 1, kind: SeatKind.REGULAR })
     expect(seats.at(-1)).toMatchObject({ row: 'H', number: 12, kind: SeatKind.REGULAR })
-    expect(new Set(seats.map((s) => s.id)).size).toBe(96) // ids únicos
+    expect(new Set(seats.map((s) => s.id)).size).toBe(96)
   })
 
   it('accessibleSeats marca o kind ACCESSIBLE só nos assentos listados', () => {

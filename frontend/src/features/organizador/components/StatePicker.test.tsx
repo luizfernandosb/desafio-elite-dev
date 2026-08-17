@@ -30,8 +30,6 @@ describe('StatePicker', () => {
     server.use(http.get(`${API}/locations/states`, () => HttpResponse.json({ code: 'X', message: 'falhou' }, { status: 500 })))
     renderWithProviders(<StatePicker value="" onChange={vi.fn()} />)
 
-    // 1 retry automático (5xx, lib/query-client.ts) com backoff -- timeout maior que
-    // o default de findBy* para não flakar sob a suíte inteira rodando em paralelo
     expect(
       await screen.findByText('Não foi possível carregar os estados. Tente de novo.', {}, { timeout: 3000 }),
     ).toBeInTheDocument()

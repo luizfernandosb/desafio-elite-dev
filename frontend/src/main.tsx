@@ -8,10 +8,6 @@ import './styles/reset.css'
 import './styles/tokens.css'
 import './styles/typography.css'
 
-// VITE_USE_MSW liga o mock de rede em desenvolvimento, sem precisar do back-end
-// rodando (§ etapa 01, "MSW desde o dia 0"). Import dinâmico: o código do MSW só
-// entra no bundle carregado em runtime se este branch de fato executar -- em
-// produção (`VITE_USE_MSW=false`, o default) ele nunca roda.
 async function enableMocking(): Promise<unknown> {
   if (!env.VITE_USE_MSW) return
   const { worker } = await import('./test/msw/browser')

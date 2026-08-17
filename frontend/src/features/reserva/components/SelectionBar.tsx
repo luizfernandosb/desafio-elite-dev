@@ -13,18 +13,12 @@ export interface SelectedSeatView {
 
 interface SelectionBarProps {
   selectedSeats: SelectedSeatView[]
-  // preço de verdade (já com o adicional de Sala VIP, se houver) -- nunca o
-  // `priceInCents` base bruto, ver `Seatmap.meta.effectivePriceInCents`
   effectivePriceInCents: number
   currency: string
   onChangePriceType: (seatId: string, priceType: TicketPriceType) => void
   onReserve: () => void
   isReserving: boolean
   atMax: boolean
-  // presente = hold já confirmado pelo servidor (201) -- a barra troca de "escolher"
-  // para "cronômetro + ir para pagamento". `expiresAt` é sempre o mesmo em todos os
-  // holds de uma mesma chamada (§ seat-hold.service.ts, `attemptHold`), qualquer um
-  // dos elementos serve.
   hold: SeatHold[] | null
   onExpire: () => void
   onProceed: () => void

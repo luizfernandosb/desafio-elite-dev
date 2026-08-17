@@ -11,10 +11,6 @@ interface CityPickerProps {
   disabled?: boolean
 }
 
-// Cascata: sem UF escolhida não tem o que buscar -- `enabled: Boolean(uf)` evita uma
-// chamada com `uf` vazio, e a troca de UF automaticamente busca de novo (query key
-// inclui `uf`). Quem limpa a cidade selecionada ao trocar de UF é o formulário pai
-// (a cidade "pertence" ao estado anterior, o picker não sabe disso por conta própria).
 export function CityPicker({ uf, value, onChange, error, disabled }: CityPickerProps) {
   const { showToast } = useToast()
   const { data, isError, isFetching } = useQuery({

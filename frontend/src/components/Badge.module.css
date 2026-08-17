@@ -6,16 +6,12 @@
   background: var(--primary-tint);
   color: var(--primary-hover);
   font-weight: 500;
-  font-size: 0.75rem; /* escala caption */
+  font-size: 0.75rem;
   letter-spacing: 0.02em;
   text-transform: uppercase;
   line-height: 1.4;
 }
 
-/* fundo com o token vívido (tint), texto com o par `-text` (etapa 12, medido em
-   `contrast.test.ts`) -- o vívido como texto sobre o próprio tint claro mede
-   ~1.9-3:1, falha AA de sobra; mesmo raciocínio de `--primary-hover` sobre
-   `--primary-tint` no badge default acima. */
 .success {
   background: color-mix(in srgb, var(--success) 14%, transparent);
   color: var(--success-text);

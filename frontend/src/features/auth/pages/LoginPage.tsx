@@ -21,7 +21,7 @@ export function LoginPage() {
     formState: { errors, isSubmitting },
   } = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
-    mode: 'onBlur', // erro aparecendo a cada tecla é hostil (§ etapa 03)
+    mode: 'onBlur',
   })
 
   async function onSubmit(values: LoginFormValues) {
@@ -36,10 +36,6 @@ export function LoginPage() {
 
   return (
     <div className={styles.page}>
-      {/* handleSubmit foca o primeiro campo inválido automaticamente
-          (shouldFocusError, default do React Hook Form) -- só funciona porque
-          Input.tsx encaminha `ref` para o <input> de verdade (etapa 02, corrigido
-          nesta etapa) */}
       <form className={styles.form} onSubmit={handleSubmit(onSubmit)} noValidate>
         <h1>Entrar</h1>
         {formError && (
@@ -66,8 +62,6 @@ export function LoginPage() {
         </Button>
         <div className={styles.divider}>ou</div>
         <GoogleLoginButton onError={setFormError} />
-        {/* Sem link de "esqueci minha senha" -- recuperação de senha está fora de
-            escopo (§9); link morto é pior que ausência (§ etapa 03). */}
         <p className={styles.switch}>
           Não tem conta? <Link to="/cadastrar">Cadastre-se</Link>
         </p>

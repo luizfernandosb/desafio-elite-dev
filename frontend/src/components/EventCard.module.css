@@ -3,7 +3,7 @@
   aspect-ratio: 2 / 3;
   border-radius: var(--radius-md);
   overflow: hidden;
-  background-color: var(--surface-2); /* fallback antes/sem a imagem carregar */
+  background-color: var(--surface-2);
   border: 1px solid var(--border);
 }
 
@@ -15,8 +15,6 @@
   object-fit: cover;
 }
 
-/* Cor vem inline (ageRatingColors) -- é a paleta oficial da classificação
-   indicativa, fixa por padrão do governo, não os tokens do produto. */
 .ageRating {
   position: absolute;
   top: var(--space-2);

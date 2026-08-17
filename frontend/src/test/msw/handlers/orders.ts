@@ -5,8 +5,6 @@ import { DEFAULT_EVENT } from './catalog'
 import { priceTypeFromHoldId, seatIdFromHoldId } from './seats'
 import { issueTicket } from './tickets'
 
-// meia-entrada: metade do preço efetivo do evento, mesma fórmula do back
-// (events/pricing.ts, computeSeatPriceInCents) -- nunca preço x quantidade.
 function seatPriceInCents(holdId: string): number {
   return priceTypeFromHoldId(holdId) === 'HALF'
     ? Math.round(DEFAULT_EVENT.priceInCents / 2)
@@ -46,9 +44,6 @@ export const ordersHandlers = [
       })),
     }
     ordersStore.set(id, order)
-    // clientSecret real do Stripe é um "pi_..._secret_...", mas o mock só precisa de
-    // ALGO não-vazio -- o teste da flag de teste do checkout mocka `@stripe/react-stripe-js`
-    // direto, nunca chama a Stripe de verdade com este valor.
     return HttpResponse.json({ order, clientSecret: 'pi_fake_secret' }, { status: 201 })
   }),
 
@@ -58,11 +53,6 @@ export const ordersHandlers = [
     return HttpResponse.json(order)
   }),
 
-  // Substituto de desenvolvimento do webhook do Stripe (docs/bugs.md #21) -- ao
-  // aprovar, emite um ingresso por assento do pedido, exatamente o que a
-  // orquestração real (`OrdersService.confirmPayment` -> criação de `Ticket`)
-  // faria no back; sem isto, o teste ponta a ponta nunca teria um ingresso para
-  // chegar até a portaria.
   http.post(`${API}/orders/:id/simulate-payment`, async ({ params, request }) => {
     const order = ordersStore.get(params.id as string)
     if (!order) return HttpResponse.json({ code: 'NOT_FOUND', message: 'Pedido não encontrado' }, { status: 404 })

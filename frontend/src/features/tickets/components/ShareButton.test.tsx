@@ -18,12 +18,6 @@ function renderButton() {
   return renderWithProviders(<ShareButton ticketId="ticket-1" />)
 }
 
-// `navigator.share` não existe em jsdom (sem polyfill de Web Share API) -- todo
-// teste aqui cai naturalmente no ramo de copiar, sem precisar simular um navegador
-// sem suporte. `navigator.clipboard`, por outro lado, o próprio `userEvent.setup()`
-// já stuba (é o mecanismo que a lib usa para suportar `user.copy()`/`user.paste()`)
-// -- ler de volta com `navigator.clipboard.readText()` verifica o que o componente
-// realmente escreveu, sem competir com esse stub reinstalando um próprio por cima.
 describe('ShareButton', () => {
   it('mostra a semântica antes de qualquer clique, não só depois de gerar o link', () => {
     renderButton()

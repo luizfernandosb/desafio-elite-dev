@@ -7,12 +7,6 @@ import { listTickets, ticketKeys, type Ticket } from '../api'
 import { TicketCard } from '../components/TicketCard'
 import styles from './TicketListPage.module.css'
 
-// Agrupar por `startsAt` vs. agora, não pelo `status` do ingresso (§ etapa 09) --
-// `status` sozinho confundiria "ainda vou usar" com "evento já aconteceu": um
-// ingresso `ACTIVE` de uma sessão de ontem é passado, não próximo. Dentro de cada
-// grupo, ordena por proximidade da data (próximos: mais cedo primeiro; passados:
-// mais recente primeiro) -- só faz sentido calcular isto no cliente porque a
-// paginação do back ordena por `createdAt`, não por `startsAt` (`ticket.repository.ts`).
 function splitByTime(tickets: Ticket[]): { upcoming: Ticket[]; past: Ticket[] } {
   const now = Date.now()
   const upcoming: Ticket[] = []
@@ -37,9 +31,6 @@ export default function TicketListPage() {
     queryFn: () => listTickets(page),
   })
 
-  // Os quatro estados padrão (§ etapa 11) -- "vazio" aqui é a página inteira sem
-  // nenhum ingresso, não "sem resultado para esta página" (paginação nunca some
-  // sozinha para uma página vazia, ver `Pagination`).
   const state = useQueryState(query, (data) => data.data.length === 0)
 
   if (state.status === 'loading') {

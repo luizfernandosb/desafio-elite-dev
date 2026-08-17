@@ -18,8 +18,6 @@
   z-index: 0;
 }
 
-/* Mesma exceção documentada em EventCard.module.css ao "zero gradiente" do resto
-   do projeto -- gradual e só até a metade, nunca cobrindo o pôster inteiro. */
 .overlay {
   position: relative;
   z-index: 1;

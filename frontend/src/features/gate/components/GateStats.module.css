@@ -40,10 +40,6 @@
   font-weight: 700;
 }
 
-/* `-text`, não o token vívido puro -- medido em `contrast.test.ts` (§ etapa 12): o
-   vívido sobre `--surface-2` claro mede ~1.9-3:1 pros três primeiros. Ícone (forma
-   já redundante com a cor, `resultIcon`) + horário ao lado tratado como texto
-   comum de qualquer forma -- mesma régua do badge de status. */
 .valid {
   color: var(--success-text);
 }

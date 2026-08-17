@@ -125,7 +125,7 @@ describe('POST /api/v1/tickets/:id/cancel', () => {
     expect(seatState.status).toBe('FREE')
 
     const order = await prisma.order.findUniqueOrThrow({ where: { id: orderId } })
-    expect(order.status).toBe('PAID') // o outro ticket do pedido ainda está ACTIVE
+    expect(order.status).toBe('PAID')
   })
 
   it('200 -- cancelar o último ticket ativo do pedido transiciona a Order para REFUNDED', async () => {
@@ -182,9 +182,6 @@ describe('POST /api/v1/tickets/:id/cancel', () => {
     expect(res.status).toBe(401)
   })
 
-  // Regressão do achado que motivou a migration `ticket_seat_unique_excludes_cancelled`:
-  // sem o índice corrigido, esta segunda compra do MESMO assento falharia com 500
-  // (violação de unique constraint) na hora de emitir o novo ticket em confirmPayment.
   it('assento cancelado pode ser vendido de novo -- migration do índice parcial resolveu o bloqueio', async () => {
     const { token, event, seats, tickets } = await payForSeats(1)
     await supertest(app).post(`/api/v1/tickets/${tickets[0]!.id}/cancel`).set('Authorization', `Bearer ${token}`)

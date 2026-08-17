@@ -58,9 +58,6 @@
   font-weight: 500;
 }
 
-/* mesma aparência do Button primary (§5.1.1) -- não é o componente `Button` porque
-   este precisa ser um `<a>` de verdade quando habilitado (navegação), e um
-   `<button disabled>` de verdade quando não (Button não tem variante polimórfica). */
 .cta,
 .ctaDisabled {
   display: inline-flex;

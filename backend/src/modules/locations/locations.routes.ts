@@ -11,7 +11,6 @@ const locationsController = new LocationsController(locationsService)
 
 export const locationsRoutes = Router()
 
-// só o organizador cria/edita sessão -- mesmo gate de catalogRoutes (§4.3)
 locationsRoutes.use(requireAuth, requireRole(Role.ORGANIZER))
 
 locationsRoutes.get('/states', locationsController.getStates)

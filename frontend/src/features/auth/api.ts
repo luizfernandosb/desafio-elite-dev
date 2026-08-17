@@ -14,9 +14,6 @@ interface SessionResponse {
   user: PublicUser
 }
 
-// skipAuth: true nas quatro que não carregam (ou não podem depender de) um
-// Authorization válido -- um 401 delas é credencial/sessão errada, não token velho,
-// então não deveriam disparar a fila de refresh de lib/api.ts (etapa 01).
 export function registerRequest(input: { name: string; email: string; password: string }) {
   return api.post<SessionResponse>('/auth/register', input, { skipAuth: true })
 }
@@ -33,8 +30,6 @@ export function googleLoginRequest(credential: string) {
   return api.post<SessionResponse>('/auth/google', { credential }, { skipAuth: true })
 }
 
-// logout carrega o Authorization normalmente -- o back-end exige sessão válida
-// para revogar o refresh certo (requireAuth na rota, back-end etapa 03)
 export function logoutRequest() {
   return api.post<void>('/auth/logout')
 }

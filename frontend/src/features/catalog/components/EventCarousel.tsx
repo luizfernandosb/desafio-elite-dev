@@ -14,8 +14,6 @@ interface EventCarouselProps {
 
 const SCROLL_AMOUNT = 640
 
-// Mesmo mecanismo de scroll horizontal com setas do `ShowtimePicker` (dia da
-// sessão) -- aqui aplicado a uma fileira de `EventCard` em vez de abas de dia.
 export function EventCarousel({ title, events, onSeeAll }: EventCarouselProps) {
   const scrollerRef = useRef<HTMLDivElement>(null)
 

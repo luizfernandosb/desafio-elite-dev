@@ -9,8 +9,6 @@ export interface GoogleProfile {
   name: string
 }
 
-// Interface isolada por decisão (§7.3, §12.1) -- Google Sign-In é o primeiro item da
-// ordem de corte. Removê-lo custa trocar quem implementa isto, não reescrever o Service.
 export interface SocialAuthProvider {
   verify(idToken: string): Promise<GoogleProfile>
 }

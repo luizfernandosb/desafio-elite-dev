@@ -1,6 +1,5 @@
 import { Link } from 'react-router-dom'
 
-// Página 404 própria -- não a página genérica de "Not Found" de um provedor de deploy.
 export function NotFoundPage() {
   return (
     <>

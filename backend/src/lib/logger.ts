@@ -1,8 +1,6 @@
 import pino from 'pino'
 import { env } from '../config/env'
 
-// exportado separado do singleton para que o teste de redact possa reconstruir a
-// mesma configuração contra um destino em memória, sem depender de I/O real
 export const loggerOptions: pino.LoggerOptions = {
   level: env.LOG_LEVEL,
   transport:
@@ -20,9 +18,9 @@ export const loggerOptions: pino.LoggerOptions = {
       'body.cardNumber',
       '*.passwordHash',
       '*.stripePaymentIntentId',
-      '*.code', // código do QR em claro -- nunca deveria ser logado (§7.6, etapa 08)
+      '*.code',
       '*.shareToken',
-      'req.params.shareToken', // o path da rota pública inclui o token (etapa 09)
+      'req.params.shareToken',
     ],
     censor: '[REDACTED]',
   },

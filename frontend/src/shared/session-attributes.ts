@@ -1,7 +1,3 @@
-// Formato/Áudio/Sala são o mesmo enum reusado em toda tela que mostra uma sessão
-// (organizador, catálogo, ingresso, portaria) -- diferente de `status.ts`, que cada
-// feature duplica porque cada domínio tem um enum de status diferente, aqui é
-// exatamente o mesmo valor em todo lugar, então mora num único módulo compartilhado.
 export type SessionFormat = 'TWO_D' | 'THREE_D'
 export type SessionAudio = 'DUBBED' | 'SUBTITLED'
 export type SessionRoomType = 'STANDARD' | 'VIP'
@@ -38,9 +34,6 @@ export function roomTypeLabel(roomType: SessionRoomType): string {
   return ROOM_TYPE_OPTIONS.find((option) => option.value === roomType)?.label ?? roomType
 }
 
-// Rótulos prontos pra virar `<Badge>` -- formato e áudio sempre aparecem (2D/Dublado
-// são o padrão, mas ainda é informação real); "Sala VIP" só aparece quando é VIP,
-// "Padrão" não é um badge (não é informação nova, só ruído ao lado dos outros dois).
 export function sessionAttributeBadges(event: {
   format: SessionFormat
   audio: SessionAudio

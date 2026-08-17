@@ -97,8 +97,6 @@ function makeMockPaymentProvider(): PaymentProvider {
   }
 }
 
-// `supportsSimulation` presente -- só o `FakePaymentProvider` de verdade tem essa
-// propriedade (payment-provider.ts); um mock "tipo Stripe" (acima) não tem.
 function makeMockFakePaymentProvider(): PaymentProvider {
   return { ...makeMockPaymentProvider(), supportsSimulation: true }
 }
@@ -135,12 +133,11 @@ describe('OrdersService.createOrder', () => {
     vi.mocked(ordersRepo.create).mockResolvedValue(makeOrder({ amountInCents: 12000 }) as never)
 
     const service = makeService({ ordersRepo, holdRepo })
-    // dto não tem campo de valor -- não há como "forjar" nada aqui
     await service.createOrder('user-1', { eventId: 'event-1', holdIds: ['hold-1', 'hold-2'], paymentMethod: PaymentMethod.FAKE }, 'idem-1', log)
 
     expect(ordersRepo.create).toHaveBeenCalledWith(
       'fake-tx',
-      expect.objectContaining({ amountInCents: 12000 }), // 6000 x 2
+      expect.objectContaining({ amountInCents: 12000 }),
     )
   })
 
@@ -166,7 +163,6 @@ describe('OrdersService.createOrder', () => {
     const service = makeService({ ordersRepo, eventsRepo, holdRepo })
     await service.createOrder('user-1', { eventId: 'event-1', holdIds: ['hold-1', 'hold-2'], paymentMethod: PaymentMethod.FAKE }, 'idem-1', log)
 
-    // 6000 + 20% = 7200 por assento x 2 = 14400 (não 12000, que seria o preço base)
     expect(ordersRepo.create).toHaveBeenCalledWith('fake-tx', expect.objectContaining({ amountInCents: 14400 }))
   })
 
@@ -182,7 +178,6 @@ describe('OrdersService.createOrder', () => {
     const service = makeService({ ordersRepo, holdRepo })
     await service.createOrder('user-1', { eventId: 'event-1', holdIds: ['hold-1', 'hold-2'], paymentMethod: PaymentMethod.FAKE }, 'idem-1', log)
 
-    // 6000 (FULL) + 3000 (HALF, metade de 6000) = 9000 -- nunca 6000 x 2 = 12000
     expect(ordersRepo.create).toHaveBeenCalledWith('fake-tx', expect.objectContaining({ amountInCents: 9000 }))
   })
 
@@ -196,8 +191,6 @@ describe('OrdersService.createOrder', () => {
     ).rejects.toThrow('Um ou mais holds não estão disponíveis')
   })
 
-  // flag de teste do checkout (front) -- paymentMethod: STRIPE usa o provedor Stripe
-  // pra criar o intent, nunca o fake, e grava esse método na order (§ resolveProvider)
   it('paymentMethod STRIPE -- usa o provedor Stripe (não o fake) e grava paymentMethod na order', async () => {
     const holdRepo = makeMockHoldRepo()
     vi.mocked(holdRepo.findManyOwnedActive).mockResolvedValue([{ id: 'hold-1', seatId: 'seat-1' }] as never)
@@ -338,7 +331,7 @@ describe('OrdersService.cancelTicket', () => {
   it('ACTIVE + evento futuro -- cancela o ticket, libera o assento e reembolsa só o valor do assento', async () => {
     const ticketRepo = makeMockTicketRepo()
     vi.mocked(ticketRepo.findOwnedById).mockResolvedValue(makeTicket() as never)
-    vi.mocked(ticketRepo.countActiveByOrderId).mockResolvedValue(1) // sobra outro ticket ativo no pedido
+    vi.mocked(ticketRepo.countActiveByOrderId).mockResolvedValue(1)
 
     const ordersRepo = makeMockOrdersRepo()
     vi.mocked(ordersRepo.findById).mockResolvedValue(makeOrder({ status: OrderStatus.PAID }) as never)
@@ -359,13 +352,10 @@ describe('OrdersService.cancelTicket', () => {
 
     expect(ticketRepo.updateStatus).toHaveBeenCalledWith('fake-tx', 'ticket-1', TicketStatus.CANCELLED)
     expect(seatStateRepo.markFree).toHaveBeenCalledWith('fake-tx', ['seat-1'])
-    expect(paymentProvider.refund).toHaveBeenCalledWith('pi_test_123', 6000) // FULL, sem Sala VIP
-    // ainda sobra 1 ticket ativo no pedido -- Order continua PAID, não vira REFUNDED
+    expect(paymentProvider.refund).toHaveBeenCalledWith('pi_test_123', 6000)
     expect(ordersRepo.updateStatus).not.toHaveBeenCalled()
   })
 
-  // order criada com paymentMethod STRIPE -- reembolso tem que ir pro provedor Stripe,
-  // nunca pro fake, mesmo que o fake também esteja configurado no mapa (§ resolveProvider)
   it('order com paymentMethod STRIPE -- reembolsa pelo provedor Stripe, não pelo fake', async () => {
     const ticketRepo = makeMockTicketRepo()
     vi.mocked(ticketRepo.findOwnedById).mockResolvedValue(makeTicket() as never)
@@ -435,7 +425,7 @@ describe('OrdersService.cancelTicket', () => {
     )
     await service.cancelTicket('ticket-1', 'user-1', log)
 
-    expect(paymentProvider.refund).toHaveBeenCalledWith('pi_test_123', 3000) // metade de 6000
+    expect(paymentProvider.refund).toHaveBeenCalledWith('pi_test_123', 3000)
   })
 
   it('ticket já USED -- lança InvalidTransitionError, não toca em nada', async () => {
@@ -536,10 +526,6 @@ describe('OrdersService.cancelTicket', () => {
 })
 
 describe('OrdersService.simulatePayment', () => {
-  // capability check é por ORDER (paymentMethod gravado na criação), não mais pelo
-  // processo inteiro -- precisa carregar a order primeiro pra saber qual provedor ela
-  // usou, diferente de antes (quando só existia um provedor pro processo todo e dava
-  // pra rejeitar sem nem tocar o banco).
   it('order com paymentMethod STRIPE -- lança ForbiddenError, nunca atualiza status', async () => {
     const ordersRepo = makeMockOrdersRepo()
     vi.mocked(ordersRepo.findById).mockResolvedValue(makeOrder({ paymentMethod: PaymentMethod.STRIPE }) as never)

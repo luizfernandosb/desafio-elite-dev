@@ -40,8 +40,6 @@ describe('ErrorState', () => {
   })
 
   it('requestId presente -- copiável, mostra toast de confirmação ao copiar', async () => {
-    // `userEvent.setup()` já stuba `navigator.clipboard` sozinho (docs/bugs.md #23) --
-    // ler de volta com `readText()` em vez de espionar uma implementação própria
     const user = userEvent.setup()
     renderError(new ApiError('INTERNAL_ERROR', 'Erro interno', 500, 'req-abc123'))
 

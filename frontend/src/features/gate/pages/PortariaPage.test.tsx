@@ -10,9 +10,6 @@ import PortariaPage from './PortariaPage'
 
 const API = env.VITE_API_URL
 
-// A câmera de verdade não roda em jsdom (sem `navigator.mediaDevices`) -- mockada
-// para rejeitar na hora, então `GateScanner` só mostra o aviso de câmera
-// indisponível e a digitação manual é o caminho exercitado neste teste de página.
 vi.mock('@zxing/browser', () => ({
   BrowserQRCodeReader: vi.fn().mockImplementation(function FakeBrowserQRCodeReader() {
     return { decodeFromConstraints: vi.fn().mockRejectedValue(new Error('sem câmera em jsdom')) }
@@ -84,7 +81,6 @@ describe('PortariaPage', () => {
     await user.type(input, 'TKT1.abc.def{Enter}')
 
     expect(await screen.findByRole('alert')).toHaveTextContent('Entrada liberada')
-    // digitação manual desabilitada enquanto o resultado ocupa a tela (mesmo "busy")
     expect(screen.getByRole('button', { name: 'Validar' })).toBeDisabled()
   })
 })

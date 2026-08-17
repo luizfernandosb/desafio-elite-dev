@@ -9,10 +9,6 @@ export interface DemoSummary {
   shareUrl: string | null
 }
 
-// Lê de volta o estado atual do Evento A e recalcula os códigos pelo serviço real
-// (`deriveTicketCode`, etapa 08) -- nunca guarda o código em claro, então "qual é o
-// código pronto pra escanear" sempre passa por aqui, tanto num seed novo quanto num
-// rerun. Reaproveitado pelo teste de integração para provar que o QR semeado é válido.
 export async function readDemoSummary(prisma: PrismaClient, eventId: string): Promise<DemoSummary> {
   const [active, used, shared] = await Promise.all([
     prisma.ticket.findFirst({

@@ -1,9 +1,6 @@
 import { Link } from 'react-router-dom'
 import styles from './Footer.module.css'
 
-// Deliberadamente mínimo -- sem redes sociais, sem badge de app store, sem colunas
-// de links institucionais: nenhuma dessas páginas existe neste produto, e um footer
-// com links mortos é pior do que nenhum footer.
 export function Footer() {
   return (
     <footer className={styles.footer}>

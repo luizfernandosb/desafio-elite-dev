@@ -39,10 +39,6 @@ describe('mixOverBackground', () => {
   })
 })
 
-// Valores literais, não `getComputedStyle` -- de propósito (§ etapa 02, "sem
-// browser"). Espelham tokens.css; se um token mudar de cor, este teste precisa ser
-// atualizado a mão -- é o preço de rodar sem DOM, e o comentário existe para que
-// quem mudar o token saiba que precisa vir aqui também.
 const LIGHT = {
   textPrimary: '#14161a',
   textSecondary: '#5b6270',
@@ -63,23 +59,18 @@ const DARK = {
   surface1: '#1c1f24',
   surface2: '#262a31',
   border: '#666d7a',
-  // no escuro os tokens `-text` apontam de volta pro vívido (tokens.css) -- o
-  // vívido já mede bem sobre o próprio tint com um fundo escuro atrás, EXCETO
-  // --danger (mede só 4.18:1 sobre --surface-1 escuro) -- ganha um vermelho mais
-  // claro só para texto
   successText: '#1db954',
   warningText: '#ff9500',
   dangerText: '#ff6b60',
   neutralGateText: '#8e8e93',
 }
 
-// tokens vívidos (fundo do tint, cor de fundo de dot/badge) -- não mudam por tema
 const SUCCESS = '#1db954'
 const WARNING = '#ff9500'
 const DANGER = '#ff3b30'
 
-const AA_TEXT = 4.5 // WCAG AA, texto normal
-const AA_NON_TEXT = 3 // WCAG 1.4.11, borda/contorno de componente
+const AA_TEXT = 4.5
+const AA_NON_TEXT = 3
 
 describe('pares de token -- contraste mínimo dos dois temas (§5.1.1, critério de aceite)', () => {
   it('tema claro: texto primário sobre surface-0 ≥ 4.5:1', () => {
@@ -107,10 +98,6 @@ describe('pares de token -- contraste mínimo dos dois temas (§5.1.1, critério
   })
 })
 
-// § etapa 12 -- auditoria encontrou os três primeiros abaixo com o token VÍVIDO como
-// texto, medindo ~1.9-3:1 (docs/bugs.md). Corrigido com os tokens `-text`
-// (tokens.css); estes testes travam o build se alguém voltar a usar o vívido cru
-// como cor de texto em cima do próprio tint.
 describe('badge de status (Badge.tsx) -- texto `-text` sobre o tint do próprio vívido', () => {
   const CASES = [
     { name: 'success', vivid: SUCCESS, percent: 14, light: LIGHT.successText, dark: DARK.successText },
@@ -143,10 +130,6 @@ describe('feed da portaria (GateStats.tsx) -- dot `-text` sobre surface-2', () =
   })
 })
 
-// Os quatro blocos de resultado da portaria (ValidationResultScreen.module.css) --
-// literais fixos, iguais nos dois temas de propósito (§ etapa 10/12: legibilidade a
-// 2 metros sob luz variável, não acompanha claro/escuro do SO). "Não o mínimo
-// exato" (plano da etapa 12) -- todos medem bem acima de 4.5:1.
 describe('resultado da portaria (ValidationResultScreen.module.css) -- blocos fixos', () => {
   it.each([
     ['valid', '#0a7a35', '#e6f9ee'],
